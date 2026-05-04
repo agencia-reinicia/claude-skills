@@ -1,0 +1,807 @@
+---
+name: soporte-procesamiento-clickup-reinicia
+description: Procesa tareas brutas de soporte llegadas por formulario ClickUp en las listas Soporte [CLIENTE] de los clientes activos configurados en la sección 2 de la skill (15 clientes en v1.6 — Equipo Proactive y Columbia). Aplica el patrón canónico de tarjeta, clasifica dominio (Zoho/Web/WABA), asigna PO Técnico y PO Cliente, publica comentario con propuesta de nivel de servicio, detecta duplicados, mueve a Product Backlog y publica resumen diario en la tarea mensual del cliente. Activación manual ("procesa el soporte", "refina el soporte") o desde tarea programada de Cowork cada 2 horas. No usar para productos en General ni para microcampañas.
+triggers:
+  - procesa el soporte
+  - procesa las tareas de soporte
+  - revisa el soporte de los clientes piloto
+  - revisa el soporte de los clientes
+  - procesa las tareas brutas de soporte
+  - refina el soporte
+---
+
+# SKILL: Procesamiento Automático de Soporte ClickUp — Reinicia
+
+## Propósito
+
+Cuando un cliente rellena un formulario de ClickUp asociado a su lista `Soporte [CLIENTE]`, ClickUp crea automáticamente una tarea en estado `Open` con `taskType: "form_response"`. La descripción se rellena con los pares pregunta/respuesta del formulario tal como los escribió el cliente, sin estructura adicional. El nombre suele incluir un identificador automático del formulario y un timestamp, no el nombre operativo del trabajo.
+
+Esta skill convierte esa tarea bruta en una tarjeta lista para sprint:
+
+1. Detecta tareas brutas pendientes en las listas `Soporte [CLIENTE]` de los clientes activos configurados en la sección 2.
+2. Clasifica el dominio del trabajo (Zoho CRM / Web / WABA / mixto).
+3. Aplica el patrón canónico de `formato-tarjeta-clickup-reinicia` (sección 2.4) preservando la descripción original literalmente en el bloque "📥 Requerimientos Cliente".
+4. Renombra siguiendo la convención `[TIPO] [Descripción] [CLIENTE]`.
+5. Rellena los campos personalizados estándar.
+6. Asigna a las personas correctas según el equipo del cliente (Proactive o Columbia).
+7. Publica un comentario al PO Técnico con preguntas pendientes y propuesta de nivel de servicio.
+8. Detecta posibles duplicados informativamente.
+9. Cambia el estado a `Product Backlog`.
+10. Una vez al día, publica un resumen consolidado en la tarea mensual del cliente.
+
+Las skills madre (`productos-digitales-zoho-clickup-reinicia`, `productos-digitales-web-clickup-reinicia`, `productos-digitales-waba-clickup-reinicia` y `formato-tarjeta-clickup-reinicia`) son la **fuente de verdad** sobre cómo se redacta el contenido. Esta skill las orquesta — no replica su lógica.
+
+---
+
+## 1. Cuándo se ejecuta
+
+### 1.1 Disparo manual
+
+El PO escribe en una conversación de Claude alguno de los triggers (`procesa el soporte`, `refina el soporte`, etc.). Claude ejecuta el flujo completo sobre las listas configuradas y reporta el resultado en chat.
+
+### 1.2 Disparo programado (Claude Cowork)
+
+La skill se registra como **tarea programada de Claude Cowork** con cadencia **cada 2 horas**. La tarea programada usa exactamente el siguiente prompt como instrucciones:
+
+```
+Aplica la skill soporte-procesamiento-clickup-reinicia. Procesa todas las tareas
+brutas de soporte pendientes en las listas Soporte [CLIENTE] de los clientes
+configurados en la sección 2 de la skill. Si es la primera ejecución del día con
+actividad detectada, publica además el resumen consolidado del día anterior en la
+tarea mensual de cada cliente que haya tenido actividad. Modelo: Opus 4.7.
+```
+
+**Nota:** se evita listar los clientes en el prompt para no obligar a actualizarlo cada vez que cambia la tabla. La fuente de verdad es siempre la sección 2.
+
+**Cuando la sesión empieza nueva cada vez (sin memoria entre ejecuciones):** la skill reconstruye todo el contexto leyendo ClickUp en cada ejecución. La marca de "ya procesada" vive en la propia tarea (comentario "Primer Refinamiento Individual Realizado" + estado `Product Backlog`), no en memoria local.
+
+---
+
+## 2. Configuración de clientes
+
+Tabla canónica que la skill debe respetar. Cualquier cambio (nuevos clientes, nuevos equipos, activación de Cliq) se hace aquí.
+
+> **Nota terminológica.** En v1.0 esta tabla se llamaba "clientes piloto" y contenía 4 clientes (HomeEspaña, Carritech, Gonher, Avaderm). Desde v1.6 la skill cubre todos los clientes activos con lista `Soporte [CLIENTE]` en ClickUp. El concepto de "piloto" se mantiene únicamente en lo que respecta al flag `cliq_publish` (todos los clientes arrancan con publicación en Cliq desactivada y se activa cliente a cliente tras validar el procesamiento — ver sección 15).
+
+| Cliente | Equipo | Lista Soporte | Lista Gestión | PO Técnico | PO Cliente | Canal Cliq | Cliq publish |
+|---|---|---|---|---|---|---|---|
+| HomeEspaña | Proactive | `901216563068` | `900501350944` | Paolo Bergamelli | Óscar Díez | `O45816000002429005` (#HomeEspaña) | `false` |
+| Carritech | Proactive | `901215748066` | `901207893946` | Fabián Vargas | Óscar Díez | `carritech` (no joined — pendiente añadir a Álvaro) | `false` |
+| Gonher | Columbia | `901209826214` | `901205582846` | Paolo Bergamelli | Pablo Losada | `O45816000003006001` (#Gonher) | `false` |
+| Avaderm | Columbia | `901210493032` | `901202330083` | Paolo Bergamelli | Pablo Losada | `O45816000002403009` (#Avaderm) | `false` |
+| Aicrov | Columbia | `901211019222` | `901208017268` | Fabián Vargas | Pablo Losada | `Aicrov` (pendiente validar acceso) | `false` |
+| Aunna | Proactive | `900502439069` | `900502395956` | Fabián Vargas | Óscar Díez | `Aunna` (pendiente validar acceso) | `false` |
+| Breezom | Proactive | `901208402881` | `162734856` | Fabián Vargas | Óscar Díez | `Breezom` (pendiente validar acceso) | `false` |
+| Estarima | Columbia | `901201751766` | `901201375273` | Paolo Bergamelli | Pablo Losada | `Estarima` (pendiente validar acceso) | `false` |
+| Inefso - Dinam | Proactive | `901214051309` | `901212796422` | Fabián Vargas | Óscar Díez | `Inefso - Dinam` (pendiente validar acceso) | `false` |
+| ISL Agency | Proactive | `901210160571` | `901202035644` | Paolo Bergamelli | Óscar Díez | `ISL Agency` (pendiente validar acceso) | `false` |
+| Kasblan | Columbia | `901210063464` | `901201259611` | Paolo Bergamelli | Pablo Losada | `Kasblan` (pendiente validar acceso) | `false` |
+| Líder System Grupo | Columbia | `211763780` | `211763776` | Paolo Bergamelli | Pablo Losada | `LiderSystemGrupo` (pendiente validar acceso) | `false` |
+| Synuptic | Proactive | `901211050939` | `901209493933` | Rolf Pinto | Óscar Díez | `Synuptic` (pendiente validar acceso) | `false` |
+| Timedi | Proactive | `901212583005` | `900800044927` | Paolo Bergamelli | Óscar Díez | `Ti Medi` (pendiente validar acceso) | `false` |
+| Worldwide Boat | Proactive | `901208726321` | `3609221` | Paolo Bergamelli | Óscar Díez | `Worldwideboat` (pendiente validar acceso) | `false` |
+
+**IDs de personas en ClickUp:**
+
+| Persona | ClickUp ID | Rol habitual |
+|---|---|---|
+| Paolo Bergamelli | `2447443` | PO Técnico (Lead Tech / Web / Zoho) |
+| Fabián Vargas | `93744950` | PO Técnico (Zoho) |
+| Rolf Pinto | `99603566` | PO Técnico (Zoho / Web — Synuptic) |
+| Óscar Díez | `93631901` | PO Cliente Equipo Proactive |
+| Pablo Losada | `87715920` | PO Cliente Equipo Columbia |
+| Néstor Tejero | `766716` | Director / referente para warnings |
+
+**Nota sobre Cliq durante el piloto:** Todos los clientes arrancan con `cliq_publish: false`. La skill **no publica nada en Cliq durante esta fase**. Cuando se valide el procesamiento, se activará cliente a cliente cambiando el flag a `true`. Ver sección 15.
+
+**Nota sobre canales pendientes de validar acceso:** Para los clientes incorporados en v1.6, el `unique_name` del canal Cliq se ha registrado tal como lo proporcionó el PO líder, pero **no se ha verificado que el usuario autenticado tenga acceso (joined)** al canal. Antes de activar `cliq_publish: true` en cualquiera de estos clientes, hay que comprobar con `ZohoCliq_List_all_channels` que el canal aparece en la lista. Si no aparece, hay que añadir a Álvaro al canal. Mientras `cliq_publish` sea `false`, esto no bloquea el procesamiento.
+
+**Nota sobre canales no listados:** Si al buscar un canal por nombre o por unique_name en `ZohoCliq_List_all_channels` la API devuelve un canal que el usuario autenticado no tiene joined, no aparecerá en los resultados. En ese caso, la skill avisa al PO indicando que **debe añadir a Álvaro al canal** para que el procesamiento pueda detectarlo y, eventualmente, publicar.
+
+---
+
+## 3. Detección de tareas brutas
+
+La skill busca en cada lista de Soporte de la tabla las tareas que cumplan **todos** estos criterios:
+
+### 3.1 Filtro principal (señal infalible)
+
+- `taskType` = `"form_response"`. Esta es la marca que ClickUp pone automáticamente a cualquier tarea creada vía formulario. Es el filtro definitivo para distinguir tareas brutas de tareas creadas a mano.
+
+### 3.2 Filtros corroborantes (orden, todos deben cumplirse)
+
+- **Estado actual = `Open`**. El estado inicial al crearse desde formulario. Si la tarea ya está en `Product Backlog` o cualquier otro estado posterior, se ignora — significa que ya fue procesada o que el PO la promovió manualmente.
+- **Sin comentario "Primer Refinamiento Individual Realizado"**. Si lo tiene, ya fue procesada por la skill y no hay que tocarla.
+- **Sin bloque `## 📥 Requerimientos Cliente` en la descripción**. Si lo tiene, la descripción ya está en formato canónico. Skip.
+- **Sin comentarios sustantivos del equipo Reinicia** (filtro v1.1). Si la tarea ya tiene comentarios de cualquier miembro del equipo Reinicia (excluyendo ClickBot y excluyendo comentarios autogenerados del formulario), la skill **NO la procesa**: pisaría trabajo en curso. La salta con un warning en el reporte final tipo "Tarea X saltada: ya tiene diálogo del equipo vivo (N comentarios)." La decisión de aplicar el patrón canónico retroactivamente queda para el PO manualmente. Esto cubre tres casos prácticos: (a) tareas que el equipo ha empezado a refinar conversacionalmente sin formalizar, (b) tareas en las que el cliente ha aclarado por comentarios la petición original, (c) tareas con diagnóstico previo donde la conversación ya es más útil que el patrón canónico.
+
+### 3.3 Señales débiles corroborantes (no bloqueantes pero indicativas)
+
+- **`time_spent > 5 minutos` sin patrón canónico**. Indicador de que alguien del equipo ha tocado la tarea. Combinado con la regla 3.2 sobre comentarios del equipo, refuerza la decisión de no procesar. Si solo aparece esta señal (tiempo registrado pero ningún comentario), la skill procesa pero **añade un aviso en el comentario al PO Técnico** (sección 8.2 v1.1) reconociendo el tiempo registrado.
+- **`REFINADO = true` sin patrón canónico aplicado**. Caso ambiguo: el PO Técnico marcó la tarea como refinada pero no documentó el refinamiento en la descripción canónica. La skill procesa igualmente devolviendo REFINADO a `false`, pero **añade un párrafo explícito en el comentario al PO Técnico**: "He detectado que la tarea estaba marcada como REFINADO=true sin patrón canónico aplicado. He aplicado el procesamiento estándar y devuelto REFINADO=false. Si ya la tenías validada, márcala de nuevo como REFINADO=true tras revisar la estructura." Respeta el criterio del PO en lugar de pisarlo silenciosamente.
+
+### 3.4 Excepción: tarea ya procesada que sigue en Open
+
+Si una tarea está en `Open` pero ya tiene el comentario "Primer Refinamiento Individual Realizado", la skill la ignora — el PO la mantiene en `Open` por algún motivo y no debe re-procesarse.
+
+### 3.5 Fallback de seguridad — tarea rara
+
+Si una tarea está en `Open` con `taskType: "form_response"` pero no encaja en ninguno de los patrones esperados (descripción vacía, contenido inesperado, etc.), la skill no la salta: aplica el procesamiento estándar **preservando la descripción original íntegra** en el bloque "📥 Requerimientos Cliente". Cero pérdida de trazabilidad.
+
+### 3.6 Herramientas
+
+- `clickup_filter_tasks` con `list_ids=[Soporte HomeEspaña, Soporte Carritech, Soporte Gonher, Soporte Avaderm]` y `statuses=["Open"]`.
+- Para cada tarea retornada, verificar `taskType` en el campo `task_type` de la respuesta y, si es `form_response`, llamar `clickup_get_task` con `subtasks=true` para tener el detalle completo.
+- `clickup_get_task_comments` y `clickup_get_threaded_comments` para verificar la marca de procesamiento, comentarios sustantivos del equipo, y otros comentarios existentes. Filtrar por `user.id` distinto de `-1` (ClickBot) para identificar comentarios humanos.
+
+---
+
+## 4. Clasificación de dominio
+
+Para cada tarea bruta detectada, la skill clasifica el dominio del trabajo. Esto determina **qué skill madre aplicar** para construir el contenido enriquecido.
+
+### 4.1 Dominios posibles
+
+| Dominio | Skill madre asociada | Tipo de Producto en ClickUp |
+|---|---|---|
+| Zoho CRM | `productos-digitales-zoho-clickup-reinicia` | CRM |
+| Web | `productos-digitales-web-clickup-reinicia` | DESARROLLO WEB |
+| WABA | `productos-digitales-waba-clickup-reinicia` | (a definir — habitualmente WHATSAPP CORPORATIVO) |
+| Mixto | la dominante + nota en comentario | El de la dominante |
+
+### 4.2 Cómo clasifica
+
+Claude lee:
+- El bloque "📥 Requerimientos Cliente" (descripción auto-generada del formulario).
+- El nombre original de la tarea (puede contener pistas como "WordPress", "Zoho Forms", "WhatsApp"…).
+- El contexto del cliente: Carritech es CRM puro, HomeEspaña es Web+CRM, Gonher es CRM+App+Web, Avaderm es CRM+integraciones.
+
+Con esa información decide el dominio dominante. Si hay duda razonable entre dos dominios (ej. "fallo en formulario que envía leads a Zoho CRM" — ¿Web o CRM?), elige el que mejor representa **dónde está el trabajo de resolución**, no dónde se manifiesta el síntoma. En el ejemplo: si el formulario es Zoho Forms, dominio = CRM; si es Gravity Forms en WordPress, dominio = Web.
+
+### 4.3 Si no es clasificable con confianza
+
+Si Claude no puede clasificar con confianza ≥ 70%, **no clasifica como Mixto** — deja el dominio como **"Por confirmar"** y lo refleja explícitamente en el comentario al PO Técnico (sección 8.2): "No he podido determinar el dominio con confianza. Hipótesis: [A] o [B]. ¿Cuál aplica?"
+
+---
+
+## 5. Aplicación del patrón canónico
+
+La skill construye la nueva descripción siguiendo la sección 2 de `formato-tarjeta-clickup-reinicia`. Bloques fijos siempre presentes; los opcionales se incluyen solo si aplican.
+
+### 5.1 Bloques fijos
+
+```markdown
+> 🎯 **RESUMEN**
+> [Resumen de qué hace el producto en 1-3 líneas]
+> **Entrega:** [qué se entrega al cierre]
+
+## 📌 Historia de usuario
+Como **[rol cliente o usuario afectado]**, **QUIERO** [necesidad], **PARA** [beneficio].
+
+## 📋 Descripción
+- **Web:** [URL del cliente]
+- **Idiomas:** [si aplica]
+- **Objetivo Cliente:** [una frase que resume qué quiere conseguir]
+- **Objetivo del Producto:** [una frase que resume qué entregamos]
+- **Público objetivo:** [si aplica — clientes finales, equipo interno, etc.]
+
+## 📥 Requerimientos Cliente
+> Petición original del cliente — formulario ClickUp — [fecha de creación de la tarea bruta]
+
+[CONTENIDO LITERAL DE LA DESCRIPCIÓN AUTO-GENERADA POR EL FORMULARIO,
+SIN RESUMIR, REFORMULAR NI OMITIR CAMPOS. Mantener las preguntas originales
+del formulario y las respuestas del cliente exactamente como las escribió.]
+
+[Nombre original de la tarjeta tal como llegó del formulario]
+
+## ✅ Ready to Backlog
+- [Condiciones específicas — accesos, credenciales, datos confirmados]
+
+## 🌍 Contexto
+[Si hay contexto operativo claro: histórico, sistemas afectados, urgencia.
+Si no: "No definida."]
+
+## 📦 Entregables
+
+**Reinicia (interno):**
+- [Entregable interno si aplica]
+
+**Cliente:**
+- [Lo que se entrega al cliente — corrección, mejora, formación, etc.]
+
+## 📚 Documentación de referencia
+- [Sprint Cero del cliente, propuesta comercial, actas relevantes — buscar en Workdrive]
+
+---
+
+## 🏁 Resultado y cierre
+> ⚠️ Bloque diferido — se completa al cierre del producto siguiendo el flujo formal de cierre (skill `formato-tarjeta-clickup-reinicia`, sección 11).
+
+[Placeholder estándar con los 6 sub-bloques de cierre — ver sección 2.12 de formato-tarjeta-clickup-reinicia]
+```
+
+### 5.2 Regla de preservación literal — sección 2.4 de `formato-tarjeta-clickup-reinicia`
+
+Esta es la regla más crítica. Antes de construir cualquier otro bloque, la skill:
+
+1. Lee la descripción auto-generada por el formulario tal como está, sin alterarla.
+2. Copia ese contenido íntegro y literal al bloque "📥 Requerimientos Cliente". Mantiene preguntas originales del formulario, respuestas del cliente, nombre original de la tarjeta tal como llegó, y cualquier metadato (timestamp del formulario, identificador de submisión).
+3. Construye el resto del patrón canónico **alrededor** como capa de interpretación profesional.
+
+**Si la descripción contiene información sensible** (correos largos, datos personales no relevantes), la skill la incluye igualmente — la decisión de editar la toma el PO, no la skill. Comentario opcional al PO Técnico avisando: "He detectado posible información sensible en la petición original. Revisa si conviene editarla antes de continuar."
+
+### 5.3 Bloques opcionales
+
+- **`## 🎯 Alcance`** — incluir solo si la incidencia tiene riesgo claro de scope creep (cliente exigente, petición ambigua, varias funcionalidades implícitas). En soporte habitual se omite.
+- **`## 🧩 Hipótesis de solución a validar`** y **`## ❓ Preguntas a responder durante el SPIKE`** — solo si la incidencia se reclasifica como SPIKE (caso raro pero posible: cliente reporta algo que requiere investigación previa). Si ocurre, la skill lo nota en el comentario al PO Técnico y delega a `spike-clickup-reinicia` para esos bloques.
+
+---
+
+## 6. Renombrado de la tarea
+
+Patrón canónico:
+
+```
+[TIPO] [Descripción corta operativa] [CLIENTE]
+```
+
+### 6.1 Tipos canónicos
+
+| Tipo | Cuándo aplicarlo |
+|---|---|
+| `[BUG]` | Algo que funcionaba ha dejado de funcionar; comportamiento erróneo de un sistema en producción |
+| `[MEJORA]` | Funcionalidad existente que el cliente quiere optimizar o ampliar puntualmente |
+| `[DUDA]` | Pregunta del cliente sobre cómo usar el sistema o por qué hace algo |
+| `[PETICIÓN]` | Solicitud nueva — pequeño desarrollo, ajuste de configuración, cambio de copy, alta de usuario |
+| `[SOPORTE-SERVIDOR]` | Operativa de servidores, hosting, despliegues, logs, monitorización, copias |
+
+### 6.2 Reglas de redacción
+
+**Convención del nombre — fuente de verdad:** sigue la sección **2.13 "Convención del nombre de la tarjeta"** de `formato-tarjeta-clickup-reinicia`. Resumen aplicable aquí:
+
+- **Principio rector**: el nombre describe el entregable en estado final, no la acción. Sustantivo o participio, nunca verbo en infinitivo.
+- **Test rápido**: si el nombre puede ir precedido de *"Tarea: ___"* sin sonar raro, está en modo acción y hay que reformularlo. Si va precedido de *"Entregable: ___"* con naturalidad, está bien.
+- **Descripción corta** ≤ 60 caracteres tras el prefijo `[TIPO]`.
+- **CLIENTE** entre corchetes con la convención del cliente (`[GONHER]`, `[CARRITECH]`, `[HOMEESPAÑA]`, `[AVADERM]`).
+- Si el formulario ya traía un patrón con timestamp tipo `Contact asocciation [CARRITECH] - #2026-03-24T16:55:54+01:00`, **se sustituye completamente** por el patrón canónico — el nombre original queda preservado en el bloque "📥 Requerimientos Cliente".
+
+### 6.3 Ejemplos aplicados a soporte
+
+Para incidencias de soporte concretamente — el matiz es el prefijo `[TIPO]` antes del entregable:
+
+| Nombre original (formulario) | Nombre canónico tras procesamiento |
+|---|---|
+| `Contact asocciation [CARRITECH] - #2026-03-24T16:55:54+01:00` | `[BUG] Asociación de contactos en módulo Cuentas corregida [CARRITECH]` |
+| `enhanced_conversions_form_2026_04_25` | `[PETICIÓN] Enhanced Conversions Google Ads configuradas desde Zoho Forms [HOMEESPAÑA]` |
+| `Lupa de zoom solapa botón Guardar Pedido` | `[BUG][APP] Solape de lupa de zoom con botón Guardar Pedido resuelto [GONHER]` |
+| `Agendas delegados[AVADERM]` | `[PETICIÓN] Campos obligatorios simplificados en módulo Visitas para delegados [AVADERM]` |
+
+### 6.4 Herramienta
+
+`clickup_update_task` con `name=[nuevo nombre]`.
+
+---
+
+## 7. Campos personalizados
+
+La skill rellena los campos personalizados estándar. IDs documentados en las skills madre (`productos-digitales-zoho-clickup-reinicia`, `productos-digitales-web-clickup-reinicia`, `productos-digitales-waba-clickup-reinicia`).
+
+### 7.1 Campos siempre rellenados
+
+| Campo | Valor |
+|---|---|
+| `PROYECTO` | Cliente correspondiente (HOMEESPAÑA, CARRITECH, GONHER, AVADERM) |
+| `TIPO DE PRODUCTO` | Según dominio clasificado: CRM / DESARROLLO WEB / WHATSAPP CORPORATIVO |
+| `PO` | PO Cliente del equipo (`OSCAR` para Proactive, `PABLO` para Columbia) |
+| `ÉPICA` | Habitualmente `05. ADOPTION` o `06. REPETITION` para soporte. Si la incidencia es de descubrimiento de bug grave que afecta a propuesta de valor, `04. CONVERSION`. Si es duda del usuario en uso normal, `05. ADOPTION` |
+| `REFINADO` | `false` siempre |
+
+### 7.2 Campos no rellenados
+
+| Campo | Motivo |
+|---|---|
+| `ORDEN` | Lo asigna el PO en Sprint Planning. La skill nunca lo toca |
+| `Tiempo estimado` | El PO lo asigna tras refinamiento técnico con el equipo |
+| `AMIGOS REINICIA` | Solo si el dominio claramente involucra a un colaborador externo (ej. Síntaris para Carritech). Si hay duda, no se rellena |
+| `PBIs PRIMER NIVEL` | Lo decide el PO. La skill no lo rellena |
+
+### 7.3 Herramienta
+
+`clickup_update_task` con `custom_fields=[{id, value}, ...]`. Los IDs y opciones de cada campo están en las skills madre — la skill de procesamiento las consulta antes de escribir.
+
+---
+
+## 8. Asignaciones y comentarios
+
+### 8.1 Asignación de la tarea
+
+Doble asignación según equipo:
+
+- **HomeEspaña (Proactive, caso especial):** Paolo Bergamelli (`2447443`) + Óscar Díez (`93631901`)
+- **Carritech (Proactive):** Fabián Vargas (`93744950`) + Óscar Díez (`93631901`)
+- **Gonher (Columbia):** Paolo Bergamelli (`2447443`) + Pablo Losada (`87715920`)
+- **Avaderm (Columbia):** Paolo Bergamelli (`2447443`) + Pablo Losada (`87715920`)
+
+`clickup_update_task` con `assignees=[id1, id2]`. Reemplaza la lista de asignados que pudiera tener la tarea bruta.
+
+### 8.2 Comentario al PO Técnico (Caso C de comentarios — texto plano)
+
+Después de aplicar la descripción canónica, la skill publica un comentario en la tarea con:
+
+```
+@[PO Técnico]
+
+Refinamiento inicial del producto basado en la petición del formulario.
+
+Dominio clasificado: [CRM / Web / WABA / Por confirmar]
+
+Nivel de servicio propuesto: [Soporte Operativo Continuo / Mejoras Evolutivas / Proyectos Nuevos]
+Razonamiento: [1-2 líneas explicando por qué]
+
+Preguntas pendientes a responder antes de Ready to Backlog:
+- [Pregunta 1 — accesos, datos, alcance, prioridad]
+- [Pregunta 2]
+- [Pregunta N]
+
+[Si el formulario no recoge solicitante (campo email/nombre del cliente):]
+Solicitante en cliente: pendiente de identificar — la persona que rellenó el formulario no está en el bloque "Requerimientos Cliente" porque la descripción original no lo recoge. Se recomienda confirmar con [PO Cliente] quién hizo la petición desde [CLIENTE].
+
+[Si REFINADO estaba en true al recibir la tarea (caso v1.1, sección 3.3):]
+He detectado que la tarea estaba marcada como REFINADO=true sin patrón canónico aplicado. He aplicado el procesamiento estándar y devuelto REFINADO=false. Si ya la tenías validada, márcala de nuevo como REFINADO=true tras revisar la estructura.
+
+[Si time_spent > 5 minutos al recibir la tarea (caso v1.1, sección 3.3):]
+La tarea tenía [X] minutos de tiempo registrado al procesarla. Si ya habías investigado/diagnosticado, complementa la estructura con tus notas en un comentario adicional.
+
+Acceso a referencias:
+[URL Sprint Cero pública del cliente si está localizada]
+[URL acta relevante si la hay]
+
+[Si aplica:] Posible duplicado de:
+[Nombre y URL de la tarea sospechosa]
+
+[Si no se han detectado duplicados:]
+Posibles duplicados detectados: ninguno en lista Soporte [CLIENTE].
+```
+
+**Limitaciones de markdown en comentarios** (sección 6.1 de `formato-tarjeta-clickup-reinicia`): ningún formato. URLs en línea separada del texto descriptivo. Sin negrita, sin headers, sin listas formateadas.
+
+**Mención al PO Técnico:** ClickUp permite mencionar usuarios en comentarios con `@[username]`. Verificar que el username funcione; si no, dejar el nombre en texto plano y la asignación en el campo `assignees` ya garantiza la notificación.
+
+### 8.3 Niveles de servicio — definición canónica
+
+Tres niveles, basados en la conversación HomeEspaña 23/03/2026 (Paolo + Kieran):
+
+- **Soporte Operativo Continuo:** mantenimiento de servidores, entornos, actualizaciones, gestión de incidencias recurrentes en sistemas en producción. Bolsa de horas mensual fija (~6h/mes). Plantilla referencia: `Soporte Operativo Continuo 1.01` (Workdrive `o16et26cabb411f5a49e98c4eaa28ee2288a5`).
+- **Mejoras Evolutivas:** crédito de horas operativas para incidencias, dudas, pequeños arreglos, ayudas puntuales. Contratación flexible. Plantilla: `Crédito Mejoras Evolutivas 1.00` (`nx8q7144b1fc0de214c649bfd122aa25ffdd0`).
+- **Proyectos Nuevos:** funcionalidades nuevas que requieren diseño funcional + presupuesto cerrado. Si la incidencia escala a esto, la tarea de Soporte se mantiene como traza pero se crea un producto en `General [CLIENTE]` que sustituye al flujo de soporte.
+
+La skill propone uno con razonamiento. La decisión final es del PO Técnico — la skill nunca rellena campos relacionados con el nivel de servicio automáticamente.
+
+### 8.4 Comentario con criterios de aceptación (Caso A)
+
+Tras el comentario al PO Técnico, la skill publica un segundo comentario con los criterios de aceptación listos para que el PO los copie al checklist (ClickUp no permite crear checklists vía MCP — limitación documentada en sección 7 de `formato-tarjeta-clickup-reinicia`).
+
+```
+CRITERIOS DE ACEPTACIÓN — para copiar manualmente al checklist
+
+[Técnicos] Acceso a [sistema afectado] verificado
+[Técnicos] Reproducción del bug en entorno controlado [si aplica]
+[Funcionales] [Comportamiento esperado tras la intervención]
+[De proceso] Validación interna por Reinicia
+[De proceso] Validación cliente
+[De proceso] Comunicación de cierre al solicitante
+```
+
+Una línea por criterio. Categoría en corchetes como prefijo. Sin headers, sin negrita.
+
+### 8.5 Detección de duplicados (informativo)
+
+Antes de finalizar, la skill busca en la misma lista de Soporte tareas con título similar, cuerpo similar o que mencionen los mismos sistemas. Usa `clickup_search` con keywords del bloque "📥 Requerimientos Cliente".
+
+Si encuentra una candidata con similitud razonable:
+
+1. **No bloquea** el procesamiento de la nueva tarea.
+2. **Añade un párrafo** al comentario al PO Técnico (sección 8.2): "Posible duplicado de [nombre y URL]".
+3. **Crea enlace bidireccional** vía `clickup_add_task_link` entre la nueva tarea y la sospechosa.
+
+La decisión de fusionar/cerrar/marcar la duplicada es siempre humana.
+
+### 8.6 Comentario de marca de procesamiento
+
+Como último paso antes de mover el estado, la skill publica un comentario corto:
+
+```
+Primer Refinamiento Individual Realizado
+```
+
+Sin formato. Sin firma adicional. Solo ese texto. Cumple dos funciones:
+
+1. **Trazabilidad operativa** — el equipo y el cliente (que tiene acceso a algunas listas) ven que la tarjeta ha pasado por una primera revisión.
+2. **Flag técnico para la skill** — al re-ejecutarse, la skill busca este comentario para confirmar que la tarea ya fue procesada (sección 3.2).
+
+La hora del procesamiento queda registrada nativamente por ClickUp en el comentario; no hace falta añadir timestamp manualmente.
+
+---
+
+## 9. Creación de subtareas
+
+Tras aplicar la descripción canónica, los campos personalizados, las asignaciones y los comentarios, la skill **crea las subtareas estándar** que descomponen el trabajo de soporte en pasos concretos.
+
+### 9.1 Patrón mínimo (a) — vigente en v1.4
+
+Cuatro subtareas siempre, en este orden:
+
+| # | Nombre subtarea | Asignado por defecto |
+|---|---|---|
+| 1 | Investigación / Reproducción del caso | PO Técnico |
+| 2 | Implementación | PO Técnico |
+| 3 | Validación Reinicia | PO Técnico |
+| 4 | Validación Cliente | PO Cliente |
+
+**Razonamiento de la asignación por defecto:** las tres primeras subtareas son trabajo del equipo técnico; la cuarta es validación desde el lado del cliente y se asigna directamente al PO Cliente para darle visibilidad anticipada de que cuando llegue el momento es suya, sin reasignaciones manuales posteriores.
+
+### 9.2 Cómo se crean
+
+Cada subtarea es una tarea independiente en la **misma lista de Soporte** del cliente, con `parent` apuntando a la tarjeta principal. Sin descripción, sin tiempo estimado, sin fecha — esos campos los completa el PO Técnico al refinar.
+
+```
+clickup_create_task
+  list_id: [Soporte CLIENTE]
+  parent: [task_id de la tarjeta principal]
+  name: [nombre de la subtarea]
+  assignees: [user_id según tabla 9.1]
+```
+
+Las subtareas heredan el contexto de la tarjeta padre por estar anidadas, no hace falta duplicar custom fields, etiquetas ni descripción.
+
+### 9.3 Limitación conocida — patrón único, no adaptado al tipo
+
+En v1.4 el patrón es **único** independientemente del tipo de incidencia (BUG, MEJORA, DUDA, PETICIÓN, SOPORTE-SERVIDOR). Es deliberadamente simple para arrancar el piloto. Una iteración futura (v2.x) puede introducir patrones adaptados por tipo:
+
+- BUG: Reproducir → Diagnosticar causa → Resolver → Validación Reinicia → Validación Cliente.
+- DUDA: Investigar → Responder al cliente → Validación Cliente (sin Reinicia).
+- PETICIÓN: Diseñar solución → Implementar → Validación Reinicia → Validación Cliente.
+- MEJORA: similar a PETICIÓN, posiblemente con Documentación interna.
+- SOPORTE-SERVIDOR: Investigar logs → Aplicar acción → Verificar resolución → Validación Reinicia.
+
+Esa evolución se hará cuando haya datos reales del piloto que justifiquen cada patrón. Mientras, el patrón mínimo es el contrato.
+
+### 9.4 Excepciones donde NO crear subtareas
+
+Si la tarea bruta procesada cumple alguno de estos criterios, la skill **omite la creación de subtareas** y deja un aviso en el comentario al PO Técnico explicándolo:
+
+- La tarea procesada ya tiene subtareas creadas (caso de tarjetas semi-procesadas a mano antes de pasar la skill).
+- La tarea está marcada como duplicado de otra (sección 8.5) — el trabajo se hará en la otra tarjeta.
+- Dominio clasificado como "Por confirmar" con confianza < 70% — esperar a que el PO Técnico decida el dominio antes de descomponer.
+
+---
+
+## 10. Imputación de tiempo automático
+
+La skill imputa **15 minutos de tiempo** a cada tarea procesada, reflejando el valor del análisis y refinamiento que el cron ejecuta sobre la tarea bruta.
+
+### 10.1 Lógica de imputación
+
+Tras crear las subtareas (sección 9) y antes de mover el estado a `Product Backlog` (sección 11), la skill registra un time entry en la tarea principal con:
+
+- **Duración**: 15 minutos (900 000 milisegundos en la API de ClickUp).
+- **Usuario**: Néstor Tejero (`766716`) — usuario autenticado en la integración del cron.
+- **Tag**: `Refinamiento Automático`.
+- **Descripción**: `Refinamiento automático de soporte por skill soporte-procesamiento-clickup-reinicia v1.5`.
+- **Fecha**: timestamp del momento de procesamiento.
+
+### 10.2 Justificación del valor
+
+15 minutos por tarea es **deliberadamente conservador** durante el piloto, considerando que:
+
+- El cron ejecuta análisis real (clasificación de dominio, búsqueda de duplicados, generación de comentario al PO Técnico, criterios de aceptación, propuesta de nivel de servicio).
+- El resultado entregado al equipo técnico es comparable al de un PO refinando manualmente.
+- Un valor más alto (30 min) podría inflar reportes de tiempo durante el piloto antes de validar la calidad real del refinamiento automático.
+
+Tras observar el comportamiento real durante el piloto, este valor puede ajustarse en futuras versiones (v1.6+) si la calidad del refinamiento lo justifica.
+
+### 10.3 Atribución durante el piloto
+
+Todos los time entries van **a nombre de Néstor** porque la integración de ClickUp del cron está autenticada con sus credenciales. Esto significa:
+
+- En reportes de tiempo del cliente, las 15 min × N tareas/día aparecerán como tiempo de Néstor.
+- El equipo Proactive (Óscar/Fabián) o Columbia (Pablo) seguirá registrando su tiempo manual cuando trabajen sobre la tarea — esos time entries son adicionales y a su nombre.
+- El tag `Refinamiento Automático` permite filtrar el tiempo del cron del tiempo humano en cualquier informe.
+
+Cuando v1.x permita tokens multi-usuario, los time entries del cron podrán atribuirse al PO Cliente del equipo correspondiente (Óscar para Proactive, Pablo para Columbia) en lugar de a Néstor — pero por ahora, **a Néstor durante el piloto** es la decisión consciente.
+
+### 10.4 Casos donde NO se imputa tiempo
+
+La skill **omite la imputación de tiempo** y lo registra como pista (sección 13.3 de captura de pistas) en estos casos:
+
+- La tarea procesada se saltó por filtros corroborantes (sección 3.2 — comentarios sustantivos del equipo, ya tiene patrón canónico, etc.). No se imputó análisis porque no hubo procesamiento real.
+- La creación de la tarea principal falló y la skill abortó. No tiene sentido imputar tiempo a una tarea que no quedó procesada.
+- La tarea se identificó como duplicado de otra (no se procesa contenido nuevo, solo se enlaza).
+
+### 10.5 Herramientas
+
+ClickUp API endpoint para time entries:
+
+```
+POST /v2/team/{team_id}/time_entries
+Body:
+  tid: [task_id de la tarea procesada]
+  duration: 900000  (15 min en ms)
+  description: "Refinamiento automático de soporte por skill..."
+  tags: [{"name": "Refinamiento Automático"}]
+  start: [timestamp actual]
+  billable: true (opcional, según configuración del cliente)
+```
+
+Si la API no acepta el tag `Refinamiento Automático` (porque no existe en el workspace), la skill lo crea on-the-fly o lo deja en la descripción solamente, registrando una pista de iteración.
+
+---
+
+## 11. Cambio de estado y cierre del procesamiento individual
+
+Una vez completados todos los pasos anteriores (descripción, campos, asignaciones, comentarios, subtareas e imputación de tiempo), la skill ejecuta:
+
+```
+clickup_update_task con status="Product Backlog"
+```
+
+Esto cumple tres funciones:
+
+1. **Marca visual** — el equipo ve que la tarea ha sido procesada y está lista para refinamiento técnico.
+2. **Filtro técnico** — la siguiente ejecución del cron no la considera bruta (sección 3.2).
+3. **Punto de control** — el PO Técnico verá la tarea en su backlog con la información ya estructurada y podrá pasarla a sprint cuando proceda.
+
+---
+
+## 12. Resumen diario consolidado
+
+### 12.1 Lógica de cuándo publicar
+
+La skill **acumula** las tareas procesadas durante el día y publica un resumen consolidado **una vez al día**, no en cada ejecución del cron.
+
+**Algoritmo:**
+
+1. En cada ejecución, además de procesar tareas brutas, la skill comprueba: ¿es la primera ejecución del día con actividad pendiente del día anterior?
+2. Para responder a esa pregunta, busca el último resumen publicado en la tarea mensual de cada cliente (sección 12.5). El resumen lleva una marca específica que lo identifica.
+3. Si el último resumen es de hace ≥ 24h **Y** ha habido tareas procesadas en las últimas 24h en alguna lista de Soporte, publica el resumen del día anterior.
+
+### 12.2 Cómo construye el resumen
+
+Para cada cliente:
+
+1. Busca en su lista de Soporte las tareas con comentario "Primer Refinamiento Individual Realizado" en las últimas 24h (filtrar por timestamp del comentario).
+2. Si hay 0 tareas → omite el resumen para ese cliente. Sin actividad, sin comentario.
+3. Si hay ≥ 1 tarea → construye el resumen.
+
+### 12.3 Destino del resumen
+
+**Estrategia (b)** — preferencia con fallback dinámico:
+
+1. Buscar en la lista de Gestión del cliente una tarea con nombre `Soporte [Mes Año actual] [CLIENTE]` (ej. `Soporte Abril 2026 [GONHER]`). Si existe → ahí va el resumen.
+2. Si no existe, buscar `Gestión [Mes Año actual] [CLIENTE]` (ej. `Gestión abril 2026 [CARRITECH]`). Si existe → ahí va el resumen.
+3. Si tampoco existe → la skill **no publica el resumen** y deja un warning en la propia última tarea procesada del día: "No he encontrado tarea mensual de Gestión ni de Soporte para [CLIENTE] correspondiente a [Mes Año]. Resumen del día no publicado. Esperando creación de la tarea mensual."
+
+**Búsqueda dinámica** vía `clickup_search` con `keywords` y filtro de lista. Sin IDs hardcodeados.
+
+### 12.4 Formato del comentario de resumen
+
+```
+Primer Refinamiento Realizado por Soporte — resumen [día anterior, formato YYYY-MM-DD]
+
+Tareas refinadas: [N]
+
+[Por cada tarea procesada:]
+- [TIPO] [Descripción corta] [CLIENTE]
+URL: [https://app.clickup.com/t/...]
+Dominio: [CRM / Web / WABA]
+Nivel propuesto: [Soporte Operativo / Mejoras Evolutivas / Proyectos Nuevos]
+[Si hay duplicado detectado:] Posible duplicado: [URL]
+
+[Si hay incidencias notables:]
+Notas:
+- [Tarea X: dominio por confirmar — pendiente decisión PO Técnico]
+- [Tarea Y: información sensible detectada — revisar]
+```
+
+Texto plano. URLs en línea separada del texto descriptivo (limitación de comentarios sección 6.1 de `formato-tarjeta-clickup-reinicia`).
+
+### 12.5 Marca de identificación del resumen
+
+Para que la skill pueda detectar el último resumen publicado y no duplicarlo, el comentario empieza siempre con la línea exacta:
+
+```
+Primer Refinamiento Realizado por Soporte — resumen
+```
+
+Esa cadena es el "marker" que la skill busca en `clickup_get_task_comments` para identificar resúmenes previos.
+
+### 12.6 Caso HomeEspaña sin tarea mensual
+
+Aplica la opción (a) decidida con el PO: la skill **salta el log de HomeEspaña con warning** hasta que exista la tarea mensual. No autocrea tareas mensuales — eso es responsabilidad del sistema mensual de gestión que ya está en marcha. El warning queda como comentario en la última tarea procesada del día para HomeEspaña.
+
+---
+
+## 13. Principio de prudencia en automático
+
+**Al ejecutarse en automático (sin supervisión humana en tiempo real), la skill debe optar siempre por el camino prudente.** Cuando aparezca cualquier ambigüedad o duda razonable, la skill **no toma la decisión más asertiva** — opta por el warning y delega la decisión al PO.
+
+### 13.1 Casos donde aplica el principio
+
+- **Clasificación de dominio con confianza < 70%** → marcar como "Por confirmar" en lugar de elegir el más probable. Reflejar en el comentario al PO Técnico.
+- **Tipo de incidencia ambiguo** (ej. ¿es BUG o MEJORA? ¿es DUDA o PETICIÓN?) → elegir el tipo más conservador (PETICIÓN sobre MEJORA, DUDA sobre BUG) y mencionar la duda en el comentario al PO Técnico.
+- **Asignación dudosa** (ej. cliente nuevo no listado, equipo no claro) → no asignar y avisar al PO Cliente y al PO Director (Néstor `766716`).
+- **Campos personalizados con opciones inciertas** (ej. ÉPICA en un caso límite) → usar la opción más neutra (`05. ADOPTION` para soporte habitual) y mencionar la duda en el comentario al PO Técnico.
+- **Detección de duplicado con similitud baja** (≥ 50% pero < 75%) → mencionarlo como posible pero NO crear el `clickup_add_task_link` automáticamente. La decisión final del enlace queda para el PO.
+- **Información sensible o personal en la petición original** → procesar igual (regla de preservación literal), pero añadir aviso explícito al PO Técnico para que valore si conviene editarla.
+- **Formato de fechas, idiomas o monedas inconsistentes en el formulario** → preservar el original y añadir nota.
+- **Tarea que parece importante pero no encaja claramente en los criterios de la sección 3** → no procesar. Avisar en el reporte final.
+
+### 13.2 Cómo se materializa el principio
+
+En la práctica, la prudencia se traduce en **más warnings y menos acciones automáticas** en casos límite. Es preferible que la skill deje 5 dudas para que el PO resuelva, a que tome 5 decisiones que el PO tendría que revertir manualmente.
+
+Los warnings se acumulan en una sección específica del comentario al PO Técnico (sección 8.2):
+
+```
+[Si hay dudas o cosas raras detectadas:]
+⚠️ Dudas y observaciones para revisión:
+- [Duda 1: descripción + qué hizo la skill por defecto + qué confirmar]
+- [Duda 2: ...]
+```
+
+### 13.3 Captura de pistas para optimización iterativa
+
+La skill **registra explícitamente** las dudas y casuísticas raras encontradas durante cada ejecución. Estas notas son la materia prima para iterar la skill en futuras versiones.
+
+**Mecanismo:** al final de cada ejecución (no en cada tarea procesada — al final del lote completo), si hubo cualquier duda, casuística rara o decisión no trivial, la skill incluye en el reporte de la conversación de Cowork (sección 16) un bloque adicional:
+
+```
+🔍 PISTAS PARA ITERACIÓN DE LA SKILL
+
+Durante esta ejecución han surgido los siguientes casos que merecen consideración para futuras versiones:
+
+- [Caso 1: tarea X, qué surgió, qué hizo la skill, propuesta de mejora si la hay]
+- [Caso 2: ...]
+
+[Si no hay nada que reportar, omitir este bloque enteramente.]
+```
+
+**Qué se considera "pista" digna de reportar:**
+- Patrones de tarea bruta no contemplados en la skill.
+- Casos donde la clasificación de dominio fue ambigua y la skill tomó una decisión por defecto.
+- Errores de herramientas MCP recurrentes que sugieren cambio de aproximación.
+- Tareas que se saltaron por filtros corroborantes y que el PO probablemente sí querría haber procesado.
+- Tareas procesadas donde la calidad del resultado fue baja (campos sin opción clara, comentario al PO Técnico poco útil, etc.).
+- Cualquier observación sobre el formulario de cliente que sugiera mejorar el formulario en sí.
+
+**Qué NO se considera pista (no reportar):**
+- Procesamientos rutinarios sin incidencia.
+- Errores transitorios de red o MCPs (se reintentan en la siguiente ejecución).
+- Casos ya documentados en el versionado actual de la skill como "comportamiento conocido".
+
+El PO recopila estas pistas a lo largo de la semana y las pasa al diseñador de la skill (Néstor + Claude) para iteraciones de versión. Cuando una pista se materializa en cambio de skill, queda anotada en la sección 18 (Versionado).
+
+---
+
+## 14. Errores y casos límite
+
+### 14.1 Lista de Soporte vacía
+
+Si en una ejecución no hay tareas brutas pendientes en ninguna lista, la skill termina silenciosamente. No publica nada en ningún sitio. No deja warnings.
+
+### 14.2 Tarea bruta corrupta o ilegible
+
+Si el contenido de la descripción no es interpretable (formato roto, vacía, error de codificación), la skill aplica el fallback de seguridad (sección 3.4): preserva lo que haya en "📥 Requerimientos Cliente", pone "No interpretable — revisar manualmente" en los demás bloques y lo refleja en el comentario al PO Técnico como prioridad alta.
+
+### 14.3 Error en una herramienta MCP
+
+Si una llamada falla (ClickUp caído, MCP de Workdrive no disponible, etc.), la skill registra el error y continúa con la siguiente tarea — no aborta toda la ejecución por un fallo puntual. La tarea que falló se reintenta en la siguiente ejecución del cron (2 horas después) ya que seguirá siendo "bruta" según los criterios de la sección 3.
+
+### 14.4 Tarea procesada parcialmente
+
+Si una tarea se llegó a procesar parcialmente (ej. se renombró pero se cayó la conexión antes de cambiar el estado), la siguiente ejecución la verá como "bruta" por seguir en `Open` sin marca de procesamiento. La skill detecta entonces que la descripción ya tiene "📥 Requerimientos Cliente" (señal corroborante 3.2) y aplica solo los pasos faltantes — no rehace lo ya hecho.
+
+### 14.5 Cliente desconocido
+
+Si aparece una tarea bruta en una lista que **no está en la tabla de clientes configurados** (sección 2), la skill la ignora. La tabla es la fuente de verdad de "qué procesa" — no se descubre clientes nuevos al vuelo.
+
+---
+
+## 15. Activación de Cliq
+
+Cuando se valide el procesamiento (típicamente tras 2-4 semanas de piloto exitoso), Cliq se puede activar **cliente a cliente** cambiando el flag `cliq_publish` de `false` a `true` en la tabla de la sección 2.
+
+**Cuando esté activado**, la skill publica al final de cada procesamiento individual un mensaje en el canal del cliente:
+
+```
+[Tipo] [Descripción corta]
+@[PO Técnico] @[PO Cliente]
+Nueva tarea de soporte refinada y lista para revisión técnica.
+URL: [URL ClickUp de la tarea]
+```
+
+Vía `ZohoCliq_Post_message_in_a_channel` con el `unique_name` del canal documentado.
+
+**Si un canal no está accesible** (no joined, no encontrado), la skill avisa al PO con un warning: "Canal Cliq de [CLIENTE] no accesible. Añadir a Álvaro al canal y reintentar." No bloquea el procesamiento — solo omite la publicación en Cliq.
+
+**Durante el piloto, esta sección está desactivada en todos los clientes.**
+
+---
+
+## 16. Salida y reporte
+
+### 13.1 Disparo manual
+
+Cuando el PO ejecuta la skill manualmente desde una conversación, Claude reporta al final:
+
+```
+Procesamiento completado.
+
+Tareas procesadas: [N]
+
+[Por cada tarea:]
+✅ [TIPO] [Descripción] [CLIENTE]
+   URL: [URL]
+   Dominio: [CRM/Web/WABA]
+   Asignados: [PO Técnico] + [PO Cliente]
+   Nivel propuesto: [...]
+
+[Si hay tareas con warnings:]
+⚠️ [N] tareas con notas para revisar — ver comentarios en cada tarjeta.
+
+[Si tocaba publicar resumen diario y se publicó:]
+📊 Resumen diario publicado en:
+- Tarea mensual [CLIENTE 1]: [URL]
+- Tarea mensual [CLIENTE 2]: [URL]
+
+[Si tocaba publicar y no se pudo (caso HomeEspaña sin tarea mensual):]
+⚠️ Resumen diario no publicado para [CLIENTE]: tarea mensual no localizada.
+```
+
+### 13.2 Disparo programado (Cowork)
+
+La salida es la misma — Cowork la guarda en el historial de la tarea programada. El PO la consulta cuando quiera entrando a la tarea programada en la app de Claude.
+
+---
+
+## 17. Limitaciones conocidas
+
+| Limitación | Impacto | Mitigación |
+|---|---|---|
+| Tareas programadas de Cowork solo corren con app abierta | Si el portátil está cerrado, las tareas brutas se acumulan | Se procesan todas juntas al abrir la app. El cron sigue siendo cada 2 horas cuando el equipo está activo |
+| Markdown no soportado en comentarios ClickUp | URLs y formato pierden estructura | Texto plano, URLs en línea separada |
+| Checklists no creables vía MCP | El PO debe copiar criterios manualmente | Comentario "Caso A" con criterios listos |
+| ClickUp API solo devuelve tiempos del usuario autenticado | El log diario no puede incluir métricas de tiempo del equipo | Aceptarlo — el log es de actividad de procesamiento, no de tracking |
+| Canales Cliq no joined no aparecen en la lista | No se puede publicar en ellos | Avisar al PO para que añada a Álvaro |
+| Detección de duplicados por similitud de texto | Falsos positivos posibles | Detección informativa, nunca bloqueante. Decisión humana |
+| Clasificación de dominio en casos límite | Errores de clasificación posibles | Caso "Por confirmar" + comentario al PO Técnico para resolver |
+
+---
+
+## 18. Versionado
+
+| Versión | Fecha | Cambio |
+|---|---|---|
+| v1.0 | 2026-04-27 | Versión inicial. Procesamiento de tareas brutas de soporte para clientes piloto HomeEspaña, Carritech, Gonher, Avaderm. Cliq desactivado durante piloto. Log diario consolidado en tarea mensual con estrategia (b) de fallback. Marca de procesamiento "Primer Refinamiento Individual Realizado" para preservar lenguaje natural visible al cliente. |
+| v1.1 | 2026-04-27 | Aprendizajes de la prueba manual sobre Avaderm 869ctbft1 y candidata descartada Carritech 869cteytn. Cambios: (a) sección 3.2 — añadido cuarto filtro corroborante "sin comentarios sustantivos del equipo Reinicia"; (b) sección 3.3 nueva — señales débiles corroborantes (time_spent > 5 min, REFINADO=true sin patrón canónico) con comportamiento documentado; (c) renumeradas las antiguas 3.3-3.5 a 3.4-3.6; (d) sección 8.2 — patrón canónico de aviso de solicitante no identificado, aviso de REFINADO=true previo, aviso de time_spent significativo previo; formato negativo de duplicados ("ninguno detectado") explícito. |
+| v1.2 | 2026-04-27 | Tres mejoras antes del despliegue en automático: (a) sección 6.2 — regla de naming corregida: el nombre del producto describe el **estado entregado**, no la actividad ("Campos obligatorios simplificados" sí, "Simplificar campos obligatorios" no). Verbo en participio o sustantivo resultante. Ejemplos actualizados; (b) sección 11 nueva — principio de prudencia: ante cualquier duda razonable, la skill opta por warning en lugar de decisión asertiva. Documenta 8 casos donde aplica y mecanismo de delegación al PO; (c) sección 11.3 — captura explícita de pistas para iteración: la skill registra al final de cada ejecución casuísticas raras y decisiones ambiguas en un bloque "🔍 PISTAS PARA ITERACIÓN DE LA SKILL" del reporte. Renumeradas secciones 11→12, 12→13, 13→14, 14→15, 15→16, 16→17, y referencias internas actualizadas. |
+| v1.3 | 2026-04-27 | Refactor de la regla de naming para vivir en su sitio canónico. La regla de "nombre = entregable en estado final, no acción" pasa a la sección 2.13 nueva de `formato-tarjeta-clickup-reinicia` (fuente de verdad transversal aplicable a todas las skills de creación de productos). Las secciones 6.2 y 6.3 de esta skill se simplifican para **referenciar** esa sección 2.13 en lugar de duplicarla, manteniendo solo el resumen aplicable, el test rápido ("Tarea:" vs "Entregable:") y los ejemplos específicos de soporte (con prefijo `[TIPO]`). Cambio coordinado: las skills madre (Zoho, Web, WABA) y SPIKE deben actualizarse equivalentemente para referenciar 2.13. Ver patch en `PATCH-formato-tarjeta-clickup-reinicia-v1.3.md`. |
+| v1.4 | 2026-04-28 | Detectada en revisión de Avaderm 869ctbft1 (refinada el 27/04 por v1.0): faltaba creación de subtareas. Añadida sección 9 nueva "Creación de subtareas" con patrón mínimo (a) de 4 subtareas: Investigación/Reproducción, Implementación, Validación Reinicia, Validación Cliente. Las tres primeras asignadas al PO Técnico, la cuarta al PO Cliente para visibilidad anticipada. Patrón único en v1.4 — futura iteración v2.x introducirá patrones adaptados al tipo de incidencia. Documentadas excepciones donde NO crear subtareas (tarjeta ya con subtareas, duplicados, dominio sin confianza). Renumeradas secciones 9→10, 10→11, 11→12, 12→13, 13→14, 14→15, 15→16, 16→17, 17→18, y referencias internas actualizadas. |
+| v1.5 | 2026-04-28 | Imputación automática de tiempo. Añadida sección 10 nueva "Imputación de tiempo automático": el cron imputa **15 minutos** por cada tarea procesada, a nombre de Néstor (`766716`, usuario autenticado de la integración), con tag `Refinamiento Automático` y descripción identificativa de la skill. Justificación: refleja el valor del análisis y refinamiento que el cron entrega al equipo (clasificación de dominio, búsqueda de duplicados, generación de comentarios al PO Técnico, propuesta de nivel de servicio, criterios de aceptación). Valor 15 min deliberadamente conservador durante el piloto — ajustable al alza en futuras versiones tras validar calidad real. Atribución a Néstor durante el piloto, migrable a tokens multi-usuario en v1.x. Casos donde NO se imputa: tareas saltadas por filtros corroborantes, fallos de creación, duplicados. Renumeradas secciones 10→11, 11→12, 12→13, 13→14, 14→15, 15→16, 16→17, 17→18, 18→19, y referencias internas actualizadas. Coherente con la imputación manual de tiempo de la skill `soporte-correo-clickup-reinicia` v1.1. |
+| v1.6 | 2026-05-04 | **Ampliación de alcance: de 4 clientes piloto a 15 clientes activos. Y cambio de cadencia del cron de 30 min a 2 horas.** Cambios: (a) sección 2 — añadidos 11 clientes nuevos (Aicrov, Aunna, Breezom, Estarima, Inefso - Dinam, ISL Agency, Kasblan, Líder System Grupo, Synuptic, Timedi, Worldwide Boat) con su Equipo, listas Soporte/Gestión, POs Técnico y Cliente, y `unique_name` de canal Cliq. Localizada también la lista Gestión de HomeEspaña que estaba pendiente: `900501350944`; (b) sección 2 — añadida nota terminológica: "piloto" pasa a referirse solo al estado del flag `cliq_publish` (todos arrancan en `false`), no al alcance de clientes; (c) sección 2 — añadida fila para Rolf Pinto (`99603566`) en la tabla de personas como PO Técnico de Synuptic, y eliminado el matiz "Zoho Carritech" del rol de Fabián porque ahora cubre múltiples clientes (Carritech, Aicrov, Aunna, Breezom, Inefso - Dinam, Synuptic — aunque el técnico real de Synuptic es Rolf); (d) sección 2 — añadida nota explícita: para los 11 clientes nuevos, el `unique_name` del canal Cliq se ha registrado tal como lo dio el PO líder pero **no se ha verificado el acceso (joined)**; antes de activar `cliq_publish: true` hay que comprobarlo con `ZohoCliq_List_all_channels`; (e) sección 1.2 — el prompt del cron ya no enumera clientes; remite a la sección 2 como fuente de verdad para no obligar a actualizar el prompt cada vez que cambia la tabla; (f) frontmatter `description` actualizada coherentemente; (g) **cadencia del cron cambiada de 30 min a 2 horas** en sección 1.2, sección 19 (puntos 3 y 5), cuadro de limitaciones y sección de manejo de errores. La cadencia más conservadora es prudente al pasar de 4 a 15 listas a chequear por ejecución y reduce el ruido de imputación de tiempo (15 min × N tareas × 12 ejecuciones/día → × 4 ejecuciones/día). **No hay cambios de lógica de procesamiento** — solo de configuración. La lógica v1.5 sigue intacta. **Pendiente operativo antes de la próxima ejecución del cron**: actualizar el prompt y la cadencia en la tarea programada de Cowork; validar acceso a los 11 canales Cliq nuevos cuando se decida activar `cliq_publish` por cliente; mientras `cliq_publish=false` esto no bloquea nada. |
+
+---
+
+## 19. Notas operativas para registrar la tarea programada en Cowork
+
+Cuando el PO registre la tarea programada de Cowork:
+
+1. Comando: abrir Cowork → `/schedule`.
+2. Nombre: `Procesamiento Soporte Reinicia`.
+3. Descripción: `Procesa cada 2 horas las tareas brutas de soporte de los clientes activos configurados en la skill y publica resumen diario consolidado.`
+4. Prompt: el documentado en sección 1.2.
+5. Cadencia: **cada 2 horas**.
+6. Modelo: **Opus 4.7**.
+7. Carpeta: la del proyecto `Asesor Product Owners Reinicia`, para que la tarea programada herede las skills y MCPs disponibles.
+
+Si en algún momento se migra a Routines de Claude Code (background 24/7 sin necesidad de app abierta), la skill funciona idéntica — solo cambia el disparador. Skill agnóstica del mecanismo de scheduling.

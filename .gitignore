@@ -1,0 +1,12 @@
+# Outputs locales
+dist/
+*.zip
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+*.swp
