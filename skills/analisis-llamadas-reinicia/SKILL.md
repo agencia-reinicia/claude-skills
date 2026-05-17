@@ -272,13 +272,17 @@ La única línea azul `#3812CF` permitida en todo el documento es la que va dent
 
 **3. Bordes de la tabla de Decisiones: blancos en TODAS las celdas.**
 
-Toda la tabla de Decisiones lleva bordes blancos (`#FFFFFF`) — incluidas las celdas de cabecera, las filas-categoría (Reinicia / Cliente) y las filas de datos. La legibilidad la dan las bandas alternas (blanco / `#EBEBEB`), el fondo lila de las filas-categoría (`#D9D0FB`) y el fondo azul de la cabecera (`#3812CF`). **No usar bordes grises ni de ningún otro color**: producen ruido visual y, si se omiten en alguna fila (típicamente en la fila-categoría con `columnSpan`), Word/LibreOffice aplican bordes negros por defecto. Definir siempre los cuatro bordes (`top`, `bottom`, `left`, `right`) explícitamente en blanco en cada `TableCell`, sin excepciones.
+Toda la tabla de Decisiones lleva bordes blancos (`#FFFFFF`) — incluidas las celdas de cabecera, las filas-categoría (Reinicia / Cliente) y las filas de datos. La legibilidad la dan las bandas alternas (blanco / `#EBEBEB`) y el fondo lila (`#D9D0FB`) de la cabecera y de las filas-categoría. **No usar bordes grises ni de ningún otro color**: si se omiten en alguna fila (típicamente en la fila-categoría con `columnSpan`), Word/LibreOffice aplican bordes negros por defecto. Definir siempre los cuatro bordes (`top`, `bottom`, `left`, `right`) explícitamente en blanco en cada `TableCell`, sin excepciones.
 
 ```javascript
 // Patrón correcto para cualquier celda de la tabla
 const whiteBorder = { style: BorderStyle.SINGLE, size: 4, color: "FFFFFF" };
 borders: { top: whiteBorder, bottom: whiteBorder, left: whiteBorder, right: whiteBorder }
 ```
+
+**4. Cabecera de la tabla de Decisiones: lila `#D9D0FB`, no azul.**
+
+La cabecera de la tabla usa fondo lila `#D9D0FB` con texto en negro de heading `#0D0D0D` (alineado con el patrón canónico de la skill `marca-reinicia`). **Nunca azul saturado `#3812CF` con texto blanco**: ese azul se reserva para acentos puntuales (líneas separadoras, énfasis tipográficos), no como fondo de cabecera de tabla.
 
 #### Estructura de contenido
 
@@ -300,7 +304,8 @@ Bloque metadatos: Cliente · Tipo · Fecha (en línea, SIN línea separadora azu
   [Texto con negritas/cursivas]
 
 4_Decisiones y próximos pasos  [H1]
-  [Tabla corporativa: cabecera #3812CF, bloques #D9D0FB, filas alternas blanco/#EBEBEB]
+  [Tabla corporativa: cabecera #D9D0FB (lila) con texto #0D0D0D, filas-categoría
+   #D9D0FB, filas alternas blanco/#EBEBEB, bordes BLANCOS en todas las celdas]
   Columnas: Acción / Decisión | Responsable | Plazo | Estado
   Bloques: Reinicia primero, cliente después
 

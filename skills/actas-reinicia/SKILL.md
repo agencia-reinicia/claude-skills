@@ -82,15 +82,37 @@ cd /home/claude && node build_acta.js
 python3 /mnt/skills/public/docx/scripts/office/validate.py output.docx
 ```
 
+### Reglas estrictas de estilo
+
+**1. Cabecera — patrón obligatorio: tabla de 3 columnas SIN bordes.**
+
+Estructura: `[logo a la izquierda] | [hueco central] | [nombre del fichero a la derecha]`. Las celdas deben llevar `verticalAlign: VerticalAlign.CENTER` para que el nombre del fichero quede centrado verticalmente respecto al logo. La línea separadora azul (`#3812CF`) va en un **párrafo independiente debajo de la tabla**, nunca como `border-bottom` del párrafo del nombre del fichero (eso pega el texto a la línea).
+
+**2. Líneas horizontales decorativas en el cuerpo: PROHIBIDAS.**
+
+La única línea azul `#3812CF` permitida en todo el documento es la que va dentro de la cabecera. **No** usar bordes inferiores ni superiores azules como separador entre secciones, antes de bloques como "Revisión del Product Owner", ni antes de la nota final. Esto incluye también líneas grises, naranjas o de cualquier otro color: el cuerpo va limpio. La separación entre bloques se consigue con espaciado (`spacing.before` / `spacing.after`) y con la propia tipografía de los headings, nunca con líneas decorativas.
+
+**3. Bordes de la tabla de Decisiones: blancos en TODAS las celdas.**
+
+Toda la tabla de Decisiones lleva bordes blancos (`#FFFFFF`) — incluidas las celdas de cabecera, las filas-categoría (Reinicia / Cliente) y las filas de datos. La legibilidad la dan las bandas alternas (blanco / `#EBEBEB`) y el fondo lila (`#D9D0FB`) de la cabecera y de las filas-categoría. **No usar bordes grises ni de ningún otro color**: si se omiten en alguna fila (típicamente en la fila-categoría con `columnSpan`), Word/LibreOffice aplican bordes negros por defecto. Definir siempre los cuatro bordes (`top`, `bottom`, `left`, `right`) explícitamente en blanco en cada `TableCell`, sin excepciones.
+
+```javascript
+const whiteBorder = { style: BorderStyle.SINGLE, size: 8, color: "FFFFFF" };
+borders: { top: whiteBorder, bottom: whiteBorder, left: whiteBorder, right: whiteBorder }
+```
+
+**4. Cabecera de la tabla de Decisiones: lila `#D9D0FB`, no azul.**
+
+La cabecera de la tabla usa fondo lila `#D9D0FB` con texto en negro de heading `#0D0D0D` (alineado con el patrón canónico de la skill `marca-reinicia`). **Nunca azul saturado `#3812CF` con texto blanco**: ese azul se reserva para acentos puntuales (líneas separadoras, énfasis tipográficos), no como fondo de cabecera de tabla.
+
 ### Estructura del documento
 
 ```
 CABECERA (tabla 3 columnas, sin bordes)
   Col izquierda:  Logotipo Reinicia en negro
   Col centro:     Vacía
-  Col derecha:    Nombre del fichero (alineado a la derecha, máx. 2 líneas)
-  + Línea separadora azul corporativo (#3812CF)
-  + Salto de línea extra
+  Col derecha:    Nombre del fichero (alineado a la derecha, vAlign CENTER)
+  + Línea separadora azul corporativo (#3812CF) en párrafo independiente debajo
 
 1_Participantes       [H1 — Manrope Regular 36pt #0D0D0D]
   HomeEspaña          [texto normal subrayado]
@@ -108,16 +130,17 @@ CABECERA (tabla 3 columnas, sin bordes)
 
 4_Decisiones – Acciones a realizar  [H1]
   [Tabla: Acción/Decisión | Responsable | Fecha entrega]
-  Cabecera: fondo #3812CF, texto blanco negrita, separadores blancos gruesos
-  Bloque Reinicia: fondo #D9D0FB
-  Bloque [Cliente]: fondo #D9D0FB
-  Filas alternas: blanco / #EBEBEB, sin líneas de separación
+  Cabecera: fondo lila #D9D0FB, texto negro #0D0D0D negrita, bordes BLANCOS
+  Bloque Reinicia: fondo lila #D9D0FB, bordes BLANCOS
+  Bloque [Cliente]: fondo lila #D9D0FB, bordes BLANCOS
+  Filas alternas: blanco / #EBEBEB, bordes BLANCOS
 
-REVISIÓN PO
+REVISIÓN PO (sin línea horizontal gris encima — solo espaciado)
   ☐  He revisado el acta y confirmo que refleja correctamente los acuerdos de la reunión.
   Product Owner: _______________     Fecha: _______________
 
 ⚠️ Nota: Acta redactada a partir de la transcripción completa...
+   (sin línea horizontal antes de la nota — solo espaciado)
 ```
 
 ---
@@ -222,12 +245,12 @@ Nunca guardar sin confirmación explícita del usuario. Proponer siempre la ruta
 
 | Elemento | Valor |
 |----------|-------|
-| Color corporativo principal | `#3812CF` |
-| Color corporativo secundario | `#D9D0FB` |
+| Color corporativo principal | `#3812CF` (solo línea separadora cabecera y acentos puntuales) |
+| Color corporativo secundario | `#D9D0FB` (lila — cabecera de tabla y bloques) |
 | Fondo fila alterna tabla | `#EBEBEB` |
 | Color texto cuerpo | `#545454` |
-| Color headings H1 | `#0D0D0D` |
-| Color headings H2 | `#0D0D0D` |
+| Color headings H1 / H2 | `#0D0D0D` |
+| Color bordes tabla | `#FFFFFF` (siempre blancos, nunca grises) |
 | Fuente Regular | `Manrope Regular` |
 | Fuente Bold | `Manrope Bold` |
 | H1 tamaño | 36pt (sz: 72) |
@@ -252,10 +275,10 @@ const {
 const fs = require('fs');
 
 // ── Identidad visual ─────────────────────────────────────────────────────────
-const REINICIA_BLUE  = "3812CF";
-const REINICIA_LIGHT = "D9D0FB";
-const HEADER_TEXT    = "FFFFFF";
+const REINICIA_BLUE  = "3812CF";       // solo línea separadora cabecera + acentos
+const REINICIA_LIGHT = "D9D0FB";       // lila — cabecera tabla y bloques
 const GRAY_ROW       = "EBEBEB";
+const WHITE          = "FFFFFF";
 const MANROPE_R      = "Manrope Regular";
 const MANROPE_B      = "Manrope Bold";
 const TEXT_COLOR     = "545454";
@@ -320,27 +343,32 @@ const italicNote = (text) => new Paragraph({
   children: [new TextRun({ text, font: MANROPE_R, size: 20, color: "888888", italics: true })]
 });
 
-// Tabla de decisiones
-const noBorder  = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
-const whiteLine = { style: BorderStyle.SINGLE, size: 6, color: "FFFFFF" };
+// ── Tabla de decisiones ─────────────────────────────────────────────────────
+// Bordes BLANCOS en todas las celdas (regla 3 de estilo)
+const whiteBorder = { style: BorderStyle.SINGLE, size: 8, color: WHITE };
+const noBorderHdr = { style: BorderStyle.NONE,   size: 0, color: WHITE };
+
 const COL1 = 4500, COL2 = 2500, COL3 = 1800;
 const TABLE_W = COL1 + COL2 + COL3;
 
 const tCell = (text, opts = {}) => {
   const isHeader = opts.header || false;
-  const fill = isHeader ? REINICIA_BLUE : (opts.block ? REINICIA_LIGHT : (opts.alt ? GRAY_ROW : "FFFFFF"));
-  const borders = isHeader
-    ? { top: noBorder, bottom: noBorder, left: whiteLine, right: whiteLine }
-    : { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
+  // Cabecera = lila (regla 4); fila-categoría también lila; alterna gris claro
+  const fill = isHeader ? REINICIA_LIGHT
+             : (opts.block ? REINICIA_LIGHT
+             : (opts.alt   ? GRAY_ROW
+             : WHITE));
   return new TableCell({
     width: { size: opts.width || COL1, type: WidthType.DXA },
-    shading: { fill, type: ShadingType.CLEAR }, borders,
+    shading: { fill, type: ShadingType.CLEAR },
+    borders: { top: whiteBorder, bottom: whiteBorder, left: whiteBorder, right: whiteBorder },
     margins: { top: 100, bottom: 100, left: 150, right: 150 },
     verticalAlign: VerticalAlign.CENTER, columnSpan: opts.span,
     children: [new Paragraph({ children: [new TextRun({
       text, font: (isHeader || opts.block) ? MANROPE_B : MANROPE_R,
       size: isHeader ? 22 : (opts.block ? 22 : 20),
-      color: isHeader ? HEADER_TEXT : TEXT_COLOR,
+      // Texto NEGRO en cabecera (sobre fondo lila), no blanco
+      color: (isHeader || opts.block) ? HEADING_COLOR : TEXT_COLOR,
       bold: isHeader || opts.block,
     })] })]
   });
@@ -349,10 +377,10 @@ const tCell = (text, opts = {}) => {
 const blockRow = (label) => new TableRow({ children: [new TableCell({
   columnSpan: 3, width: { size: TABLE_W, type: WidthType.DXA },
   shading: { fill: REINICIA_LIGHT, type: ShadingType.CLEAR },
-  borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+  borders: { top: whiteBorder, bottom: whiteBorder, left: whiteBorder, right: whiteBorder },
   margins: { top: 80, bottom: 80, left: 150, right: 150 },
   children: [new Paragraph({ children: [new TextRun({
-    text: label, font: MANROPE_B, size: 22, bold: true, color: TEXT_COLOR
+    text: label, font: MANROPE_B, size: 22, bold: true, color: HEADING_COLOR
   })] })]
 })] });
 
@@ -380,17 +408,24 @@ const makeDecisionesTable = (reiniciaRows, clienteRows, clienteNombre) => {
   });
 };
 
-// Logotipo y cabecera
+// ── Logotipo y cabecera (tabla 3 columnas sin bordes + línea azul debajo) ────
+const NO_BORDER = { style: BorderStyle.NONE, size: 0, color: WHITE };
+const noBorders = { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER, insideHorizontal: NO_BORDER, insideVertical: NO_BORDER };
+
 const logoData = fs.readFileSync('/home/claude/logo_reinicia.png');
 const logoRun = new ImageRun({ data: logoData, transformation: { width: 120, height: 22 }, type: "png" });
+
 const noBorderCell = (children, width) => new TableCell({
   width: { size: width, type: WidthType.DXA },
-  borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
-  verticalAlign: VerticalAlign.CENTER, children,
+  borders: noBorders,
+  verticalAlign: VerticalAlign.CENTER,
+  margins: { top: 0, bottom: 0, left: 0, right: 0 },
+  children,
 });
+
 const headerTable = new Table({
   width: { size: 9026, type: WidthType.DXA }, columnWidths: [3000, 2026, 4000],
-  borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideH: noBorder, insideV: noBorder },
+  borders: noBorders,
   rows: [new TableRow({ children: [
     noBorderCell([new Paragraph({ children: [logoRun] })], 3000),
     noBorderCell([new Paragraph({ children: [] })], 2026),
@@ -399,6 +434,13 @@ const headerTable = new Table({
       children: [new TextRun({ text: FILENAME, font: MANROPE_R, size: 16, color: TEXT_COLOR })]
     })], 4000),
   ]})]
+});
+
+// Línea separadora azul: párrafo INDEPENDIENTE debajo de la tabla, no border-bottom de la celda del nombre
+const headerSeparatorLine = new Paragraph({
+  spacing: { before: 60, after: 60 },
+  border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: REINICIA_BLUE, space: 1 } },
+  children: [new TextRun({ text: "", font: MANROPE_R, size: 2 })]
 });
 
 // ── DOCUMENTO ────────────────────────────────────────────────────────────────
@@ -424,9 +466,7 @@ const doc = new Document({
     page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, right: 1134, bottom: 1134, left: 1134 } }
   }, headers: { default: new Header({ children: [
     headerTable,
-    new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: REINICIA_BLUE, space: 4 } },
-      spacing: { after: 0 }, children: [] }),
-    new Paragraph({ spacing: { after: 240 }, children: [] }),
+    headerSeparatorLine,
   ]})},
   children: [
 
@@ -466,10 +506,9 @@ const doc = new Document({
       "[CLIENTE]"  // ← nombre del cliente para el bloque
     ),
 
-    // ── REVISIÓN PO ────────────────────────────────────────────────────────
+    // ── REVISIÓN PO (sin línea horizontal — solo espaciado) ────────────────
     spacer(), spacer(),
     new Paragraph({
-      border: { top: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC", space: 8 } },
       spacing: { before: 200, after: 80 },
       children: [new TextRun({ text: "Revisión del Product Owner", font: MANROPE_B, size: 22, bold: true, color: TEXT_COLOR })]
     }),

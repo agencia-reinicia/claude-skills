@@ -1,6 +1,6 @@
 ---
 name: soporte-procesamiento-clickup-reinicia
-description: Procesa tareas brutas de soporte llegadas por formulario ClickUp en las listas Soporte [CLIENTE] de los clientes activos configurados en la sección 2 de la skill (15 clientes en v1.6 — Equipo Proactive y Columbia). Aplica el patrón canónico de tarjeta, clasifica dominio (Zoho/Web/WABA), asigna PO Técnico y PO Cliente, publica comentario con propuesta de nivel de servicio, detecta duplicados, mueve a Product Backlog y publica resumen diario en la tarea mensual del cliente. Activación manual ("procesa el soporte", "refina el soporte") o desde tarea programada de Cowork cada 2 horas. No usar para productos en General ni para microcampañas.
+description: Procesa tareas brutas de soporte llegadas por formulario ClickUp en las listas Soporte [CLIENTE] de los clientes activos configurados en la sección 2 de la skill (15 clientes en v1.8 — Equipo Proactive y Columbia). Aplica el patrón canónico de tarjeta editando SIEMPRE el form_response original (jamás creando canónicas paralelas), clasifica dominio (Zoho/Web/WABA), asigna PO Técnico y PO Cliente, publica comentario con propuesta de nivel de servicio, detecta duplicados, mueve a Product Backlog y publica resumen diario en la tarea mensual del cliente. Activación manual ("procesa el soporte", "refina el soporte") o desde tarea programada de Cowork cada 2 horas. No usar para productos en General ni para microcampañas.
 triggers:
   - procesa el soporte
   - procesa las tareas de soporte
@@ -20,7 +20,7 @@ Esta skill convierte esa tarea bruta en una tarjeta lista para sprint:
 
 1. Detecta tareas brutas pendientes en las listas `Soporte [CLIENTE]` de los clientes activos configurados en la sección 2.
 2. Clasifica el dominio del trabajo (Zoho CRM / Web / WABA / mixto).
-3. Aplica el patrón canónico de `formato-tarjeta-clickup-reinicia` (sección 2.4) preservando la descripción original literalmente en el bloque "📥 Requerimientos Cliente".
+3. Aplica el patrón canónico de `formato-tarjeta-clickup-reinicia` (sección 2.4) **editando el propio form_response** (sección 5.0) y preservando la descripción original literalmente en el bloque "📥 Requerimientos Cliente".
 4. Renombra siguiendo la convención `[TIPO] [Descripción] [CLIENTE]`.
 5. Rellena los campos personalizados estándar.
 6. Asigna a las personas correctas según el equipo del cliente (Proactive o Columbia).
@@ -120,15 +120,23 @@ La skill busca en cada lista de Soporte de la tabla las tareas que cumplan **tod
 - **`time_spent > 5 minutos` sin patrón canónico**. Indicador de que alguien del equipo ha tocado la tarea. Combinado con la regla 3.2 sobre comentarios del equipo, refuerza la decisión de no procesar. Si solo aparece esta señal (tiempo registrado pero ningún comentario), la skill procesa pero **añade un aviso en el comentario al PO Técnico** (sección 8.2 v1.1) reconociendo el tiempo registrado.
 - **`REFINADO = true` sin patrón canónico aplicado**. Caso ambiguo: el PO Técnico marcó la tarea como refinada pero no documentó el refinamiento en la descripción canónica. La skill procesa igualmente devolviendo REFINADO a `false`, pero **añade un párrafo explícito en el comentario al PO Técnico**: "He detectado que la tarea estaba marcada como REFINADO=true sin patrón canónico aplicado. He aplicado el procesamiento estándar y devuelto REFINADO=false. Si ya la tenías validada, márcala de nuevo como REFINADO=true tras revisar la estructura." Respeta el criterio del PO en lugar de pisarlo silenciosamente.
 
-### 3.4 Excepción: tarea ya procesada que sigue en Open
+### 3.4 form_response con duplicado canónico ya creado por error (v1.7)
+
+Si una tarea cumple los criterios de form_response (sección 3.1 + 3.2) pero tiene `linked_tasks` no vacío apuntando a una tarjeta canónica con nombre `[TIPO] ... [CLIENTE]` en la misma lista de Soporte, **la skill procesa el form_response normalmente** (no la salta) y, adicionalmente, en el comentario al PO Técnico (sección 8.2) añade un párrafo:
+
+> "Posible duplicado canónico erróneo detectado: la tarjeta linkada [URL] tiene nombre canónico y parece haber sido creada por una ejecución anterior de la skill que no respetaba la regla 5.0 (editar siempre el original). Recomiendo cerrar/eliminar la canónica linkada manualmente, ya que esta form_response es la fuente de verdad y queda procesada aquí."
+
+La decisión final de eliminar el duplicado es siempre humana — la skill nunca borra tarjetas. Esta sección sustituye a la antigua 3.4 de v1.6 ("Excepción: tarea ya procesada que sigue en Open"), que pasa a 3.5.
+
+### 3.5 Excepción: tarea ya procesada que sigue en Open
 
 Si una tarea está en `Open` pero ya tiene el comentario "Primer Refinamiento Individual Realizado", la skill la ignora — el PO la mantiene en `Open` por algún motivo y no debe re-procesarse.
 
-### 3.5 Fallback de seguridad — tarea rara
+### 3.6 Fallback de seguridad — tarea rara
 
-Si una tarea está en `Open` con `taskType: "form_response"` pero no encaja en ninguno de los patrones esperados (descripción vacía, contenido inesperado, etc.), la skill no la salta: aplica el procesamiento estándar **preservando la descripción original íntegra** en el bloque "📥 Requerimientos Cliente". Cero pérdida de trazabilidad.
+Si una tarea está en `Open` con `taskType: "form_response"` pero no encaja en ninguno de los patrones esperados (descripción vacía, contenido inesperado, etc.), la skill no la salta: aplica el procesamiento estándar **preservando la descripción original íntegra** en el bloque "📥 Requerimientos Cliente". Cero pérdida de trazabilidad. Caso especial de descripción vacía o solo plantilla genérica — ver sección 14.8.
 
-### 3.6 Herramientas
+### 3.7 Herramientas
 
 - `clickup_filter_tasks` con `list_ids=[Soporte HomeEspaña, Soporte Carritech, Soporte Gonher, Soporte Avaderm]` y `statuses=["Open"]`.
 - Para cada tarea retornada, verificar `taskType` en el campo `task_type` de la respuesta y, si es `form_response`, llamar `clickup_get_task` con `subtasks=true` para tener el detalle completo.
@@ -166,9 +174,21 @@ Si Claude no puede clasificar con confianza ≥ 70%, **no clasifica como Mixto**
 
 ## 5. Aplicación del patrón canónico
 
-La skill construye la nueva descripción siguiendo la sección 2 de `formato-tarjeta-clickup-reinicia`. Bloques fijos siempre presentes; los opcionales se incluyen solo si aplican.
+### 5.0 Regla absoluta — la skill SIEMPRE edita el form_response original (v1.7)
+
+La skill aplica el patrón canónico **modificando la tarjeta form_response detectada en la sección 3** mediante llamadas `clickup_update_task` (nombre, descripción, campos personalizados, asignados, estado).
+
+**Está terminantemente prohibido** que la skill llame `clickup_create_task` para crear una versión canónica paralela del form_response. La única `clickup_create_task` permitida en todo el flujo es la de las 4 subtareas hijas de la sección 9, que se crean con `parent` apuntando al propio form_response.
+
+Si la skill detecta una situación donde "tendría sentido" crear una tarjeta nueva (ej. el form_response viene con campos que no se pueden modificar, contenido roto, etc.), la respuesta correcta es **aplicar el fallback de seguridad de la sección 3.6** preservando la descripción literal y avisando al PO Técnico — nunca crear una tarjeta paralela.
+
+Esta regla existe porque (a) el form_response es la fuente de verdad del cliente y romper la trazabilidad con la submisión original deja huérfanos en producción, (b) crear tarjeta nueva genera duplicados que el PO tiene que limpiar a mano, y (c) las versiones paralelas pierden los adjuntos del formulario original que ClickUp guarda solo en la form_response.
+
+Esta regla se introduce en v1.7 tras detectar en la ejecución del 2026-05-06 cuatro tarjetas canónicas erróneas en Soporte Carritech (`869d5zpe6`, `869d5zpyb`, `869d5zq6u`, `869d5zqv7`) creadas por una ejecución previa del cron que no respetaba este principio. Limpieza retroactiva: ver sección 14.6 + auditoría one-shot recomendada al deployar v1.7.
 
 ### 5.1 Bloques fijos
+
+La skill construye la nueva descripción siguiendo la sección 2 de `formato-tarjeta-clickup-reinicia`. Bloques fijos siempre presentes; los opcionales se incluyen solo si aplican.
 
 ```markdown
 > 🎯 **RESUMEN**
@@ -261,7 +281,13 @@ Patrón canónico:
 
 - **Principio rector**: el nombre describe el entregable en estado final, no la acción. Sustantivo o participio, nunca verbo en infinitivo.
 - **Test rápido**: si el nombre puede ir precedido de *"Tarea: ___"* sin sonar raro, está en modo acción y hay que reformularlo. Si va precedido de *"Entregable: ___"* con naturalidad, está bien.
-- **Descripción corta** ≤ 60 caracteres tras el prefijo `[TIPO]`.
+- **Hard cap de longitud**: la **descripción corta entre el `[TIPO]` y el `[CLIENTE]` debe ser ≤ 60 caracteres**. Si la descripción que se está generando supera los 60 caracteres, la skill debe abreviar **antes** de escribir, no después. Patrones útiles:
+  - sustituir "Sales Quotes" por "SQs" cuando ya está claro por contexto
+  - sustituir "Opportunities" por "Opps"
+  - usar flechas `→` en lugar de "desde X a Y"
+  - eliminar artículos (`de las`, `del`)
+  - sustituir "automáticamente" por adjetivos equivalentes ("automatizado")
+  - Si tras abreviar sigue por encima de 60 caracteres, partir el producto en dos productos hijos en lugar de tener un nombre largo.
 - **CLIENTE** entre corchetes con la convención del cliente (`[GONHER]`, `[CARRITECH]`, `[HOMEESPAÑA]`, `[AVADERM]`).
 - Si el formulario ya traía un patrón con timestamp tipo `Contact asocciation [CARRITECH] - #2026-03-24T16:55:54+01:00`, **se sustituye completamente** por el patrón canónico — el nombre original queda preservado en el bloque "📥 Requerimientos Cliente".
 
@@ -278,7 +304,7 @@ Para incidencias de soporte concretamente — el matiz es el prefijo `[TIPO]` an
 
 ### 6.4 Herramienta
 
-`clickup_update_task` con `name=[nuevo nombre]`.
+`clickup_update_task` con `name=[nuevo nombre]`. **Importante (regla 5.0)**: la skill NUNCA usa `clickup_create_task` para crear una tarjeta canónica nueva — siempre `update` sobre la form_response original.
 
 ---
 
@@ -329,6 +355,12 @@ Doble asignación según equipo:
 Después de aplicar la descripción canónica, la skill publica un comentario en la tarea con:
 
 ```
+[Si la tarea tiene un comentario previo con texto "Saltada por skill" del propio bot/usuario (caso v1.7):]
+Corrección a comentario anterior:
+
+El comentario previo "Saltada por skill ..." queda sin efecto. Se aplica el patrón
+canónico estándar sobre esta form_response a partir de aquí.
+
 @[PO Técnico]
 
 Refinamiento inicial del producto basado en la petición del formulario.
@@ -356,7 +388,11 @@ Acceso a referencias:
 [URL Sprint Cero pública del cliente si está localizada]
 [URL acta relevante si la hay]
 
-[Si aplica:] Posible duplicado de:
+[Si aplica — duplicado canónico erróneo de ejecución previa de la skill (v1.7, sección 3.4):]
+Posible duplicado canónico erróneo detectado: la tarjeta linkada [URL] tiene nombre canónico [TIPO] [...] [CLIENTE] y parece haber sido creada por una ejecución anterior de la skill que no respetaba la regla 5.0 (editar siempre el original). Recomiendo cerrar/eliminar la canónica linkada manualmente — esta form_response es la fuente de verdad y queda procesada aquí.
+
+[Si aplica — duplicado funcional ordinario:]
+Posible duplicado de:
 [Nombre y URL de la tarea sospechosa]
 
 [Si no se han detectado duplicados:]
@@ -427,7 +463,7 @@ La hora del procesamiento queda registrada nativamente por ClickUp en el comenta
 
 Tras aplicar la descripción canónica, los campos personalizados, las asignaciones y los comentarios, la skill **crea las subtareas estándar** que descomponen el trabajo de soporte en pasos concretos.
 
-### 9.1 Patrón mínimo (a) — vigente en v1.4
+### 9.1 Patrón mínimo (a) — vigente en v1.4+
 
 Cuatro subtareas siempre, en este orden:
 
@@ -442,21 +478,23 @@ Cuatro subtareas siempre, en este orden:
 
 ### 9.2 Cómo se crean
 
-Cada subtarea es una tarea independiente en la **misma lista de Soporte** del cliente, con `parent` apuntando a la tarjeta principal. Sin descripción, sin tiempo estimado, sin fecha — esos campos los completa el PO Técnico al refinar.
+Cada subtarea es una tarea independiente en la **misma lista de Soporte** del cliente, con `parent` apuntando a la tarjeta principal (que es la propia form_response — ver regla 5.0). Sin descripción, sin tiempo estimado, sin fecha — esos campos los completa el PO Técnico al refinar.
 
 ```
 clickup_create_task
   list_id: [Soporte CLIENTE]
-  parent: [task_id de la tarjeta principal]
+  parent: [task_id de la form_response procesada]
   name: [nombre de la subtarea]
   assignees: [user_id según tabla 9.1]
 ```
 
 Las subtareas heredan el contexto de la tarjeta padre por estar anidadas, no hace falta duplicar custom fields, etiquetas ni descripción.
 
+**Aclaración importante (v1.7):** estas son las **únicas** llamadas `clickup_create_task` permitidas en todo el flujo. Cualquier otra llamada `clickup_create_task` (por ejemplo, para "crear una versión canónica del form_response") está prohibida por la regla 5.0.
+
 ### 9.3 Limitación conocida — patrón único, no adaptado al tipo
 
-En v1.4 el patrón es **único** independientemente del tipo de incidencia (BUG, MEJORA, DUDA, PETICIÓN, SOPORTE-SERVIDOR). Es deliberadamente simple para arrancar el piloto. Una iteración futura (v2.x) puede introducir patrones adaptados por tipo:
+En v1.4+ el patrón es **único** independientemente del tipo de incidencia (BUG, MEJORA, DUDA, PETICIÓN, SOPORTE-SERVIDOR). Es deliberadamente simple para arrancar el piloto. Una iteración futura (v2.x) puede introducir patrones adaptados por tipo:
 
 - BUG: Reproducir → Diagnosticar causa → Resolver → Validación Reinicia → Validación Cliente.
 - DUDA: Investigar → Responder al cliente → Validación Cliente (sin Reinicia).
@@ -473,6 +511,7 @@ Si la tarea bruta procesada cumple alguno de estos criterios, la skill **omite l
 - La tarea procesada ya tiene subtareas creadas (caso de tarjetas semi-procesadas a mano antes de pasar la skill).
 - La tarea está marcada como duplicado de otra (sección 8.5) — el trabajo se hará en la otra tarjeta.
 - Dominio clasificado como "Por confirmar" con confianza < 70% — esperar a que el PO Técnico decida el dominio antes de descomponer.
+- Form_response con descripción vacía o solo plantilla genérica (sección 14.8) — solo se renombra y se deja un comentario.
 
 ---
 
@@ -487,7 +526,7 @@ Tras crear las subtareas (sección 9) y antes de mover el estado a `Product Back
 - **Duración**: 15 minutos (900 000 milisegundos en la API de ClickUp).
 - **Usuario**: Néstor Tejero (`766716`) — usuario autenticado en la integración del cron.
 - **Tag**: `Refinamiento Automático`.
-- **Descripción**: `Refinamiento automático de soporte por skill soporte-procesamiento-clickup-reinicia v1.5`.
+- **Descripción**: `Refinamiento automático de soporte por skill soporte-procesamiento-clickup-reinicia v1.8`.
 - **Fecha**: timestamp del momento de procesamiento.
 
 ### 10.2 Justificación del valor
@@ -498,7 +537,7 @@ Tras crear las subtareas (sección 9) y antes de mover el estado a `Product Back
 - El resultado entregado al equipo técnico es comparable al de un PO refinando manualmente.
 - Un valor más alto (30 min) podría inflar reportes de tiempo durante el piloto antes de validar la calidad real del refinamiento automático.
 
-Tras observar el comportamiento real durante el piloto, este valor puede ajustarse en futuras versiones (v1.6+) si la calidad del refinamiento lo justifica.
+Tras observar el comportamiento real durante el piloto, este valor puede ajustarse en futuras versiones (v1.8+) si la calidad del refinamiento lo justifica.
 
 ### 10.3 Atribución durante el piloto
 
@@ -517,6 +556,7 @@ La skill **omite la imputación de tiempo** y lo registra como pista (sección 1
 - La tarea procesada se saltó por filtros corroborantes (sección 3.2 — comentarios sustantivos del equipo, ya tiene patrón canónico, etc.). No se imputó análisis porque no hubo procesamiento real.
 - La creación de la tarea principal falló y la skill abortó. No tiene sentido imputar tiempo a una tarea que no quedó procesada.
 - La tarea se identificó como duplicado de otra (no se procesa contenido nuevo, solo se enlaza).
+- La form_response trae solo plantilla genérica vacía (sección 14.8) — no hay procesamiento real, solo renombrado y aviso.
 
 ### 10.5 Herramientas
 
@@ -527,13 +567,53 @@ POST /v2/team/{team_id}/time_entries
 Body:
   tid: [task_id de la tarea procesada]
   duration: 900000  (15 min en ms)
-  description: "Refinamiento automático de soporte por skill..."
-  tags: [{"name": "Refinamiento Automático"}]
+  description: "Refinamiento automático de soporte por skill soporte-procesamiento-clickup-reinicia v1.8 [Refinamiento Automático]"
   start: [timestamp actual]
   billable: true (opcional, según configuración del cliente)
 ```
 
-Si la API no acepta el tag `Refinamiento Automático` (porque no existe en el workspace), la skill lo crea on-the-fly o lo deja en la descripción solamente, registrando una pista de iteración.
+⚠️ **Regla canónica v1.8 — Idempotencia obligatoria del time entry**
+
+**No usar el parámetro `tags`.** Aunque el endpoint `add_time_entry` del MCP de ClickUp lo acepta sintácticamente, su validación del tag tiene un comportamiento intermitente que genera duplicación silenciosa: en algunos casos la API rechaza la respuesta con error "Name value is required" cuando el tag no existe pre-creado, **pero el time entry ya se ha persistido en ClickUp antes del rechazo**. Si el código reintenta tras el error de tag, se crea una segunda entry duplicada con `start`/`end`/`description` idénticos a la primera.
+
+Este bug se confirmó en Sprint 6-26 con 6 tareas afectadas y 6 entries fantasma generadas (Avaderm D2, Carritech D5+D6, HomeEspaña D6, Breezom D8 ×2), inflando AUTOIAs del Equipo Operativo en +1,5h.
+
+**Solución canónica v1.8** (NO depende de que el tag exista en el workspace):
+
+1. **NUNCA llamar `add_time_entry` con `tags`**. El campo `tags` no se usa.
+2. **Identificación del refinamiento automático va en `description`**: incluir literalmente `[Refinamiento Automático]` al final de la cadena (formato fijo, búsqueda por filtro de texto en cualquier informe).
+3. **Una sola llamada `add_time_entry`** por tarea procesada. Sin reintentos, sin loops, sin fallback que vuelva a crear entry.
+4. **Si la llamada falla** (error HTTP 4xx/5xx, timeout, o cualquier excepción), **NO reintentar**. Registrar la falla como pista (sección 13.3) con `task_id`, `error`, `timestamp` y dejar al PO líder decidir si imputar manualmente. Mejor perder una imputación que duplicar todas.
+
+**Protección defensiva adicional — verificación pre-creación**
+
+Antes de llamar `add_time_entry`, la skill realiza una verificación opcional para detectar entries existentes y abortar si ya hay una válida:
+
+1. Consultar `clickup_get_task_time_entries` con `task_id` y filtro `start_date = hoy 00:00`.
+2. Filtrar entries con `user.id = 766716` (Néstor) y `description` que contenga `[Refinamiento Automático]`.
+3. **Si encuentra al menos 1 entry coincidente** (creada hoy, mismo usuario, descripción del cron): **abortar imputación** y registrar pista informativa "tarea ya tiene refinamiento automático imputado hoy — no duplicar".
+4. **Si no encuentra ninguna**: proceder con `add_time_entry` (única llamada, sin tags).
+
+Esto cubre dos escenarios:
+- **El cron se ejecuta dos veces sobre la misma tarea por bug de detección**: la verificación pre-creación intercepta el segundo intento.
+- **Una ejecución previa creó la entry pero la skill abortó después por otro error y volvió a procesar la tarea**: misma protección.
+
+**Limpieza retroactiva de entries fantasma generadas por v1.7**
+
+Tras desplegar v1.8, el PO líder ejecuta una limpieza manual one-shot sobre las 6 tareas afectadas conocidas del Sprint 6-26:
+
+| Día | Cliente | Task ID |
+|---|---|---|
+| D2 08/05 | Avaderm | `869d6yc31` |
+| D5 11/05 | Carritech | `869d7cx7p` |
+| D6 12/05 | Carritech | `869d8hzn1` |
+| D6 12/05 | HomeEspaña | `869d8aah5` |
+| D8 14/05 | Breezom | `869d9dg5b` |
+| D8 14/05 | Breezom | `869d9dh4z` |
+
+Para cada una: identificar las 2 entries con `start`/`end` idénticos, conservar la primera, eliminar la segunda. Los AUTOIAs del Equipo Operativo se recalcularán solos vía SUMAR.SI tras la limpieza.
+
+Si tras los próximos sprints aparecen más tareas con entries duplicadas que escaparon a la lista conocida, aplicar el mismo patrón de limpieza (filtrar por `description` con `[Refinamiento Automático]` y agrupar por `task_id` + `start`).
 
 ---
 
@@ -660,8 +740,12 @@ La skill **registra explícitamente** las dudas y casuísticas raras encontradas
 
 Durante esta ejecución han surgido los siguientes casos que merecen consideración para futuras versiones:
 
-- [Caso 1: tarea X, qué surgió, qué hizo la skill, propuesta de mejora si la hay]
-- [Caso 2: ...]
+[Por cada pista, usar formato estructurado v1.7:]
+- Categoría: [bug-cron | falso-positivo-skip | calidad-baja | bloqueador-mcp | otro]
+- Tarea: [URL si aplica]
+- Síntoma observado: [qué se ha visto]
+- Hipótesis de causa: [por qué pasa]
+- Propuesta concreta para v1.X: [qué cambio en la skill resolvería]
 
 [Si no hay nada que reportar, omitir este bloque enteramente.]
 ```
@@ -691,7 +775,7 @@ Si en una ejecución no hay tareas brutas pendientes en ninguna lista, la skill 
 
 ### 14.2 Tarea bruta corrupta o ilegible
 
-Si el contenido de la descripción no es interpretable (formato roto, vacía, error de codificación), la skill aplica el fallback de seguridad (sección 3.4): preserva lo que haya en "📥 Requerimientos Cliente", pone "No interpretable — revisar manualmente" en los demás bloques y lo refleja en el comentario al PO Técnico como prioridad alta.
+Si el contenido de la descripción no es interpretable (formato roto, vacía, error de codificación), la skill aplica el fallback de seguridad (sección 3.6): preserva lo que haya en "📥 Requerimientos Cliente", pone "No interpretable — revisar manualmente" en los demás bloques y lo refleja en el comentario al PO Técnico como prioridad alta.
 
 ### 14.3 Error en una herramienta MCP
 
@@ -704,6 +788,36 @@ Si una tarea se llegó a procesar parcialmente (ej. se renombró pero se cayó l
 ### 14.5 Cliente desconocido
 
 Si aparece una tarea bruta en una lista que **no está en la tabla de clientes configurados** (sección 2), la skill la ignora. La tabla es la fuente de verdad de "qué procesa" — no se descubre clientes nuevos al vuelo.
+
+### 14.6 Tarea no-form_response en lista de Soporte (v1.7)
+
+Si la skill encuentra en una lista de Soporte una tarea en `Open` con `task_type` distinto de `form_response` (ej. `Producto Digital`, `null`, `Bug`, etc.), la skill **no la procesa** y la registra como pista en la sección 13.3 con el mensaje:
+
+> "Tarea [URL] está en lista Soporte [CLIENTE] con `task_type=[X]` (no es form_response). La lista de Soporte se está usando para tareas que no proceden del formulario; el PO líder debe decidir si moverlas a la lista General [CLIENTE] o gestionarlas aparte."
+
+Casos típicos detectados en producción: tareas creadas a mano por POs con plantilla genérica, tareas de tipo "Producto Digital" arrastradas desde otras listas, tareas creadas por workflows de ClickUp internos.
+
+### 14.7 form_response antigua sin actividad reciente (v1.7)
+
+Si una form_response cumple los criterios de procesamiento (sección 3) pero `date_created` es anterior a 30 días respecto al momento de ejecución, **la skill no la procesa** y la registra como pista en sección 13.3 con el mensaje:
+
+> "form_response [URL] de [fecha] lleva [N días] en Open sin procesar. La skill no la procesa para no generar actividad artificial sobre tarjetas que el equipo ha dejado dormir. El PO líder debe decidir si procesarla, cerrarla por obsolescencia, o si requiere intervención manual."
+
+La razón: procesar una tarjeta dormida hace 6 meses generaría notificaciones al PO Técnico, time entry de 15 min, y subtareas nuevas — todo ruido sobre algo que el equipo ha decidido tácitamente no atender. Mejor que el PO decida manualmente.
+
+### 14.8 form_response con descripción vacía o solo plantilla genérica (v1.7)
+
+Si la descripción del form_response no contiene contenido real del cliente y solo tiene la plantilla genérica de Reinicia (cabeceras `Historia de usuario: Como...QUIERO...PARA...`, `Descripción:`, `Ready to Backlog`, `Contexto`, etc., sin texto rellenado por el cliente), **la skill no aplica el patrón canónico completo**. En su lugar:
+
+1. Aplica solo el renombrado a `[PETICIÓN] [Asunto del título original] — pendiente contenido [CLIENTE]`.
+2. Asigna a PO Técnico + PO Cliente.
+3. Publica un único comentario al PO Técnico (sin marker, sin criterios, sin subtareas, sin time entry):
+
+> "@[PO Técnico] La form_response llegó sin contenido real del cliente — solo trae la plantilla genérica. La skill no la procesa completamente. Hay dos opciones: (a) cerrar como inválida y pedir al cliente que rellene el formulario completo, o (b) recuperar el contenido de fuera de banda (email, llamada) y pegarlo en la descripción para que el siguiente cron la procese."
+
+4. Mantiene el estado en `Open` (no la mueve a Product Backlog).
+
+Esto cubre form_response como `869bxtw5z` y `869arfgz0` detectadas en la ejecución del 2026-05-06.
 
 ---
 
@@ -730,7 +844,7 @@ Vía `ZohoCliq_Post_message_in_a_channel` con el `unique_name` del canal documen
 
 ## 16. Salida y reporte
 
-### 13.1 Disparo manual
+### 16.1 Disparo manual
 
 Cuando el PO ejecuta la skill manualmente desde una conversación, Claude reporta al final:
 
@@ -758,7 +872,7 @@ Tareas procesadas: [N]
 ⚠️ Resumen diario no publicado para [CLIENTE]: tarea mensual no localizada.
 ```
 
-### 13.2 Disparo programado (Cowork)
+### 16.2 Disparo programado (Cowork)
 
 La salida es la misma — Cowork la guarda en el historial de la tarea programada. El PO la consulta cuando quiera entrando a la tarea programada en la app de Claude.
 
@@ -771,10 +885,12 @@ La salida es la misma — Cowork la guarda en el historial de la tarea programad
 | Tareas programadas de Cowork solo corren con app abierta | Si el portátil está cerrado, las tareas brutas se acumulan | Se procesan todas juntas al abrir la app. El cron sigue siendo cada 2 horas cuando el equipo está activo |
 | Markdown no soportado en comentarios ClickUp | URLs y formato pierden estructura | Texto plano, URLs en línea separada |
 | Checklists no creables vía MCP | El PO debe copiar criterios manualmente | Comentario "Caso A" con criterios listos |
+| Tags de time entry causaban duplicación silenciosa (bug v1.7) | Cada par de entries duplicadas inflaba AUTOIAs +0,25h | Resuelto en v1.8: el campo `tags` ya no se usa. El marcador `[Refinamiento Automático]` va siempre en `description`. Verificación pre-creación con `clickup_get_task_time_entries` previene reintentos accidentales |
 | ClickUp API solo devuelve tiempos del usuario autenticado | El log diario no puede incluir métricas de tiempo del equipo | Aceptarlo — el log es de actividad de procesamiento, no de tracking |
 | Canales Cliq no joined no aparecen en la lista | No se puede publicar en ellos | Avisar al PO para que añada a Álvaro |
 | Detección de duplicados por similitud de texto | Falsos positivos posibles | Detección informativa, nunca bloqueante. Decisión humana |
 | Clasificación de dominio en casos límite | Errores de clasificación posibles | Caso "Por confirmar" + comentario al PO Técnico para resolver |
+| MCP no expone delete de comentarios | Comentarios "Saltada por skill..." de ejecuciones erróneas previas no se pueden borrar | La skill deja un nuevo comentario "Corrección a comentario anterior" que retracta el anterior (sección 8.2) |
 
 ---
 
@@ -789,6 +905,8 @@ La salida es la misma — Cowork la guarda en el historial de la tarea programad
 | v1.4 | 2026-04-28 | Detectada en revisión de Avaderm 869ctbft1 (refinada el 27/04 por v1.0): faltaba creación de subtareas. Añadida sección 9 nueva "Creación de subtareas" con patrón mínimo (a) de 4 subtareas: Investigación/Reproducción, Implementación, Validación Reinicia, Validación Cliente. Las tres primeras asignadas al PO Técnico, la cuarta al PO Cliente para visibilidad anticipada. Patrón único en v1.4 — futura iteración v2.x introducirá patrones adaptados al tipo de incidencia. Documentadas excepciones donde NO crear subtareas (tarjeta ya con subtareas, duplicados, dominio sin confianza). Renumeradas secciones 9→10, 10→11, 11→12, 12→13, 13→14, 14→15, 15→16, 16→17, 17→18, y referencias internas actualizadas. |
 | v1.5 | 2026-04-28 | Imputación automática de tiempo. Añadida sección 10 nueva "Imputación de tiempo automático": el cron imputa **15 minutos** por cada tarea procesada, a nombre de Néstor (`766716`, usuario autenticado de la integración), con tag `Refinamiento Automático` y descripción identificativa de la skill. Justificación: refleja el valor del análisis y refinamiento que el cron entrega al equipo (clasificación de dominio, búsqueda de duplicados, generación de comentarios al PO Técnico, propuesta de nivel de servicio, criterios de aceptación). Valor 15 min deliberadamente conservador durante el piloto — ajustable al alza en futuras versiones tras validar calidad real. Atribución a Néstor durante el piloto, migrable a tokens multi-usuario en v1.x. Casos donde NO se imputa: tareas saltadas por filtros corroborantes, fallos de creación, duplicados. Renumeradas secciones 10→11, 11→12, 12→13, 13→14, 14→15, 15→16, 16→17, 17→18, 18→19, y referencias internas actualizadas. Coherente con la imputación manual de tiempo de la skill `soporte-correo-clickup-reinicia` v1.1. |
 | v1.6 | 2026-05-04 | **Ampliación de alcance: de 4 clientes piloto a 15 clientes activos. Y cambio de cadencia del cron de 30 min a 2 horas.** Cambios: (a) sección 2 — añadidos 11 clientes nuevos (Aicrov, Aunna, Breezom, Estarima, Inefso - Dinam, ISL Agency, Kasblan, Líder System Grupo, Synuptic, Timedi, Worldwide Boat) con su Equipo, listas Soporte/Gestión, POs Técnico y Cliente, y `unique_name` de canal Cliq. Localizada también la lista Gestión de HomeEspaña que estaba pendiente: `900501350944`; (b) sección 2 — añadida nota terminológica: "piloto" pasa a referirse solo al estado del flag `cliq_publish` (todos arrancan en `false`), no al alcance de clientes; (c) sección 2 — añadida fila para Rolf Pinto (`99603566`) en la tabla de personas como PO Técnico de Synuptic, y eliminado el matiz "Zoho Carritech" del rol de Fabián porque ahora cubre múltiples clientes (Carritech, Aicrov, Aunna, Breezom, Inefso - Dinam, Synuptic — aunque el técnico real de Synuptic es Rolf); (d) sección 2 — añadida nota explícita: para los 11 clientes nuevos, el `unique_name` del canal Cliq se ha registrado tal como lo dio el PO líder pero **no se ha verificado el acceso (joined)**; antes de activar `cliq_publish: true` hay que comprobarlo con `ZohoCliq_List_all_channels`; (e) sección 1.2 — el prompt del cron ya no enumera clientes; remite a la sección 2 como fuente de verdad para no obligar a actualizar el prompt cada vez que cambia la tabla; (f) frontmatter `description` actualizada coherentemente; (g) **cadencia del cron cambiada de 30 min a 2 horas** en sección 1.2, sección 19 (puntos 3 y 5), cuadro de limitaciones y sección de manejo de errores. La cadencia más conservadora es prudente al pasar de 4 a 15 listas a chequear por ejecución y reduce el ruido de imputación de tiempo (15 min × N tareas × 12 ejecuciones/día → × 4 ejecuciones/día). **No hay cambios de lógica de procesamiento** — solo de configuración. La lógica v1.5 sigue intacta. **Pendiente operativo antes de la próxima ejecución del cron**: actualizar el prompt y la cadencia en la tarea programada de Cowork; validar acceso a los 11 canales Cliq nuevos cuando se decida activar `cliq_publish` por cliente; mientras `cliq_publish=false` esto no bloquea nada. |
+| v1.7 | 2026-05-06 | **Aprendizajes de la ejecución 2026-05-06 sobre Carritech (4 duplicadas erróneas detectadas) y Gonher/Lider (casuísticas de tareas no procesables).** Cambios: (a) **sección 5.0 nueva** — regla rotunda "la skill SIEMPRE edita el form_response original con `clickup_update_task`; JAMÁS crea canónicas paralelas; única `clickup_create_task` permitida son las 4 subtareas hijas". Esta regla cierra el bug que generó las 4 duplicadas erróneas en Soporte Carritech (`869d5zpe6`, `869d5zpyb`, `869d5zq6u`, `869d5zqv7`); (b) **sección 3.4 reescrita** — form_response con `linked_tasks` apuntando a canónica errónea: procesar normalmente (no saltar) y avisar al PO en el comentario al PO Técnico. La antigua 3.4 ("Excepción tarea ya procesada") pasa a 3.5; antiguas 3.5/3.6 a 3.6/3.7; (c) **sección 6.2 reforzada** — hard cap 60 caracteres en descripción del nombre con patrones explícitos de abreviación (SQs, Opps, flechas, eliminar artículos); (d) **sección 8.2 ampliada** — bloque condicional "Corrección a comentario anterior" para retractar comentarios "Saltada por skill" de ejecuciones previas erróneas + bloque "duplicado canónico erróneo de ejecución previa" en plantilla del comentario al PO Técnico; (e) **sección 10.5 ampliada** — manejo del fallo del tag `Refinamiento Automático` (fallback a sufijo en descripción cuando el tag no existe pre-creado en workspace); (f) **sección 14.6 nueva** — tarea no-form_response en lista de Soporte: no procesar, registrar pista. Cubre casos como `869arfgz0` (task_type=Producto Digital) y `869axy0pz`/`869axxz5u` (task_type=null) detectados en Lider System Grupo; (g) **sección 14.7 nueva** — form_response antigua >30 días sin actividad: no procesar, registrar pista. Cubre las 7+ "(Comentarios Sesión)" de Gonher de noviembre 2025; (h) **sección 14.8 nueva** — form_response con descripción vacía/plantilla genérica: solo renombrar + comentario explicativo, mantener en Open. Cubre `869bxtw5z` y `869arfgz0`; (i) **sección 13.3 estructurada** — formato fijo para pistas (Categoría, Tarea, Síntoma, Hipótesis, Propuesta) para facilitar priorización por el diseñador; (j) **sección 17 ampliada** — añadidas dos limitaciones nuevas: tags de time entry rechazados sin preexistencia, y MCP no expone delete de comentarios; (k) frontmatter `description` actualizada para reflejar la regla 5.0. **Pendiente operativo tras deploy v1.7**: pasada de auditoría manual one-shot sobre las 15 listas de Soporte para detectar y eliminar duplicados form_response ↔ canónica generados por v1.0-v1.6 (preservando form_response). Opcional: skill auxiliar `auditoria-duplicados-soporte-reinicia` que automatice la detección y deje al PO solo el click de eliminación. |
+| v1.8 | 2026-05-14 | **Bug crítico de duplicación silenciosa de time entries del Refinamiento Automático corregido.** Diagnóstico (descubierto durante el cierre de AUTOIAs Sprint 6-26 Día 8): el fallback de `tags` documentado en v1.7 sección 10.5 (intentar con `tags`, si falla repetir sin `tags` añadiendo sufijo en `description`) generaba 2 time entries idénticas en algunos casos. Hipótesis técnica: la API del MCP de ClickUp valida el tag **después** de persistir la entry — cuando el tag no existe en el workspace, devuelve error "Name value is required" pero la entry ya está creada. El paso 2 del fallback creaba entonces una segunda entry. Bug intermitente: solo se disparaba cuando el flujo de validación de tag fallaba con persistencia previa. Casos confirmados Sprint 6-26 (6 tareas, 6 entries fantasma, +1,5h hinchadas en AUTOIAs Equipo Operativo): Avaderm `869d6yc31` (D2), Carritech `869d7cx7p` (D5), Carritech `869d8hzn1` (D6), HomeEspaña `869d8aah5` (D6), Breezom `869d9dg5b` (D8), Breezom `869d9dh4z` (D8). **Cambios v1.8**: (a) **sección 10.5 reescrita completamente** — eliminado el patrón de fallback con dos llamadas. Regla canónica nueva: NUNCA usar el parámetro `tags`. El marcador `[Refinamiento Automático]` va siempre en `description` como sufijo literal (búsqueda por filtro de texto). UNA sola llamada `add_time_entry` por tarea. Si falla: NO reintentar, registrar como pista. Mejor perder una imputación que duplicar todas; (b) **sección 10.5 — protección defensiva**: añadida verificación pre-creación opcional con `clickup_get_task_time_entries` filtrando por `start_date=hoy 00:00`, `user.id=766716`, `description contiene [Refinamiento Automático]`. Si encuentra al menos 1 entry coincidente: abortar imputación y registrar pista informativa. Cubre escenarios de re-ejecución del cron sobre la misma tarea; (c) **sección 10.5 — limpieza retroactiva**: documentadas las 6 tareas conocidas con entries duplicadas del Sprint 6-26 para que el PO líder ejecute limpieza manual one-shot (eliminar la segunda entry de cada par, conservar la primera); (d) **sección 17 limitaciones — entrada actualizada**: "Tags de time entry rechazados si no preexisten" → "Tags de time entry causaban duplicación silenciosa (bug v1.7) — resuelto en v1.8"; (e) **frontmatter `description`** — actualizada referencia v1.7 → v1.8; (f) **description del time entry** — actualizada referencia v1.7 → v1.8 en sección 10.1. **Validación esperada tras deploy v1.8**: 0 duplicaciones nuevas. La verificación es trivial — buscar entries con `start`/`end`/`task_id` idénticos generadas por la skill. **Pendiente operativo tras deploy**: ejecutar limpieza retroactiva de las 6 entries fantasma documentadas. Tras limpieza, los AUTOIAs Fabián, Paolo y Alejandro deberían reflejar el cuadre correcto automáticamente vía SUMAR.SI. |
 
 ---
 
