@@ -209,6 +209,69 @@ Tres niveles, igual que en la skill de cierre para mantener coherencia:
 
 ---
 
+## PASO 3.bis — ESPERA DE MATERIALIZACIÓN DE PLANTILLA CLICKUP
+
+⚠️ **Crítico para idempotencia con plantillas**: cuando una lista `Gestión [CLIENTE]`
+tiene asociada una **plantilla ClickUp** (template), las subtareas, custom fields y
+campos derivados de la plantilla se materializan de forma **asíncrona** tras la
+creación de la tarea madre. Si la skill crea inmediatamente sus propias subtareas
+(Patrón A o B) sin esperar, puede generar **duplicados** que la plantilla iba a
+crear unos segundos después.
+
+### 3.bis.1 — Espera inicial obligatoria
+
+Tras `clickup_create_task` de la tarea madre del Paso 3 (o si la tarea madre ya
+existía por re-ejecución), **esperar 15 segundos** antes de inspeccionar subtareas.
+Tiempo validado empíricamente para que ClickUp materialice las subtareas de
+plantilla en la mayoría de los casos.
+
+### 3.bis.2 — Inspección de subtareas materializadas
+
+Llamar `clickup_get_task` con `subtasks: true` sobre la tarea madre y registrar el
+inventario de subtareas existentes en ese momento:
+
+- Para cada subtarea, capturar `id`, `name`, `status`, `assignees`, `start_date`,
+  `due_date` y matchear contra los patrones canónicos esperados (Patrón A:
+  `^Gesti[oó]n Semana \d+$`; Patrón B: `^Generaci[oó]n informe dedicaci[oó]n horas`).
+- Marcar cada subtarea materializada como **"ya presente por plantilla — no
+  crear"** en la estructura interna de planificación.
+
+### 3.bis.3 — Reintento si el inventario está vacío
+
+Si en el primer check **no aparece ninguna subtarea** y el cliente tiene plantilla
+asociada (deducible si el mes en curso de referencia tiene subtareas que encajan
+con los patrones canónicos), **esperar 30 segundos adicionales** (total 45s desde
+la creación) y reinspeccionar.
+
+- Si en el reintento aparecen subtareas → continuar con el inventario.
+- Si tras el reintento sigue vacío → asumir que la plantilla **no incluye**
+  subtareas predefinidas y proceder a crear todo desde cero (Pasos 4.1 y 4.2 sin
+  filtro de duplicados de plantilla).
+
+### 3.bis.4 — Patrón de detección antes de crear
+
+A partir de este punto, todas las decisiones de creación de subtareas (Patrones A
+y B en Paso 4) se cruzan con el inventario obtenido aquí:
+
+```
+Por cada subtarea canónica a crear:
+  ¿Existe ya en el inventario una subtarea con nombre que matchee el patrón
+   canónico (regex tolerante a variaciones de espaciado, formato de fecha,
+   capitalización)?
+  ├─► SÍ → NO crear. Verificar campos canónicos (start_date, due_date, assignees).
+  │         Si falta alguno, completarlo con clickup_update_task SIN sobrescribir.
+  └─► NO → Crear normalmente.
+```
+
+### 3.bis.5 — Anomalía: múltiples matches
+
+Si el match detecta **dos o más** subtareas candidatas para el mismo patrón
+canónico (ej. dos `Gestión Semana 1` o dos informes del mismo periodo): **no crear
+nada** para ese hueco y **reportar al PO** como duplicado de plantilla a resolver
+manualmente. La skill no borra ni renombra subtareas existentes.
+
+---
+
 ## PASO 4 — CREACIÓN DE SUBTAREAS
 
 ### 4.1 Patrón A: Gestión Semanal (siempre se crea)
@@ -277,11 +340,52 @@ Configuración:
 - `start_date` y `due_date`: bordes del rango calculado
 - `priority`: replicada de la subtarea equivalente (típicamente `high`)
 
-#### 4.2.2 Cadencia adicional — Detección sobre el mes en curso
+#### 4.2.2 Cadencia adicional — Detección sobre el mes en curso + validación con el PO
 
 Solo si hay lista de Soporte (paso 4.2.1 activo), la skill examina la composición
 de subtareas tipo B en la **tarea madre del mes en curso** para identificar la
-cadencia adicional del cliente:
+cadencia adicional del cliente.
+
+##### Flujo general de decisión
+
+```
+¿La tarea madre del mes en curso tiene subtareas B canónicas que permitan
+ inferir cadencia adicional?
+
+  ├─► SÍ → Inferencia automática (M / Q / S) + VALIDAR con el PO antes de crear:
+  │         "Para [CLIENTE], detecto cadencia [X] (informes [periodicidad])
+  │          basándome en Gestión [Mes En Curso] [Año] [CLIENTE]. ¿La mantenemos
+  │          para [Mes Siguiente]?"
+  │         ├─► OK (o modo desatendido) → usar cadencia detectada.
+  │         └─► Cambiar → preguntar cadencia nueva al PO (M/Q/S/Otra).
+  │
+  └─► NO (es la primera vez con Soporte para este cliente, o no hay patrón
+        canónico identificable) → PREGUNTAR al PO directamente:
+        "Es la primera vez (o no detecto patrón canónico) que se abre Gestión
+         con Soporte para [CLIENTE]. ¿Con qué cadencia generamos el informe de
+         dedicación al cliente?
+         A) Mensual cerrado (canónico v1.4)
+         B) Quincenal con acumulado (1-15 y 16-fin)
+         C) Semanal con acumulado (lunes-domingo)
+         D) Otra (especifica)"
+```
+
+##### Modos de ejecución
+
+- **Modo asistido** (PO presente en chat): la validación / pregunta se hace de
+  forma síncrona en chat y se espera respuesta antes de crear las subtareas
+  adicionales.
+- **Modo desatendido** (tarea programada día 27 sin PO presente): la skill **NO
+  pregunta** y aplica la siguiente regla:
+  - Si la inferencia automática es **clara y consistente** (M, Q o S sin
+    anomalías) → usar cadencia detectada y registrarlo en el reporte para
+    auditoría posterior por el PO.
+  - Si la inferencia es **dudosa o es primera vez** → aplicar 4.2.5 (crear solo
+    la pieza fija del mes anterior + comentario asignado al PO solicitando que
+    cree las subtareas adicionales manualmente y confirme la cadencia para
+    siguientes meses).
+
+##### Inferencia automática — tabla de detección
 
 1. Recoger todas las subtareas tipo B del mes en curso (matchee el regex
    `^Generaci[oó]n informe dedicaci[oó]n horas`).
@@ -300,6 +404,24 @@ cadencia adicional del cliente:
 
 4. Si la composición no encaja con ninguno de los tres patrones (irregularidades
    dominantes, mezcla atípica) → cadencia **no identificable**. Aplicar 4.2.5.
+
+##### Persistencia de la cadencia confirmada
+
+Cuando la cadencia queda confirmada (sea por validación del PO o por inferencia
+clara en modo desatendido), la skill **persiste el dato** en la descripción de la
+tarea madre del mes objetivo recién creada, con una etiqueta canónica al final:
+
+```
+📋 Cadencia informe dedicación: [M | Q | S]
+🔁 Fuente: [inferencia automática mes anterior | confirmación PO | primera definición PO]
+🕓 Registrado: [fecha YYYY-MM-DD]
+```
+
+Esto permite que en el siguiente ciclo, la skill pueda **leer la cadencia
+directamente de la tarea madre del mes en curso** (más fiable que reinferirla cada
+vez) y **validar contra el PO** que sigue siendo correcta. Si la etiqueta no
+existe (caso de tareas históricas anteriores a v1.1), la skill cae a inferencia
+sobre las subtareas como en v1.0.
 
 #### 4.2.3 Cadencia M (mensual pura) — sin acción adicional
 
@@ -413,14 +535,26 @@ respecto al mes anterior.
 
 ## PASO 5 — IDEMPOTENCIA EN SUBTAREAS
 
-Si la tarea madre del mes objetivo ya existía (caso de re-ejecución parcial donde
-la madre ya estaba pero no las subtareas), la skill comprueba antes de crear cada
-subtarea si ya existe en la madre con el mismo nombre. **Solo crea las que falten**.
+La idempotencia opera en dos niveles complementarios:
+
+1. **Inventario previo** del Paso 3.bis (subtareas materializadas por plantilla
+   ClickUp tras la creación de la tarea madre). Esto cubre el caso de listas con
+   plantilla asociada que crea subtareas predefinidas de forma asíncrona.
+2. **Re-ejecución parcial**: si la tarea madre del mes objetivo ya existía (skill
+   ejecutada dos veces el mismo día, o continuación tras error), la skill
+   comprueba antes de crear cada subtarea si ya existe en la madre con el mismo
+   nombre. **Solo crea las que falten**.
 
 Ejemplos:
-- Si ya existen `Gestión Semana 1` y `Gestión Semana 2` pero faltan `3, 4, 5`,
-  la skill crea solo las que faltan.
+- Si ya existen `Gestión Semana 1` y `Gestión Semana 2` (porque las creó la
+  plantilla o una ejecución previa) pero faltan `3, 4, 5`, la skill crea solo las
+  que faltan.
 - Si una subtarea B con un rango concreto ya existe, no se duplica.
+- Si la subtarea de plantilla tiene un nombre **ligeramente distinto** al canónico
+  pero matchee el regex tolerante (ej. "Informe dedicación Mayo 2026 [GONHER]"
+  contra "Generación informe dedicación horas periodo 01-05-2026 a 31-05-2026
+  [GONHER]"), se considera **match positivo**: no se duplica y se reporta la
+  diferencia de naming al PO en el Paso 6 para que decida si renombrar o aceptar.
 
 ---
 
@@ -478,6 +612,18 @@ Total proyectos elegibles (con Gestión [Mes En Curso] viva): [N]
     a fecha"). El formato cambia respecto al mes anterior.
   ...
 
+🧩 Subtareas heredadas de plantilla ClickUp ([N]):
+  - [CLIENTE Y]: la plantilla aplicó [N] subtareas tras la creación de la tarea
+    madre. Match canónico verificado, no se duplicaron. Diferencias de naming
+    detectadas: [lista de naming alternativos para revisar].
+  ...
+
+📋 Cadencia confirmada y persistida ([N]):
+  - [CLIENTE Z]: cadencia [M | Q | S] registrada en la descripción de la tarea
+    madre del mes objetivo. Fuente: [inferencia automática | confirmación PO |
+    primera definición PO].
+  ...
+
 🚫 Proyectos no elegibles (sin Gestión [Mes En Curso] viva) ([N]):
   - [CLIENTE 8]: lista de Gestión existe pero no tiene tarea del mes en curso.
     No se crea automáticamente. Si es cliente pausado, ignora. Si debe entrar en
@@ -505,6 +651,21 @@ Total proyectos elegibles (con Gestión [Mes En Curso] viva): [N]
   fields configurables).
 - **Subtareas semanales reales**: se calculan según el calendario del mes objetivo
   (4 o 5 semanas lunes-domingo). No siempre 5.
+- **Espera obligatoria tras crear la tarea madre (15s + 30s reintento)**: dar
+  tiempo a ClickUp para materializar las subtareas de la plantilla asociada a la
+  lista antes de que la skill cree las suyas. Aplica tanto a subtareas A
+  (semanales) como a subtareas B (informes). Sin esta espera, riesgo de
+  duplicación.
+- **Validación de cadencia con el PO**: la skill **no asume** la cadencia
+  automáticamente sin avisar. En modo asistido, valida con el PO antes de crear
+  las subtareas adicionales (Q o S). En modo desatendido, aplica la inferencia
+  automática si es clara y la reporta para auditoría posterior; si es dudosa o es
+  primera vez, escala vía comentario.
+- **Persistencia de cadencia en la tarea madre**: cuando la cadencia queda
+  confirmada, se registra en la descripción de la tarea madre del mes objetivo
+  como etiqueta canónica `📋 Cadencia informe dedicación: [M|Q|S]`. El siguiente
+  ciclo lee directamente esa etiqueta y la valida contra el PO en lugar de
+  reinferir cada vez.
 - **Subtareas de informes — pieza fija + cadencia adicional**: si el cliente tiene
   lista `Soporte [CLIENTE]` en su carpeta, se crea siempre el informe del mes
   anterior (rango `01 a último día del mes anterior`). La cadencia adicional
@@ -627,3 +788,4 @@ Si en el futuro se cambia el mecanismo de disparo, la skill funciona idéntica
 | Versión | Fecha | Cambios |
 |---|---|---|
 | **v1.0** | 2026-05-05 | Versión inicial. Tarea programada "Crear gestiones mensuales activas" día 27 a las 09:00 hora de Madrid. Filtro estricto: solo crea mes siguiente si existe el mes en curso (sin caso "cliente nuevo"). Subtareas A (Gestión Semana N) según semanas reales del calendario lunes-domingo. Subtareas B (Generación informe dedicación horas): pieza fija = informe del mes anterior (`01 a último día del mes anterior`) cuando el cliente tiene lista Soporte; cadencia adicional detectada del mes en curso (M sin extras / Q con 2 quincenales con acumulado / S con N semanales con acumulado). Modelo unificado de nomenclatura para Q y S: "semana DD-MM a DD-MM + acumulado mes a fecha", con normalización del modelo nuevo aunque el mes en curso tenga el modelo antiguo de subtareas separadas. Comentario al PO si la cadencia adicional no es identificable. Anomalías reportadas pero no propagadas. No copia tiempo registrado ni avance ni métricas. Identificación del PO por cascada (custom field PO → assignee → reporte). Inclusión de tareas internas Reinicia. Idempotencia en madre y subtareas. Plan futuro: integración con Catalyst para una v2.0 que pueda enriquecer la decisión de cadencia con datos externos. |
+| **v1.1** | 2026-05-17 | Paso 3.bis nuevo: espera de materialización de plantilla ClickUp (15s + reintento de 30s) tras crear la tarea madre antes de crear subtareas propias. Inventario previo de subtareas para evitar duplicar lo que crea la plantilla. Cadencia: validación con el PO en modo asistido (primera vez → pregunta directa con 4 opciones; ya hay historial → validación del valor inferido). Modo desatendido aplica inferencia automática solo cuando es clara; si es dudosa, escala vía comentario. Persistencia de la cadencia confirmada en la descripción de la tarea madre con etiqueta canónica `📋 Cadencia informe dedicación: [M|Q|S]` + fuente y fecha, para que el siguiente ciclo la lea directamente sin reinferir. Idempotencia reforzada con match tolerante de naming (renombrados de plantilla detectados sin duplicar). Reporte final ampliado con tres nuevas secciones (subtareas heredadas de plantilla, cadencia confirmada, naming alternativo detectado). Validado tras dry-run informe dedicación Gonher Mayo 2026. |

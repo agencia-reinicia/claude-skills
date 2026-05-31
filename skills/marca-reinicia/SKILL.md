@@ -91,6 +91,35 @@ Versiones suaves de los anteriores. Usar de forma **excepcional**, principalment
 
 Usar cuando Manrope no esté disponible (p.ej. en herramientas online que no soporten fuentes personalizadas). Es una tipografía web-safe humanista y geométrica, parecida en carácter a Manrope.
 
+### Bug conocido: fallback Manrope → Roboto en herramientas Zoho
+
+⚠️ **Caso especial validado en Zoho Sheet, Zoho Writer y Zoho Show (mayo 2026).**
+
+**Síntoma**: aplicar `font_name: "Manrope"` mediante la API (`ZohoSheet_format_ranges`, ranges de Writer, etc.) devuelve `status: success`, pero al abrir el documento algunas (o todas) las celdas se renderizan en **Roboto** en lugar de Manrope. El cambio es **silencioso** — no hay error ni warning.
+
+**Causa**: Zoho hace fallback automático a Roboto cuando Manrope **no está en el catálogo personal de fuentes** del usuario propietario del workbook/documento. La API acepta el nombre Manrope porque es válido conceptualmente, pero el render usa fuente alternativa.
+
+**Decisión de marca**: en herramientas Zoho **NO** se acepta el fallback a Roboto como sustituto canónico. Manrope debe verse en el documento final.
+
+**Workaround operativo**:
+
+1. **Una vez por usuario propietario**: añadir Manrope al catálogo personal de fuentes de Zoho desde la UI: `Configuración Zoho > Fuentes personalizadas > Añadir fuente > Manrope` (descargar desde Google Fonts si hace falta).
+2. **En cada generación de documento**: la skill sigue enviando `font_name: "Manrope"` siempre — no hay cambio en el código.
+3. **Validación obligatoria al cierre**: antes de marcar un documento como listo para envío al cliente, **verificación visual** de que la tipografía es Manrope (mirar 2-3 celdas/párrafos de cuerpo y cabeceras). Si aparece Roboto, aplicar workaround del paso 1 y reaplicar formato.
+4. **Si el usuario propietario no puede / no quiere añadir Manrope**: fallback aceptable únicamente en este caso a **Verdana** (no Roboto). Documentar la decisión en el documento.
+
+**Skills que aplican este workaround**:
+- `informes-dedicacion-clientes-reinicia` (validado mayo 2026, Gonher)
+- `revision-sprint-backlog-equipo-reinicia` (Sprint Backlogs AUTOIA)
+- `informes-ejecutivos-sprint-backlog-equipos-reinicia`
+- `plan-proyecto-zoho-sheet-reinicia`
+- Cualquier skill futura que genere documentos en Zoho Sheet / Writer / Show
+
+**Lo que NO hacer**:
+- ❌ Aceptar Roboto silenciosamente como "casi Manrope" — no lo es y rompe la consistencia visual de marca.
+- ❌ Cambiar `font_name` a Roboto en el código de la skill — el dato canónico sigue siendo Manrope.
+- ❌ Confundir este caso con el fallback genérico a Verdana documentado más arriba (que aplica a herramientas que NO soportan fuentes personalizadas, no a Zoho).
+
 ### Escala tipográfica (ofiмática / documentos)
 
 La escala oficial usa una relación de **cuarta aumentada** (×1.414 entre niveles). Para documentos de oficina del día a día, los tamaños validados son:

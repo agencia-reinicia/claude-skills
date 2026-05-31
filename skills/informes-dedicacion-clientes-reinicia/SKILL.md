@@ -1,15 +1,16 @@
 ---
 name: informes-dedicacion-clientes-reinicia
 description: >
-  Skill para generar y actualizar Informes de Dedicación de Horas para clientes de Reinicia
-  con Soporte Operativo contratado. Cubre el flujo completo: elicitación dinámica al PO,
-  lectura de tarjetas y time entries de ClickUp, redacción de Resolution Summaries por ítem,
-  construcción del Zoho Sheet con 7 pestañas (Report, Historical, PO Breakdown, Pivot Table,
-  ClickUp Data, Bonus History, Leyenda), formato canónico Reinicia sin combinar celdas,
-  fórmulas en español, bonus UPLIFT por producto y sistema Operational Planning para
-  Account Management (Gestión + Refinamiento) con % congelado por fila, todo persistido
-  en Bonus History unificado, semáforo de consumo con comentarios automáticos según
-  umbrales, y cierre de la subtarea de generación.
+  Skill para generar y actualizar Informes de Dedicación de Horas para clientes
+  de Reinicia con Soporte Operativo contratado. Cubre el flujo completo: elicitación
+  al PO, lectura de tarjetas y time entries de ClickUp, redacción de Resolution
+  Summaries por ítem, construcción del Zoho Sheet con 7 pestañas (Informe/Histórico
+  cara cliente + PO Breakdown / Pivot Table / ClickUp Data / Bonus History / Leyenda
+  internas) con refinamiento visual canónico v1.4 (lavado base, Tabla Reinicia,
+  bloques de configuración, Col G facturable en lavanda, redondeo a 2 decimales con
+  preservación, notas obligatorias), fórmulas en español, bonus UPLIFT por producto
+  y Operational Planning para Account Management con % congelado vía Bonus History,
+  semáforo de consumo con comentarios automáticos, e inventario de anomalías al cierre.
 
   Actívala cuando el PO pida generar, crear o actualizar el informe de dedicación o
   el report de soporte de un cliente para un periodo concreto.
@@ -19,7 +20,9 @@ description: >
 
 # SKILL: Informes de Dedicación de Horas a Clientes — Reinicia
 
-> **Versión actual: v1.3** — Evolución de v1.2 tras sesión iterativa con Carritech v4 (15-16/05/2026). Incorpora: **(A)** sistema **Operational Planning** en PO Breakdown rows 24-34 con tabla separada para Account Management (Gestión mensual + Refinamiento) con % override por fila, defaults globales y congelación vía Bonus History; **(B)** **Bonus History UNIFICADO** con columna `Type` (Bonus | Management | Refinement), columna `Identifier` (genérica) y `Frozen %` — única fuente de verdad para TODAS las congelaciones; **(C)** nueva **pestaña Leyenda** como deliverable interno con explicaciones de Report, PO Breakdown, pestañas auxiliares y notas operativas, incluyendo ejemplos numéricos; **(D)** Refinamiento separado por meses con clave compuesta `Nombre - Mes Año` (la tarjeta ClickUp es ANUAL pero las horas se reparten por mes vía filtro `start` de time entries); **(E)** **REGLA DE ORO: NUNCA combinar celdas** (`merge_cell`) — banners y headers con fondo extendido + texto solo en celda A + celdas a la derecha vacías para permitir desbordamiento visual; **(F)** AUX cells del Report movidas a G19:I20 con texto blanco para ocultarlas; **(G)** Historical reubicado a 2ª posición tras Report (manual desde UI, no MCP); **(H)** A27 Report con etiqueta "Account Management" para coherencia con DETAIL; **(I)** múltiples reglas técnicas nuevas (5.A14-5.A18) sobre límites de la API Zoho Sheet (notas no eliminables, content="" asimétrico entre single/batch, unmerge implícito).
+> **Versión actual: v1.4** — Evolución de v1.3 tras sesión cruzada con Synuptic v2 (17/05/2026) y Gonher Mayo (17/05/2026). Refinamiento visual canónico completo: **(A)** Lavado base obligatorio (REGLA DEL LIENZO LIMPIO: fill_color blanco + border blanco simultáneos hasta col Z fila 100); **(B)** Pestañas cara cliente localizadas al idioma del informe (Informe / Histórico para ES, Report / Historical para EN); **(C)** Patrón canónico "Tabla Reinicia" formalizado (banner + nota + header + datos + TOTAL pegado, sin separaciones intermedias); **(D)** Patrón "bloque de configuración" (verde menta `#D1FAF2` + bold para valor editable; gris `#F2F2F2` + italic para validación); **(E)** Espaciado canónico **5 filas vacías** entre bloques distintos en una misma pestaña; **(F)** Col G "Hours final / Billed hours" siempre en lavanda `#D9D0FB` + bold (destaca el valor facturable); **(G)** Redondeo a 2 decimales con algoritmo half-up + fallback ceiling para preservar fórmulas dependientes (`G = ENTERO(D × (1+F) × 100) / 100`); **(H)** Anti-Roboto: `font_name: "Manrope"` obligatorio en TODO format_ranges; **(I)** Notas obligatorias en celdas de configuración y headers (catálogo verbatim en ANEXO B); **(J)** Cambio arquitectónico Informe!B27: usar `SUMAR.SI` sobre Pivot Table en lugar de referencia directa a fila absoluta (robustez frente a reestructuraciones); **(K)** Sección nueva — cliente con sistema de informes preexistente (3 opciones: Migrar / Coexistir / Manual); **(L)** Inventario automático de anomalías de cierre (6 chequeos); **(M)** 3 reglas técnicas nuevas (5.A19 Manrope fallback Roboto, 5.A20 re-formato pisa formato previo, 5.A21 inserción de filas rompe referencias externas).
+
+> **v1.3** — Versión anterior. Incorporaba: **(A)** sistema **Operational Planning** en PO Breakdown rows 24-34 con tabla separada para Account Management (Gestión mensual + Refinamiento) con % override por fila, defaults globales y congelación vía Bonus History; **(B)** **Bonus History UNIFICADO** con columna `Type` (Bonus | Management | Refinement), columna `Identifier` (genérica) y `Frozen %` — única fuente de verdad para TODAS las congelaciones; **(C)** nueva **pestaña Leyenda** como deliverable interno con explicaciones de Report, PO Breakdown, pestañas auxiliares y notas operativas, incluyendo ejemplos numéricos; **(D)** Refinamiento separado por meses con clave compuesta `Nombre - Mes Año` (la tarjeta ClickUp es ANUAL pero las horas se reparten por mes vía filtro `start` de time entries); **(E)** **REGLA DE ORO: NUNCA combinar celdas** (`merge_cell`) — banners y headers con fondo extendido + texto solo en celda A + celdas a la derecha vacías para permitir desbordamiento visual; **(F)** AUX cells del Report movidas a G19:I20 con texto blanco para ocultarlas; **(G)** Historical reubicado a 2ª posición tras Report (manual desde UI, no MCP); **(H)** A27 Report con etiqueta "Account Management" para coherencia con DETAIL; **(I)** múltiples reglas técnicas nuevas (5.A14-5.A18) sobre límites de la API Zoho Sheet (notas no eliminables, content="" asimétrico entre single/batch, unmerge implícito).
 
 > **v1.2** — Versión anterior. Cubría sistema Bonus por producto en `Bonus History` (esquema simple con Task ID + Frozen Bonus % + Source Report), columnas de fechas en PO Breakdown, columna L "Original Request" en Report DETAIL, órdenes canónicos validados, glosario statuses reordenado al ciclo de vida.
 
@@ -266,6 +269,100 @@ Texto descriptivo en C21 según rango:
 - 8-30 días: "⚠️ Contract approaching end — plan renewal" (`#FFE0CC` / `#A04000`)
 - ≤7 días: "🚨 Contract expiring imminently" (`#FFD0D0` / `#B0000F`)
 
+### 3.4.bis Lavado base — REGLA DEL LIENZO LIMPIO *(NUEVA v1.4)*
+
+**Antes de poblar ninguna pestaña, ejecutar lavado base obligatorio.**
+
+#### Por qué
+
+`fill_color: #FFFFFF` **NO basta** por sí solo: las gridlines internas de Zoho Sheet siguen visibles y dan sensación de "rejilla fantasma" que rompe la marca Reinicia. Es necesario aplicar **simultáneamente** fondo blanco + bordes blancos en cada llamada de format. Detectado en Synuptic v2 y Gonher Mayo 2026.
+
+#### Patrón canónico v1.4
+
+```javascript
+ZohoSheet_format_ranges({
+  fill_color: "#FFFFFF",
+  font_name: "Manrope",
+  font_size: 10,
+  border: {
+    border_color: "#FFFFFF",
+    border_style: "solid",
+    border_type: "all_border"
+  },
+  range: "A1:Z100",
+  worksheet_name: "[Pestaña]"
+})
+```
+
+**Aplicar A1:Z100 a TODAS las pestañas como PASO 0**, antes de poblar banner, headers, tablas, etc. Esto neutraliza el formato heredado de la plantilla y previene sombreados fantasma.
+
+#### Rangos adicionales a blanquear después de poblar (huecos internos)
+
+Algunas filas y zonas quedan vacías por diseño del informe pero deben mantenerse limpias explícitamente para evitar que herede formato vecino:
+
+**Informe**:
+- M2:Z100 (cols a la derecha del Informe)
+- A88:L100 (filas debajo del bloque de contacto)
+- Rows internas vacías: 2, 12, 14, 22, 24, 31-32, 34, 44, 47, 49-59, 61, 68, 77, 83
+- C25:L30 (zona limpia entre BREAKDOWN y DETAIL)
+
+**Histórico**:
+- I1:Z100 (cols a la derecha)
+- A8:H100 (filas debajo)
+- Rows 2, 4-5 (filas vacías entre banner, nota y tabla)
+
+**PO Breakdown Preparation**:
+- N1:Z100 (cols a la derecha)
+- A38:M100 (filas debajo del TOTAL Operational Planning)
+- Filas vacías obligatorias entre tabla principal y Operational Planning (rows 16-20, ver §5.A27)
+- Rows internas: 2
+
+**Pivot Table**:
+- F1:Z100 + A10:E100 + rows vacías intermedias
+
+**ClickUp Data**:
+- I1:Z100 + A17:H100 (ajustar a tamaño real de datos)
+
+**Bonus History**:
+- F1:Z100 + A13:E100 (ajustar a tamaño real)
+- Rows 2, 4
+
+**Leyenda**:
+- D1:Z100 (cols a la derecha)
+- A37:C100 (filas debajo)
+- Rows vacías intermedias entre secciones: 2, 4, 6, 15, 22, 28 (ajustar a estructura real)
+
+#### Regla operativa
+
+> **Cada vez que se aplica `format_ranges` debe incluir SIEMPRE las 3 propiedades juntas: `fill_color`, `border` (con `border_color` igual al `fill_color` si es zona limpia), y `font_name: "Manrope"`. Si falta cualquiera de las 3, las gridlines aparecen o la fuente cae a Roboto.** Ver §5.A19 y §5.A20.
+
+### 3.4.ter Cliente con sistema de informes preexistente *(NUEVA v1.4)*
+
+Caso aplicable cuando el cliente tiene ya en su carpeta de Workdrive informes previos en formato distinto al canónico v1.3+ (ej. informes quincenales, cadencia distinta, plantilla obsoleta).
+
+**Detección** en fase 3.2.1.bis: al inventariar la carpeta del cliente, comprobar si hay ficheros que matchen el patrón de informe (Informe-Dedicacion-* / Operational-Support-*) pero con nomenclatura o estructura distinta a la canónica.
+
+**Si se detectan**, preguntar al PO antes de continuar:
+
+**Opción A — Migrar:**
+> "Existen N informes previos con formato no canónico. ¿Quieres que rehaga el último en formato canónico v1.4 y descontinúe el sistema previo? Esto implica que el cliente vea un cambio de plantilla en el siguiente envío."
+
+**Opción B — Coexistir (lo más habitual):**
+> "Crear informe nuevo en canónico v1.4 sin tocar los antiguos. Carry-over de horas = 0 (no se arrastra consumo previo del sistema descontinuado). Documentar la coexistencia en una nota interna en la pestaña Leyenda."
+
+**Opción C — Mantener formato previo:**
+> "La skill no soporta replicar formatos antiguos. Si insistes en mantener el formato previo, hay que generar manualmente sin skill."
+
+#### Si el PO elige B (Coexistir)
+
+Añadir en la pestaña Leyenda, sección "Notas operativas", una fila explicativa:
+
+```
+| Coexistencia con informes previos | Hasta [fecha], los informes de soporte se generaron con plantilla antigua (cadencia [X]). A partir de este informe, se aplica la plantilla canónica v1.4. Carry-over = 0. Plan de unificación futura: [pendiente / fecha estimada]. |
+```
+
+**Validado en Gonher Mayo 2026** (3 informes quincenales previos de Alejandro Pont → elección B, plantilla canónica desde Mayo).
+
 ### 3.5 Creación del workbook
 
 #### 3.5.1 Nombre canónico del workbook (v1.1)
@@ -303,23 +400,17 @@ Inmediatamente después, llamar `ZohoWorkdrive_getFileOrFolderDetails`:
 
 Si algo falla, descartar el fichero (mover a papelera) y recrear.
 
-### 3.6 Construcción de las 7 pestañas *(actualizada v1.3)*
+### 3.6 Construcción de las 6 pestañas
 
-Por defecto al crear el workbook hay una hoja `Hoja1` (locale ES). Renombrar a `Report` y crear las 6 restantes con `ZohoSheet_create_worksheet`.
+Por defecto al crear el workbook hay una hoja `Hoja1` (locale ES). Renombrar a `Report` y crear las 5 restantes con `ZohoSheet_create_worksheet`.
 
-**Orden de creación canónico v1.3** (crear en este orden para minimizar reordenamiento manual posterior):
-
-1. `Report` (renombrar Hoja1, worksheet_id `0#`)
-2. `Historical` (`1#`) *(reubicada en v1.3 a 2ª posición — crearla aquí evita arrastrarla luego)*
-3. `PO Breakdown Preparation` (`2#`)
-4. `Pivot Table` (`3#`)
-5. `ClickUp Data` (`4#`)
-6. `Bonus History` (`5#`)
-7. `Leyenda` (`6#`) *(nueva en v1.3)*
-
-⚠️ **REGLA v1.3**: crear las pestañas en el orden canónico desde el principio. La API MCP no expone `worksheet.move`, así que cualquier desviación obligará a reordenamiento manual del PO desde la UI (ver 5.A18 y Sección 13.2).
-
-⚠️ Los worksheet_ids `0#` a `6#` se asignan en orden de creación. Verificar con `list_all_worksheets` después de crear todas y antes de aplicar fórmulas que referencian pestañas por nombre.
+Orden y nombres exactos:
+1. `Report` (worksheet_id `0#`)
+2. `PO Breakdown Preparation` (`1#`)
+3. `Pivot Table` (`2#`)
+4. `ClickUp Data` (`3#`)
+5. `Historical` (`4#`)
+6. `Bonus History` (`5#`) *(nueva en v1.2)*
 
 ### 3.7 Resolution Summary y Original Request *(ampliada en v1.2)*
 
@@ -420,19 +511,102 @@ Después de la fase del semáforo (y aunque no se haya disparado), Claude **siem
 2. **Datos clave del periodo**: horas / % / semáforo / exhaustion / días al fin de contrato
 3. **Puntos a revisar antes de enviar al cliente**: Carry-over, logos pendientes, Resolution Summary, items en curso
 4. **Productos sin Tiempo MIN/MAX** (lista completa)
-5. **Aviso de subtarea cerrada**
+5. **Inventario de anomalías detectadas** (ver §3.10.bis) con acción correctiva sugerida
+6. **Aviso de subtarea cerrada**
 
-⚠️ Va al **producto Gestión**, NO a la subtarea de generación.
+⚠️ Va al **producto Gestión del cliente** (ej. `Gestión Mayo 2026 [SYNUPTIC]`), NO a la lista interna de Gestión Reinicia, NO a la subtarea de generación.
 
-### 3.10 Cierre formal *(actualizada v1.3)*
+⚠️ **v1.4 — Refinamiento visual post-publicación**: si después de publicar el comentario inicial se aplican refinamientos visuales adicionales al workbook (ej. ajustes de marca, redondeos, notas), publicar un **comentario adicional** detallando los cambios visuales y conservando el enlace. **No borrar ni editar el comentario original** (preserva trazabilidad del estado entregado inicialmente).
 
-⚠️ **Antes de cerrar la subtarea**, ejecutar el **Checklist de cierre del informe (Sección 13.7)** completo. Solo si todos los puntos están marcados se procede al cierre formal.
+### 3.10 Cierre formal
 
 Marcar la subtarea de generación del informe como `Closed` con `clickup_update_task`.
 
 ⚠️ **Si la subtarea no existe (v1.1)**: crearla en el momento con `clickup_create_task` (padre = producto Gestión, nombre canónico `Generación informe dedicación horas periodo [DD-MM-AAAA] a [DD-MM-AAAA] [CLIENTE]`) y cerrarla. Esto deja registro de que el informe se generó.
 
 📝 **Nota interna**: lo ideal es que `apertura-gestion-mensual-clickup-reinicia` cree la subtarea automáticamente al abrir cada mes. Ver sección 12.
+
+### 3.10.bis Inventario automático de anomalías de cierre *(NUEVA v1.4)*
+
+Antes de generar el comentario final al PO (§3.9), la skill ejecuta **6 chequeos automáticos** y, para cada anomalía encontrada, la incluye en el comentario con su acción correctiva sugerida.
+
+#### 1. Time entries sin task asociada en el periodo
+
+Buscar entries en `clickup_get_time_entries` cuyo campo `task.id` sea null o no resoluble.
+
+**Reportar**: lista de time entry IDs con duración, usuario y fecha.
+
+**Acción sugerida**: el PO debe revisar manualmente, asociar a una task existente o eliminar el time entry. La hora queda fuera del informe hasta que se resuelva.
+
+#### 2. Time entries de personas no del equipo Reinicia confirmado
+
+Comprobar `user.id` contra la lista oficial del equipo Reinicia (memoria #27).
+
+**Reportar**: lista de time entries con nombre de usuario externo, total de horas.
+
+**Acción sugerida**: típicamente un colaborador externo (Amigo Reinicia o consultor puntual). Si imputaron por error, eliminar; si era intencionado, validar inclusión con el PO Cliente antes de facturar.
+
+Caso Gonher Mayo: bug `invalid_type` en `task.id` de un time entry de José Barreiro.
+
+#### 3. Time entries de miembros del equipo Reinicia en productos de OTROS clientes
+
+Para cada miembro del equipo Reinicia presente en este informe, comprobar si tiene además time entries en el mismo periodo asociados a tareas de otros clientes.
+
+**Reportar**: lista con persona, otro cliente, horas imputadas allí.
+
+**Acción sugerida**: verificar que la asignación a otro cliente es correcta (no error de imputación). Si lo era, no hacer nada — son horas legítimas del otro cliente. Si fue error, mover entry al cliente correcto.
+
+Caso Gonher Mayo: Ronald Urquidi imputó 2h en Breezom mientras supuestamente estaba dedicado a Gonher.
+
+#### 4. Tarjetas duplicadas en ClickUp del mismo nombre
+
+Buscar tareas en la lista de cliente con `name` idéntico (case-insensitive).
+
+**Reportar**: lista de duplicados con task IDs.
+
+**Acción sugerida**: el PO debe consolidar (mover horas + comentarios a una y cerrar/eliminar la otra). Riesgo: doble facturación si ambos están en el informe.
+
+Caso Gonher Mayo: `869d2dz57` y `869d2rjh6` ambas como "Gestión Mayo 2026 [GONHER]".
+
+#### 5. Tarjetas de Soporte sin Tiempo MIN/MAX informado
+
+Para tareas en la lista `Soporte [CLIENTE]`, verificar que `Tiempo MIN` y `Tiempo MAX` (custom fields canónicos) están rellenos.
+
+**Reportar**: lista de tareas sin MIN/MAX.
+
+**Acción sugerida**: norma Reinicia exige siempre estimación de ventana min-max al cualificar soporte. El PO debe completar antes del próximo informe.
+
+#### 6. Modo dry-run con ClickUp Data agregada vs individual
+
+Si el informe se generó en modo dry-run con time entries agregados por (task_id, user), advertir que en la versión oficial debe repoblarse con entries individuales (uno por entry de ClickUp).
+
+**Reportar**: cantidad de entries agregadas vs total real.
+
+**Acción sugerida**: si el informe va a enviarse al cliente, repoblar ClickUp Data con `cells.content.set` por lotes de 50 con time entries individuales (necesario para que el cliente pueda auditar línea por línea).
+
+Caso Gonher v1: dry-run agregado, oficial individual.
+
+#### Formato canónico de la sección "Anomalías" en el comentario
+
+```
+🔍 Anomalías detectadas en este periodo
+
+1. [Tipo anomalía]
+   - [Detalle 1 con IDs / horas / personas afectados]
+   - [Detalle 2]
+   → Acción: [acción correctiva sugerida]
+
+2. [Tipo anomalía]
+   ...
+
+Si todas las anomalías se resuelven antes de enviar al cliente, regenerar el informe oficial.
+```
+
+Si **no hay anomalías**, incluir en el comentario:
+
+```
+✅ Sin anomalías detectadas en este periodo. El workbook está listo para los pendientes manuales de §13.
+```
 
 ---
 
@@ -671,6 +845,216 @@ La API MCP de Zoho Sheet **no expone el método `worksheet.move`** (sí existe e
 
 **Implicación**: si tras crear todas las pestañas el orden no coincide con el canónico (ej. Historical debe ir 2ª pero quedó 5ª), **avisar al PO** para que arrastre la pestaña a su posición desde la UI. Apuntarlo en la Sección 13 como paso manual del cierre del informe.
 
+### 5.A19 *(NUEVA v1.4)* — Manrope con fallback a Roboto
+
+**Síntoma**: el `format_ranges` aplica `font_name: "Manrope"` correctamente (la API acepta el cambio), pero algunas celdas se renderizan en Roboto al abrir el workbook.
+
+**Causa**: Zoho Sheet puede hacer fallback a Roboto si la fuente Manrope no está instalada en el catálogo de fuentes del usuario propietario del workbook (no del usuario que abre el sheet, sino del owner del fichero).
+
+**Workaround**:
+- La skill debe seguir enviando `font_name: "Manrope"` siempre en todo `format_ranges`.
+- **Apuntar en el comentario final al PO**: "Si visualmente aparece Roboto en lugar de Manrope, añadir Manrope al catálogo de fuentes desde Configuración Zoho > Fuentes personalizadas (operación de usuario, no de fichero)".
+
+**Diagnóstico rápido**: cuando una pestaña recién creada aparece en Roboto pero las pestañas viejas en Manrope, el problema NO es el código de la skill, sino el catálogo de fuentes del owner.
+
+### 5.A20 *(NUEVA v1.4)* — Re-formato pisa formato previo (orden crítico)
+
+**Síntoma**: aplicar `fill_color: #FFFFFF` a A1:Z100 al final del proceso borra todo el formato visual previamente aplicado (banner, headers, tablas).
+
+**Aprendizaje**: el método `ranges.format.set` **REEMPLAZA completamente** el estilo del rango, no lo fusiona. Cada llamada de format pisa el estado anterior.
+
+**Patrón canónico de construcción de pestaña**:
+1. **Reset masivo primero**: aplicar lienzo blanco (§3.4.bis) + Manrope 10 a A1:Z100.
+2. **Después aplicar formatos específicos en orden de generalidad**: banner → nota descriptiva → headers → tablas → chips de status → filas TOTAL → bloques de configuración → notas en celda.
+3. **Cuando se MODIFICA una pestaña ya existente**: aplicar bloque a bloque, **nunca** hacer reset masivo seguido de re-aplicar todo (cuello de botella + riesgo de perder ajustes manuales).
+
+**Regla operativa**: si en algún momento durante la generación necesitas "limpiar y rehacer", clona la pestaña, aplica formato a la copia, y elimina la original. Pisar formato sobre una pestaña parcialmente formateada lleva a inconsistencias visibles.
+
+### 5.A21 *(NUEVA v1.4)* — Inserción de filas rompe referencias externas
+
+**Síntoma**: al insertar 3 filas entre la Tabla Bonus UPLIFT y el banner Operational Planning en PO Breakdown Preparation, la fórmula `Informe!B27 = 'PO Breakdown Preparation'!G34` queda apuntando a una celda vacía (debería apuntar a G37 tras la inserción).
+
+**Causa**: `worksheet.row.insert` actualiza fórmulas relativas **dentro de la misma pestaña** pero **no toca referencias externas** desde otras pestañas a la pestaña modificada.
+
+**Patrón canónico v1.4**:
+1. Cuando se inserten filas en una pestaña, **inventariar todas las referencias externas** a esa pestaña antes de la operación (búsqueda por nombre de pestaña en las otras pestañas).
+2. Después de la inserción, **re-apuntar manualmente** las fórmulas externas a la nueva fila.
+
+**Alternativa más robusta (aplicada en v1.4)**:
+- Evitar referencias por número de fila absoluto en fórmulas externas.
+- Usar `SUMAR.SI` por categoría sobre Pivot Table en lugar de apuntar a `G34/G37` directamente.
+
+Ejemplo aplicado:
+```
+ANTES (v1.3):
+Informe!B27 = ='PO Breakdown Preparation'!G34
+
+DESPUÉS (v1.4 canónico):
+Informe!B27 = =SUMAR.SI('Pivot Table'!$C$2:$C$N;"Account management";'Pivot Table'!$D$2:$D$N)
+```
+
+La versión nueva es robusta frente a cualquier reestructuración futura de PO Breakdown.
+
+### 5.A22 *(NUEVA v1.4)* — Anti-Roboto: font_name explícito en TODO format_ranges
+
+**Regla absoluta**: `font_name: "Manrope"` debe incluirse **explícitamente** en CADA llamada a `format_ranges`, incluso si parece redundante.
+
+**Por qué**: aunque la plantilla aparente tener Manrope por defecto, Zoho cae a Roboto en cuanto se aplica un cambio de formato (`fill_color`, `border`, `bold`, etc.) sin especificar `font_name`. Una sola llamada sin `font_name` corrompe la consistencia tipográfica de todo el rango afectado.
+
+**Aprendido en Histórico v2 Synuptic**: la pestaña heredó Roboto silenciosamente al aplicar bordes blancos sin `font_name`.
+
+**Verificación**: tras una sesión de formateo, comprobar visualmente una muestra de cada pestaña. Si aparece Roboto, identificar la llamada `format_ranges` problemática y reaplicar con `font_name: "Manrope"`.
+
+### 5.A23 *(NUEVA v1.4)* — Redondeo a 2 decimales con preservación de fórmulas dependientes
+
+**Regla**: toda columna que represente horas (raw, final, billed) en cualquier pestaña se muestra con **2 decimales**, no 4.
+
+**Algoritmo de redondeo**:
+
+```python
+from decimal import Decimal, ROUND_HALF_UP, ROUND_CEILING
+
+# Paso 1: candidato con half-up estándar
+candidato = Decimal(valor_original).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+# Paso 2: validar consistencia con fórmulas dependientes
+# Ej. en PO Breakdown, G = INT(D × (1+F) × 100) / 100
+g_recalculado = int(float(candidato) * 1.15 * 100) / 100
+if g_recalculado != g_actual:
+    # Probar ceiling
+    candidato = Decimal(valor_original).quantize(Decimal("0.01"), rounding=ROUND_CEILING)
+    g_recalc2 = int(float(candidato) * 1.15 * 100) / 100
+    if g_recalc2 != g_actual:
+        # Aceptar half-up y documentar el cambio
+        candidato = Decimal(valor_original).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        documentar_cambio_en_log()
+```
+
+**Por qué importa**: preservar la coherencia matemática que el cliente puede recalcular con calculadora. Si lee `D=3,79` y `G=4,35`, el cliente recalcula `3,79 × 1,15 = 4,3585 → 4,35` ✓. Si lee `D=3,78` y `G=4,35`, recalcula `3,78 × 1,15 = 4,347 → 4,34` ≠ 4,35 → detecta inconsistencia y pierde confianza en el informe.
+
+**Caso validado v1.4** (Synuptic v2):
+- D13 = 3,784 → con half-up daría 3,78 → G13 = 4,34 (cambia, ≠ G actual = 4,35).
+- Con ceiling D13 = 3,79 → G13 = 4,35 ✓ (preserva consistencia).
+- Aplicar ceiling solo en D13, half-up estándar en resto de filas.
+
+**Pestañas afectadas por la regla**:
+- Informe (cara cliente): cifras a 2 decimales.
+- Histórico (cara cliente): cifras a 2 decimales.
+- PO Breakdown Preparation (interna): cifras a 2 decimales para coherencia con cara cliente.
+- Pivot Table (interna): mantener 4 decimales (auditoría interna).
+- ClickUp Data (interna): mantener 4 decimales (datos crudos).
+- Bonus History (interna): mantener formato de % (no horas).
+
+### 5.A24 *(NUEVA v1.4)* — Notas obligatorias en headers y configuración
+
+**Regla**: toda celda de **configuración** (valores editables por el PO que afectan a cálculos) y todo **header de tabla** DEBE llevar nota explicativa con `set_note_to_cell`.
+
+**Catálogo verbatim** de notas obligatorias por celda: ver **ANEXO B — Catálogo de notas obligatorias por celda**.
+
+**Principio general**: cualquier celda cuyo significado no sea autoevidente para el PO, o cualquier celda con fórmula compleja, → nota obligatoria. Esto reduce el coste cognitivo del PO al revisar el workbook y evita malentendidos sobre qué editar y qué no.
+
+### 5.A25 *(NUEVA v1.4)* — Patrón canónico "Tabla Reinicia"
+
+**Toda tabla en cualquier pestaña del workbook sigue este patrón visual**:
+
+```
+Row N:     Banner          → fondo #3812CF, font #FFFFFF Manrope 14 bold, alineación center
+Row N+1:   (vacía)          → lavado base
+Row N+2:   Nota italic      → fondo blanco, Manrope 10 italic, wrap_text: false, bordes blancos, row_height: 20
+Row N+3:   (vacía)          → lavado base
+Row N+4:   Header           → fondo #3812CF, font #FFFFFF Manrope 11 bold, center
+Row N+5..: Datos            → fondo #F2F2F2, font #000000 (NO azul), bordes #FFFFFF, Manrope 10
+Row N+M:   TOTAL            → fondo #D9D0FB, font #3812CF Manrope 11 bold (PEGADO a la última fila de datos, SIN espacio entre medio)
+```
+
+**Refinamientos canónicos**:
+- **Col "horas finales facturables"** (ej. G en PO Breakdown principal y G en Operational Planning) → fondo `#D9D0FB` + font `#3812CF` + bold. Destaque visual del valor facturable. La fila TOTAL es lavanda completa; la columna G es lavanda fila a fila.
+- **Headers de tabla**: borde del mismo color que el fondo (#3812CF azul). Excepción: si la fila header se extiende más allá del ancho de la tabla, las columnas sobrantes (ej. K-M cuando la tabla termina en J) llevan bordes blancos para no parecer "header extendido".
+- **Col A del cuerpo de tabla**: texto **negro bold** (NO azul Reinicia). El azul `#3812CF` queda reservado a headers, totales y banners — destacar la col A en azul ensucia visualmente.
+
+**Aplica a**: BREAKDOWN del Informe, DETAIL del Informe, glosario del Informe, Histórico, tabla principal y Operational Planning en PO Breakdown, Pivot Table, ClickUp Data, Bonus History, las 4 secciones de Leyenda.
+
+### 5.A26 *(NUEVA v1.4)* — Patrón "bloque de configuración" (verde menta + gris validación)
+
+**Bloques de configuración editables** (defaults que el PO puede ajustar para afectar cálculos de la tabla siguiente):
+
+```
+Col A (etiqueta):    fondo #D1FAF2 (verde menta), font #000000 Manrope 10 bold
+Col B (valor):       fondo #D1FAF2, font #000000 Manrope 10 bold
+Col C (validación):  fondo #F2F2F2 (gris), font #000000 Manrope 10 italic
+```
+
+**Bordes blancos** en las 3 celdas. **Notas obligatorias** en celda de valor (B) y en celda de validación (C).
+
+**Aplica a** (en PO Breakdown Preparation):
+- A4:B4 — Default Bonus % UPLIFT
+- A5:B5 — Bonus % bounds (validación cap 0-25%)
+- A24:B24 — Default % Management to bill (Operational Planning)
+- A25:B25 — Default % Refinement to bill (Operational Planning)
+
+Si en futuras versiones aparece otro bloque de configuración (ej. tasa horaria editable, recargo por urgencia), aplicar el mismo patrón.
+
+### 5.A27 *(NUEVA v1.4)* — Espaciado canónico entre bloques
+
+**Reglas de espaciado vertical en pestañas con múltiples bloques**:
+
+1. **Fila TOTAL pegada a la tabla**: NUNCA dejar filas vacías entre la última fila de datos y la fila TOTAL del mismo bloque.
+2. **Entre bloques distintos**: dejar **EXACTAMENTE 5 filas vacías** entre el TOTAL de un bloque y el banner del siguiente bloque.
+3. **Lavado base** en las filas vacías intermedias (fondo blanco + bordes blancos + Manrope 10).
+
+**Caso canónico — PO Breakdown Preparation**:
+
+```
+Row 1:        Banner Tabla principal
+Row 2:        (vacía)
+Row 3:        Nota italic
+Row 4:        Default Bonus %       (bloque config)
+Row 5:        Bonus % bounds        (bloque config)
+Row 6:        Header tabla principal
+Rows 7..14:   8 productos individuales
+Row 15:       TOTAL tabla principal (PEGADO a row 14)
+Rows 16-20:   5 filas vacías        ← ESPACIADO CANÓNICO
+Row 21:       Banner Operational Planning
+Row 22:       (vacía)
+Row 23:       Nota italic
+Row 24:       Default % Management  (bloque config)
+Row 25:       Default % Refinement  (bloque config)
+Row 26:       Header tabla Operational
+Rows 27..N:   Filas Management / Refinement
+Row N+1:      TOTAL Operational (PEGADO a row N)
+```
+
+**Validado**: 5 filas vacías es lo decidido como canónico v1.4 (Synuptic v2 ya cumplía; Gonher Mayo se actualiza retroactivamente en propagación post-skill).
+
+### 5.A28 *(NUEVA v1.4)* — Patrón canónico de fila de nota italic (row 3)
+
+**Aplica** a todas las pestañas con nota descriptiva en row 3: Informe, Histórico, PO Breakdown Preparation, Bonus History, Leyenda.
+
+**Formato canónico unificado**:
+
+```
+font_name: Manrope
+font_size: 10
+italic: true
+horizontal_alignment: start
+vertical_alignment: middle
+wrap_text: false             ← REGLA: el texto desborda en celdas vacías a la derecha
+fill_color: #FFFFFF
+border: { border_color: #FFFFFF, border_style: solid, border_type: all_border }
+row_height: 20               ← fijo, no auto_fit
+```
+
+**Causa del cambio**: `auto_fit + wrap_text: true` inflaba la fila a ~80px con notas largas. `wrap_text: false + row_height: 20` da consistencia visual entre pestañas.
+
+### 5.A29 *(NUEVA v1.4)* — Cabeceras col A del Informe con wrap_text + row_height
+
+**En el bloque "Cabecera + SUMMARY" del Informe (cols A:I, rows 3-21)**:
+
+- Col A (etiquetas) → `wrap_text: true`, `row_height: 30`, `vertical_alignment: middle`.
+- Permite etiquetas largas como "Fecha inicio Soporte Operativo" o "Hours consumed (period)" sin truncar.
+
+**Aplica a**: A3:A11 (cabecera identificación cliente) y A15:A21 (SUMMARY métricas del periodo) del Informe.
+
 ### 5.1 Convención de nomenclatura de ficheros (v1.1 actualizado)
 Ver sección 3.5.1. Resumen:
 - **Cliente ES**: `Informe-Dedicacion-Soporte-Operativo-[CLIENTE]-[fechas]-AUTOIA-v[N]`
@@ -735,7 +1119,28 @@ Esto da coherencia total: el cliente recibe un fichero con nombre, título y con
 
 ---
 
-## 6. Estructura canónica del Report (pestaña principal)
+## 6. Estructura canónica del Report (pestaña principal — "Informe" en ES, "Report" en EN)
+
+### 6.0 Nombres de pestañas según idioma *(NUEVA v1.4)*
+
+| Pestaña interna técnica | Cliente ES (Informe) | Cliente EN (Report) |
+|---|---|---|
+| Pestaña principal cara cliente | **Informe** | **Report** |
+| Pestaña histórico cara cliente | **Histórico** | **Historical** |
+| PO Breakdown Preparation | (sin cambio) | PO Breakdown Preparation |
+| Pivot Table | (sin cambio) | Pivot Table |
+| ClickUp Data | (sin cambio) | ClickUp Data |
+| Bonus History | (sin cambio) | Bonus History |
+| Leyenda | (sin cambio) | Legend |
+
+**Regla operativa**:
+- Las pestañas **cara cliente** se localizan al idioma del informe (Informe/Histórico para ES, Report/Historical para EN).
+- Las pestañas **internas** mantienen nombre técnico en inglés porque solo las ve el equipo Reinicia. Excepción: la Leyenda se localiza a "Legend" en EN, "Leyenda" en ES (la lee el equipo + opcionalmente el cliente si se desoculta).
+
+**Renombrado post-creación obligatorio cuando idioma = ES**:
+- `ZohoSheet_create_workbook` crea por defecto "Hoja1" → renombrar a "Informe" (o "Report" en EN).
+- Al crear la segunda pestaña con `create_worksheet`, especificar directamente "Histórico" (o "Historical").
+- Si por error queda con nombre técnico inglés en informe ES, renombrar con `ZohoSheet_rename_worksheet` antes de poblar.
 
 ### 6.1 Plano de filas
 
@@ -1004,6 +1409,11 @@ Patrón canónico: `'Original name: <task name original ClickUp>. Cliente reques
 
 ⚠️ **Orden de statuses en ciclo de vida v1.2**: representa el viaje natural de una tarjeta de soporte (Open al entrar → Product Backlog tras refinar → Sprint Backlog al planificar → Doing al ejecutar → Validation Client al entregar → Closed al cerrar). **Parking siempre al final** porque es un estatus lateral/excepcional. Este orden ayuda al cliente a entender cómo fluyen las peticiones internamente.
 
+⚠️ **v1.4 — Col B sin wrap_text** (regla §5.A28 generalizada al glosario):
+- Col B del glosario (B64:L76 + B79:L82 + B85:L87) → `wrap_text: false` (desborda lateralmente sobre cols vacías a la derecha).
+- Antes (v1.3) la col B tenía `wrap_text: true` lo cual **recortaba textos largos** y obligaba a aumentar la altura de fila.
+- Aplica también a **row 56** (separación entre TOTAL CONSUMIDO y banner GLOSSARY): bordes blancos explícitos para mantener la zona limpia (§3.4.bis).
+
 ### 6.bis.F — Pestañas internas (PO Breakdown / Pivot Table / ClickUp Data)
 
 Patrón común:
@@ -1089,32 +1499,68 @@ Aplicar SIEMPRE con `ZohoSheet_column_width` (ver 5.A1).
 >
 > ⚠️ **Reordenamiento manual**: al crear el workbook desde cero las pestañas aparecen en orden de creación. Tras crearlas todas, **arrastrar Historical a 2ª posición** desde la UI (la API MCP no expone `worksheet.move` — ver 5.A18 y Sección 13.2).
 
-### 7.1 PO Breakdown Preparation *(reescrita en v1.2)*
+### 7.1 PO Breakdown Preparation *(reescrita en v1.4)*
 
-Tabla de uso interno del PO para decidir qué horas se facturan al cliente. La pestaña aplica un **bonus UPLIFT** sobre las horas raw para cubrir el overhead no imputado (gestión técnica, contexto, comunicaciones, micro-interrupciones, revisiones) y deja trazabilidad de las fechas operativas de cada producto.
+Tabla de uso interno del PO para decidir qué horas se facturan al cliente. La pestaña aplica un **bonus UPLIFT** sobre las horas raw de productos individuales (cubre overhead no imputado: gestión técnica, contexto, comunicaciones, micro-interrupciones, revisiones) y un **bloque Operational Planning** independiente para Account Management (Gestión mensual + Refinamiento), donde el % es multiplicativo (no UPLIFT). Deja trazabilidad de fechas operativas (entrada y refinamiento) de cada producto.
 
-#### Bloque de configuración (rows 4-5)
+#### Plano canónico v1.4
 
-| Celda | Contenido |
-|---|---|
-| A4 | Etiqueta "Default bonus % this period" |
-| B4 | Valor numérico (ej. `0,15` = 15%). Aplicable solo a productos NUEVOS — productos preexistentes preservan su % vía Bonus History |
-| A5 | Etiqueta "Bonus % bounds" |
-| B5 | Fórmula validación: `=SI(O($B$4<0;$B$4>0,25);"⚠ Out of range...";"0% – 25% OK")` |
+```
+Row 1:        Banner principal (lavanda, fondo extendido A1:M1)
+Row 2:        (vacía — lavado base)
+Row 3:        Nota italic descriptiva (Manrope 10, wrap_text:false, row_height:20, ver §5.A28)
+Row 4:        Default Bonus %    | A4:B4 verde menta #D1FAF2 + bold | C4 vacía
+Row 5:        Bonus % bounds     | A5:B5 verde menta + bold | C5 gris #F2F2F2 + italic (fórmula validación)
+Row 6:        Header tabla principal (A:M, azul #3812CF + blanco + bold)
+Rows 7..14:   Productos individuales (típicamente 8, máximo 16 en periodos extensos)
+Row 15:       TOTAL tabla principal (lavanda #D9D0FB + bold, A15:M15 PEGADO a row 14)
+Rows 16-20:   5 filas vacías (§5.A27)
+Row 21:       Banner Operational Planning (lavanda, fondo extendido A21:M21)
+Row 22:       (vacía)
+Row 23:       Nota italic Operational
+Row 24:       Default % Management | A24:B24 verde menta + bold | C24 gris + italic (validación 0-100%)
+Row 25:       Default % Refinement | A25:B25 verde menta + bold | C25 gris + italic (validación 0-100%)
+Row 26:       Header tabla Operational (A:J azul + blanco + bold | K:M bordes blancos)
+Rows 27..N:   Filas Management/Refinement
+Row N+1:      TOTAL Operational (lavanda + bold, A:M PEGADO a row N)
+```
+
+#### Bloque de configuración tabla principal (rows 4-5)
+
+| Celda | Contenido | Formato |
+|---|---|---|
+| A4 | "Default bonus % this period" | Verde menta + bold |
+| B4 | Valor numérico (ej. `0,15` = 15%). Aplicable solo a productos NUEVOS — productos preexistentes preservan su % vía Bonus History | Verde menta + bold |
+| A5 | "Bonus % bounds" | Verde menta + italic |
+| B5 | Misma celda etiqueta extendida o leyenda | Verde menta + italic |
+| C5 | Fórmula validación: `=SI(O($B$4<0;$B$4>0,25);"⚠ Out of range 0% - 25%";"0% – 25% OK")` | Gris #F2F2F2 + italic |
 
 ⚠️ **Manual obligatorio post-creación**: aplicar formato porcentaje a B4 (limitación API — `format_ranges` con `date_time:"0,00%"` no funciona; ver 5.A10).
 
-#### Cabecera (row 6) y columnas
+#### Bloque de configuración Operational Planning (rows 24-25)
+
+| Celda | Contenido | Formato |
+|---|---|---|
+| A24 | "Default % Management a facturar" | Verde menta + bold |
+| B24 | `0,8` (80%) — % de horas de Gestión mensual que se facturan al cliente | Verde menta + bold |
+| C24 | Fórmula validación: `=SI(O($B$24<0;$B$24>1);"⚠ Out of range 0%-100%";"0% – 100% OK")` | Gris + italic |
+| A25 | "Default % Refinement a facturar" | Verde menta + bold |
+| B25 | `0,5` (50%) — % de horas de Refinamiento que se facturan | Verde menta + bold |
+| C25 | Fórmula validación análoga | Gris + italic |
+
+⚠️ Igualmente aplicar formato porcentaje manualmente a B24 y B25.
+
+#### Cabecera tabla principal (row 6) y columnas
 
 | Col | Letra | Contenido |
 |---|---|---|
 | 1 | A | Item (nombre tarjeta) |
 | 2 | B | Task ID (ClickUp) |
 | 3 | C | Category |
-| 4 | D | Hours raw (BUSCARV a Pivot Table) |
+| 4 | D | Hours raw (BUSCARV a Pivot Table) — **redondeado a 2 decimales con preservación G** (§5.A23) |
 | 5 | E | **Bonus % override** (PO puede sobreescribir manualmente) |
 | 6 | F | **Bonus % applied** (fórmula con fallback a Bonus History) |
-| 7 | G | **Hours final** (= Hours raw × (1 + Bonus % applied)) |
+| 7 | G | **Hours final** (= ENTERO(Hours raw × (1 + Bonus %)×100)/100) — fondo lavanda `#D9D0FB` + font azul `#3812CF` + bold |
 | 8 | H | Tiempo MIN |
 | 9 | I | Tiempo MAX |
 | 10 | J | PO Comments |
@@ -1143,36 +1589,66 @@ Prioridad:
 
 **Columna M (Fecha informe)**: `=SI.ERROR(BUSCARV(B_n;'Bonus History'!$A$6:$B$25;2;0);"")` — fecha primera aparición.
 
-**Fila TOTAL (row 23)**:
-- D23: `=TEXTO(SUMA(D7:D22);"0,00")` (workaround formato numérico)
-- G23: `=SUMA(G7:G22)`
+**Fila TOTAL tabla principal (row 15 en v1.4)**:
+- D15: `=TEXTO(SUMA(D7:D14);"0,00")` (workaround formato numérico)
+- G15: `=SUMA(G7:G14)`
 
-#### Notas obligatorias en celda
+⚠️ **Cambio v1.4 — referencia robusta desde Informe**: la fórmula `Informe!B27` (Account Management en BREAKDOWN BY CATEGORY) ya **no debe** apuntar a una fila absoluta de PO Breakdown. En su lugar:
+```
+Informe!B27 = =SUMAR.SI('Pivot Table'!$C$2:$C$N;"Account management";'Pivot Table'!$D$2:$D$N)
+```
+Ver §5.A21 (inserción de filas rompe referencias externas).
 
-- **F7:F22** cada celda con nota individual: `"Frozen from informe vN — primera aparición del producto. Bonus aplicado: X%. Valor heredado vía BUSCARV a Bonus History. Para sobrescribir en este informe, rellena la columna E (Bonus % override)."`
-- **M6** (cabecera): nota explicando el algoritmo de congelación y que la skill consulta Workdrive al regenerar.
+#### Notas obligatorias en celda *(REFORZADO v1.4)*
 
-#### Orden de filas — canónico v1.2
+Ver **ANEXO B — Catálogo de notas obligatorias por celda** para texto verbatim de cada nota. Resumen:
 
-⚠️ **Por Fecha de entrada DESC (más reciente arriba)**. Distinto del Report (que va por Start Date DESC). Intencional:
+- **B4**: explicación UPLIFT, fórmula `G = ENTERO(D × (1+F) × 100)/100`, rangos 0%-25%, ámbito (productos nuevos), interacción con Bonus History.
+- **B5**: fórmula de validación y política Reinicia sobre el cap 25%.
+- **E6**: cascada de prioridad override → history → default, valores válidos.
+- **F6**: fórmula completa de Bonus % applied con los 3 niveles de prioridad.
+- **G6**: fórmula con ejemplo numérico explícito.
+- **K6**: origen del dato (date_created ClickUp), formato dd/MM/yyyy HH:mm, uso operativo (ordenar por antigüedad).
+- **L6**: origen heurístico (status_history), formato, casos en que la celda queda vacía.
+- **F7:F14** (cada fila individualmente): `"Frozen from informe vN — primera aparición del producto. Bonus aplicado: X%. Valor heredado vía BUSCARV a Bonus History. Para sobrescribir en este informe, rellena la columna E (Bonus % override)."`
+- **B24**: por qué 80% default, fórmula multiplicativa (no UPLIFT), ejemplo numérico.
+- **B25**: por qué 50% default, desagregación anual→mensual.
+- **A26**: explicación del Item Key (formato según tipo Management/Refinement).
+- **B26**: valores permitidos Management/Refinement y mapeo a default B24/B25.
+- **C26**: formato Period (rango fechas).
+- **E27:E29**: cascada de prioridad override → history → default Operational.
+- **F27:F29** (cada fila individualmente): `"Frozen from informe vN — primera aparición de esta fila [Type]. % aplicado: X% (default Y). Valor heredado vía BUSCARV a Bonus History. Para sobrescribir en este informe, rellena la columna E."`
+
+#### Orden de filas — canónico v1.2 (mantiene v1.4)
+
+⚠️ **Por Fecha de entrada DESC (más reciente arriba)**. Distinto del Informe (que va por Start Date DESC). Intencional:
 - PO Breakdown: orden "entrada al sistema" — útil para el PO operativamente
-- Report: orden "cronología del trabajo" — útil para el cliente
+- Informe: orden "cronología del trabajo" — útil para el cliente
 
-#### Formato canónico v1.2
+#### Formato canónico v1.4
 
 | Bloque | Formato |
 |---|---|
-| Banner row 1 | Azul Reinicia `#3812CF` blanco bold Manrope 12, bordes `#3812CF` solid all_border. **Extender hasta M1** |
-| Note row 3 | Italic |
-| Bloque config B4-B5 | Default Reinicia |
-| Header row 6 | `#3812CF` blanco bold Manrope |
-| Items rows 7-22 cols A-J | Default (`#F2F2F2` o blanco según patrón general 6.bis.F) |
-| **Items rows 7-22 cols K-M** | **Fondo gris `#EBEBEB`**, bordes blancos `#FFFFFF` solid all_border, Manrope, alineación center+middle |
+| Banner row 1 | Azul Reinicia `#3812CF` blanco bold Manrope 14, bordes `#3812CF` solid all_border. **Extender hasta M1** |
+| Note row 3 | Italic Manrope 10, wrap_text:false, row_height:20, bordes blancos (§5.A28) |
+| Bloque config B4-B5 | Verde menta #D1FAF2 + bold para A:B + gris #F2F2F2 italic para C (§5.A26) |
+| Header row 6 | Azul #3812CF + blanco + bold Manrope 11 |
+| Items rows 7-14 cols A-J | Fondo #F2F2F2 + bordes blancos + Manrope 10 |
+| **Items rows 7-14 col G** | **Fondo lavanda `#D9D0FB`** + font `#3812CF` + bold Manrope 10 (destaque Hours final) |
+| Items rows 7-14 cols K-M | Fondo gris `#EBEBEB`, bordes blancos, Manrope, alineación center+middle |
 | K-L formato fecha | `dd/MM/yyyy HH:mm` (vía `format_ranges.date_time` — SÍ funciona, ver 5.A11) |
 | M formato fecha | `dd/MM/yyyy` |
-| Fila TOTAL row 23 | Lavanda `#D9D0FB`, Manrope bold, **extender de A23 a M23** (banda continua) |
+| Fila TOTAL row 15 | Lavanda `#D9D0FB`, Manrope bold, **extender de A15 a M15** (banda continua, pegada a row 14) |
+| Rows 16-20 (5 filas vacías) | Lavado base (blanco + bordes blancos + Manrope 10) |
+| Banner row 21 (Operational Planning) | Mismo estilo que banner row 1, extender A21:M21 |
+| Note row 23 | Mismo estilo §5.A28 |
+| Bloque config rows 24-25 | Mismo patrón §5.A26 |
+| Header row 26 | A26:J26 azul + blanco + bold | K26:M26 bordes blancos |
+| Filas Operational rows 27..N cols A-J | Fondo #F2F2F2 + bordes blancos |
+| **Filas Operational col G** | **Fondo lavanda + font azul + bold** (Billed hours destacadas) |
+| Fila TOTAL Operational | Lavanda, extender A:M |
 
-#### Anchos canónicos v1.2
+#### Anchos canónicos v1.2 (mantienen v1.4)
 
 | Col | Ancho (px API) |
 |---|---|
@@ -1235,9 +1711,13 @@ Row 1 = header. Rows 2..N+1 = entries. **No tiene row TOTAL**.
 
 ⚠️ Columna `task_id` (B) **obligatoria** para fórmulas SUMAR.SI.
 
-### 7.4 Historical *(reubicada a 2ª posición en v1.3)*
+### 7.4 Histórico / Historical *(reubicada a 2ª posición en v1.3; renombrada en v1.4)*
 
-⚠️ En v1.3 se movió de 5ª a 2ª posición en el workbook (justo después de Report). El **orden de aparición en la skill se mantiene aquí** (7.4) por coherencia con la numeración de las secciones; pero al crear el workbook, **Historical debe quedar como pestaña #2**. Como la API MCP de Zoho Sheet **no expone el método `worksheet.move`**, el reordenamiento se hace **manualmente** desde la UI (drag & drop de la pestaña) tras crear todas las pestañas.
+⚠️ **v1.4 — Nombre de la pestaña**:
+- Cliente ES: **Histórico**
+- Cliente EN: **Historical**
+
+⚠️ En v1.3 se movió de 5ª a 2ª posición en el workbook (justo después del Informe). El **orden de aparición en la skill se mantiene aquí** (7.4) por coherencia con la numeración de las secciones; pero al crear el workbook, **Histórico debe quedar como pestaña #2**. Como la API MCP de Zoho Sheet **no expone el método `worksheet.move`**, el reordenamiento se hace **manualmente** desde la UI (drag & drop de la pestaña) tras crear todas las pestañas.
 
 | Col | Contenido |
 |---|---|
@@ -1250,7 +1730,12 @@ Row 1 = header. Rows 2..N+1 = entries. **No tiene row TOTAL**.
 | G | Consumption % (fórmula `=TEXTO(E/D;"0,00%")`) |
 | H | Notes (incluye estado del semáforo: "🟠 Negotiate level — 80,87%") |
 
-Row 1 = banner. Row 3 = nota. Row 6 = header. Rows 7+ = un periodo por fila (crecimiento entre informes).
+Row 1 = banner. Row 3 = nota (Manrope italic, wrap_text:false, row_height:20, §5.A28). Row 6 = header. Rows 7+ = un periodo por fila (crecimiento entre informes).
+
+⚠️ **v1.4 — Patrón canónico Tabla Reinicia obligatorio** (§5.A25):
+- Filas de datos: fondo `#F2F2F2` + bordes blancos + Manrope 10 + col A texto negro bold.
+- Cifras de horas a **2 decimales** (§5.A23) — no 4.
+- `font_name: "Manrope"` explícito en TODOS los format_ranges (§5.A22), pues Histórico es una pestaña creada con `create_worksheet` que tiende a heredar Roboto por defecto.
 
 ### 7.5 Operational Planning — Tabla separada para Account Management *(NUEVA v1.3)*
 
@@ -1448,9 +1933,18 @@ Pestaña de **uso interno** que documenta cada elemento del informe para que cua
 #### Reglas de contenido
 
 - **Incluir ejemplos numéricos siempre** (recomendación validada con Carritech v4). Ej.: `Hours final UPLIFT: 0,65h × (1 + 0,15) = 0,74h`.
-- **Col A en bold + azul Reinicia** (concepto destacado).
-- **Word wrap activado** en col C.
-- **Notas operativas sección 4 imprescindibles**: locale es-ES, decimales coma, fechas dd/MM/yyyy, bug csvdata.set, pestañas visibles cliente, marca Reinicia.
+- **Word wrap activado** en col C (Explicación).
+
+#### Reglas de formato canónico v1.4 *(REFORZADO)*
+
+- **Col A**: texto **NEGRO bold** sobre fondo `#F2F2F2` (NO azul Reinicia). Convención específica de la Leyenda — distinta del Informe/Histórico. Razón: la Leyenda tiene mucha densidad de texto y el azul en concepto+azul en sección de cabecera generaba ruido visual.
+- **Col B y C**: texto negro normal sobre fondo `#F2F2F2`, bordes blancos.
+- **Banners de sección**: fondo `#3812CF` + texto blanco bold Manrope 14, extendidos A:C SIN merge.
+- **Headers de tabla**: fondo `#3812CF` + blanco + bold Manrope 11.
+- **`font_name: "Manrope"` obligatorio** en TODO format_ranges de Leyenda (§5.A22), especialmente porque algunas secciones con texto largo tienden a heredar Roboto.
+- **Row 3 nota italic**: aplicar patrón §5.A28 (wrap_text:false, row_height:20, bordes blancos).
+- **Las 4 secciones (Informe / PO Breakdown / Pestañas auxiliares / Notas operativas)**: cada una con su propio banner + header + tabla. Entre secciones, **5 filas vacías** (§5.A27) si hay espacio; mínimo 2 si la pestaña es densa.
+- **Nota operativa adicional v1.4**: si el cliente tenía sistema de informes preexistente (caso §3.4.ter opción B), añadir fila explicativa en sección 4 "Notas operativas" sobre la coexistencia.
 
 ---
 
@@ -1556,8 +2050,8 @@ Manual desde la UI.
 ### 10.7 Notas en celda pueden requerir aprobación
 `ZohoSheet_set_note_to_cell` puede devolver "No approval received" sin razón evidente. Avisar al PO.
 
-### 10.8 Time entries solo del usuario autenticado
-`clickup_get_time_entries` solo entries del usuario autenticado salvo admin. Avisar al PO si faltan entries.
+### 10.8 ~~Time entries solo del usuario autenticado~~ — OBSOLETO (rectificado v1.5)
+Limitación reportada en v1.0/v1.1 era incorrecta. `clickup_get_time_entries` SÍ devuelve entries de cualquier usuario del workspace pasando `assignee_id` + `start_date` + `end_date` + `workspace_id=762713`. Ver §10.15 para el patrón canónico de recopilación "por persona".
 
 ### 10.9 Carácter `+` perdido en CSV
 No usar en fechas con offset horario.
@@ -1577,6 +2071,65 @@ No funciona con `date_time`. Usar `=TEXTO(...; "0,00%")`. Ver 5.A10.
 ### 10.14 Tipo numérico heredado de fecha
 Restas de fechas devuelven número con formato fecha heredado. Envolver con `ENTERO()`. Ver 5.A6.
 
+### 10.15 Bug `clickup_get_task_time_entries` devuelve vacío *(NUEVA v1.5)*
+
+⚠️ **Bug observado en lista Soporte Avaderm y Gestión Avaderm.** El endpoint `clickup_get_task_time_entries` (entries de una tarjeta concreta) devuelve `200 OK` con array vacío en tarjetas que SÍ tienen tiempo imputado real. Verificado en:
+- `869c23tnw` (Refinamiento - 2026 [AVADERM])
+- `869d2rmd6` (Gestión Mayo 2026 [AVADERM])
+
+No es error de permisos ni de filtros: responde sin error pero el array `data` viene vacío. Comportamiento inconsistente entre ejecuciones.
+
+**WORKAROUND CANÓNICO — "Recopilación por persona":**
+En lugar de iterar `por tarjeta → get_task_time_entries`, invertir el bucle:
+
+1. Para cada miembro del equipo Reinicia (resolver IDs con `clickup_find_member_by_name` o usar memoria):
+   ```
+   clickup_get_time_entries(
+     assignee_id=<member_id>,
+     start_date=<periodo_inicio_ms>,
+     end_date=<periodo_fin_ms>,
+     workspace_id=762713
+   )
+   ```
+2. Filtrar los entries devueltos cuya `task.id` pertenezca a las tarjetas del cliente del periodo (cruce con la lista de tarjetas Q-E del Soporte + Gestión).
+3. Acumular por persona y por tarjeta.
+
+Este patrón "por persona" es el **flujo correcto y canónico**, no un workaround temporal. Aplicar siempre en Modo A §3.2.5 y Modo B §4.3, independientemente de si `get_task_time_entries` funciona o no en la tarjeta. Garantiza consistencia y captura entries de todo el equipo (no solo del usuario autenticado, ver §10.8 rectificada).
+
+IDs canónicos del equipo Reinicia (referencia rápida):
+- Néstor `766716` · Pablo `87715920` · Paolo `2447443` · Alejandro Pont `93805276` · Johanna `56699411` · José Barreiro `87739095` · Fabián `93744950` · Óscar Díez `93631901` · Mario `81733832` · Álvaro `2441281`.
+
+### 10.16 Bug `invalid_type` en `task.id` de algún entry *(NUEVA v1.5)*
+
+⚠️ **Bug intermitente del endpoint `clickup_get_time_entries`.** El response puede contener entries con `task.id = "invalid_type"` (string literal, no error). Visto en sesión Avaderm v1 con el entry de José Barreiro (assignee_id `87739095`) sobre `869c23tnw`. No bloquea el response global, solo afecta a entries puntuales.
+
+**WORKAROUND:**
+- Si el entry afectado **es relevante** para el informe (cubre una imputación importante) y existe una versión anterior del informe (v1, v_anterior) donde el entry sí está bien capturado: **heredar el valor** de la versión anterior y documentarlo en notas internas (ej. "Heredado v1 — bug invalid_type en API").
+- Si el entry **no se puede verificar** contra una versión anterior: registrarlo en el **Inventario automático de anomalías al cierre** (§3.10.bis chequeo 1, time entries sin task asociada o anómalas) y reportarlo en el comentario al PO como anomalía sin impacto en datos.
+- Si afecta a >10% del total de horas del periodo: detener generación y avisar al PO antes de continuar.
+
+### 10.17 Acumulación de error por redondeo en subtotales *(NUEVA v1.5)*
+
+⚠️ **Bug metodológico, no técnico.** Si la skill calcula subtotales (por persona, por tarjeta, por categoría) redondeando cada uno a 2 decimales antes de sumarlos, el error acumulado puede llegar a `±0,03h` por bloque y romper el cuadre con los time entries reales de ClickUp.
+
+**Ejemplo real (Avaderm v2 17/05/2026):**
+- Cálculo inicial con subtotales redondeados: 11,11h.
+- Cálculo correcto con minutos exactos: 10,73h (10:44 en minutos).
+- Pivot Table sobre celdas escritas con 2 decimales: 10,76h.
+- Discrepancia: 0,35h respecto al cálculo inicial, 0,03h respecto al exacto.
+
+**PATRÓN CANÓNICO:**
+- **Cálculo interno**: sumar en minutos enteros (no horas con decimales). Solo redondear al final, cuando se escribe en celda destino.
+- **Celdas escritas**: aceptar redondeo a 2 decimales porque es lo que ve el cliente, pero garantizar coherencia con la Pivot Table (que aplica `SUMAR.SI` sobre las celdas escritas, no sobre los minutos exactos).
+- **Fuente de verdad**: lo que la Pivot Table calcula a partir de ClickUp Data es el dato oficial para Informe + PO Breakdown. Documentar discrepancia esperable `±0,03h` en notas internas si la hay.
+- **No usar `clickup_get_time_entries` con la suma en horas** que devuelve la API — recalcular siempre desde la duración en milisegundos de cada entry.
+
+Algoritmo correcto en pseudo-Python:
+```python
+total_minutos = sum(entry["duration"] // 60000 for entry in entries)
+horas_decimales = round(total_minutos / 60, 2)  # solo redondear AL FINAL
+```
+
 ---
 
 ## 11. Versiones
@@ -1587,6 +2140,8 @@ Restas de fechas devuelven número con formato fecha heredado. Envolver con `ENT
 | **v1.1** | 2026-05-11 | Néstor + Claude | Refinamiento tras primera ejecución real (Carritech v3). Incorpora: (A) bugs técnicos descubiertos (column_width, decimales coma, BUSCARV con 0, ENTERO en restas de fechas, rangos acotados, CSV en lotes, update_named_range, namedrange con notación rango, TEXTO para porcentajes, FECHA en lugar de strings); (B) identidad visual canónica completa (paleta unificada, banner sin bordes, cabecera/SUMMARY/BREAKDOWN en A-B, DETAIL sin zebra, GLOSSARY banner gris extendido, pestañas internas con cols laterales y rows extra limpias); (C) convención de naming por idioma del cliente (ES y EN); (D) políticas operativas validadas (Q-E solo Soporte+Gestión, Q-F GUARANTEE a 0h, Q-G PO cuenta, Q-H datos crudos); (F) crecimiento vertical Historical paramétrico; (G) manual de estilo Resolution Summary ampliado con ejemplos del v3 Carritech. Modo B reforzado con sección de cambios estilísticos pestaña a pestaña. Banner del semáforo extendido a C18:F18. Contacto solo PO. Creación de subtarea si no existe en cierre formal. |
 | **v1.2** | 2026-05-16 | Néstor + Claude | Evolución tras segunda ejecución real (Carritech v4). Cambios principales: (A) **Sistema Bonus por producto** — nueva pestaña 6 `Bonus History` que congela el % de bonus aplicado tras la primera aparición de cada producto en cualquier informe del cliente; fórmula F en PO Breakdown con BUSCARV fallback a Bonus History; algoritmo de regeneración entre informes que consulta informes anteriores en Workdrive; bonus es UPLIFT (`1+bonus%`) no descuento. (B) **PO Breakdown Preparation con fechas** — cols K (Fecha entrada / date_created ClickUp), L (Fecha refinamiento / primer time_in_status en backlog), M (Fecha informe / BUSCARV a Bonus History). Bloque config B4-B5 con default bonus y validación de rango. Fila TOTAL extendida A-M lavanda. Orden canónico Fecha entrada DESC. (C) **Report con col L Original Request** — 12 cols A-L con el "Original name" de ClickUp + "Cliente request" del custom field del form, vacío para Account Management recurrente, "Cliente reported X, addressed under project guarantee" para in-warranty. Banner row 1 extendido A-L. Subtotales y TOTAL CONSUMED extendidos A-L. (D) **Orden Report DETAIL por Start Date DESC** en ambos bloques (billable e in-warranty). Intencional distinto del PO Breakdown. (E) **Glosario statuses reordenado al ciclo de vida**: Open → Product Backlog → Sprint Backlog → Doing → Validation Client → Closed → Parking. (F) **Bug fixes técnicos**: 5.A11 (formato fecha SÍ funciona vía API, excepción al límite de formato numérico), 5.A12 (validación post-reordenamiento obligatoria), 5.A13 (conversión px↔pt en column_width factor 4/3). (G) **Paleta clarificada**: dos grises distintos por pestaña (`#F2F2F2` en Report, `#EBEBEB` en PO Breakdown cols K-L-M). |
 | **v1.3** | 2026-05-16/17 | Néstor + Claude | Evolución tras sesión iterativa sobre Carritech v4. Cambios principales: **(A) Sistema Operational Planning (Sección 7.5)** — tabla separada en PO Breakdown rows 24-34 para Account Management (Gestión mensual + Refinamiento) con cols A:J incluyendo nueva col E "% override" y col F "% applied (frozen)". Defaults globales B27 (Management) y B28 (Refinement). Diferencia clave con Bonus UPLIFT: aquí el % MULTIPLICA (`Billed = Raw × %`), no SUMA. Refinement separado por meses aunque la tarjeta ClickUp sea anual (clave compuesta `Nombre - Mes Año`). **(B) Bonus History UNIFICADO (Sección 7.6)** — única fuente de verdad para Bonus, Management y Refinement. Esquema migra a 5 cols: `Identifier` (antes Task ID), First Report Date, `Frozen %` (antes Frozen Bonus %), Source Report, `Type` (NUEVA: Bonus \| Management \| Refinement). Fórmulas de PO Breakdown consultan por col A sin filtrar por Type (clave única natural). **(C) Pestaña Leyenda (Sección 7.7)** — nuevo deliverable interno con 4 secciones (Report, PO Breakdown, Pestañas auxiliares, Notas operativas), 3 cols (Concepto / Ubicación / Explicación), ejemplos numéricos obligatorios, ~40 filas de contenido. Castellano. Se oculta antes de enviar al cliente. **(D) REGLA DE ORO "NUNCA combinar celdas"** (Sección 5.7 endurecida) — aplica a TODO el workbook. Patrón canónico: fill_color extendido + texto solo en celda A + celdas a la derecha vacías para desbordamiento visual. **(E) AUX cells del Report (5.A14)** — movidas de D19:F20 a G19:I20 con `font_color: #FFFFFF` para ocultarlas. B20 referencia ahora `$I$20`. Combinar con Protect Sheet manual. **(F) Historical reubicada a 2ª posición** (tras Report) — reordenamiento manual desde UI porque API MCP no expone `worksheet.move` (5.A18). **(G) A27 Report con etiqueta "Account Management"** (no "Operational Planning") por coherencia con el DETAIL. **(H) 4 nuevas reglas técnicas**: 5.A14 (AUX cells ocultas), 5.A15 (notas no eliminables vía API), 5.A16 (`content: ""` asimétrico single vs batch), 5.A17 (unmerge implícito re-formateando sin merge_cell), 5.A18 (reordenar pestañas requiere acción manual). **(I) Sección 13 NUEVA** — pasos previos al envío al cliente (ocultar pestañas, reordenar, Protect Sheet, verificación numérica final). |
+| **v1.4** | 2026-05-17 | Néstor + Claude | Refinamiento visual canónico completo tras sesión cruzada con Synuptic v2 y Gonher Mayo. Validación dual: workbook `egjr6445b8cb54cb14b0e94fa1eaa97d5c24e` (Synuptic) + workbook Gonher Mayo 2026. Cambios principales: **(A) Lavado base PASO 0 (§3.4.bis)** — REGLA DEL LIENZO LIMPIO: `fill_color: #FFFFFF` + `border: {all_border, #FFFFFF, solid}` SIEMPRE juntos, hasta col Z fila 100, en TODAS las pestañas, antes de poblar. Lista exhaustiva de rangos por pestaña. **(B) Localización pestañas cara cliente (§6.0)** — Informe/Histórico en ES, Report/Historical en EN. Internas mantienen nombre técnico. Renombrado obligatorio post-creación de Hoja1. **(C) Patrón canónico "Tabla Reinicia" (§5.A25)** — banner + nota + header + datos + TOTAL pegado (sin espacio), refinamiento col A texto NEGRO bold (no azul Reinicia). Col G "Hours final" en lavanda `#D9D0FB` + bold para destacar valor facturable. **(D) Patrón "bloque de configuración" (§5.A26)** — verde menta `#D1FAF2` + bold para etiqueta+valor, gris `#F2F2F2` + italic para celda de validación. Notas obligatorias. **(E) Espaciado canónico 5 filas vacías (§5.A27)** entre bloques distintos (validado vs alternativa 3-filas-Gonher, decisión canónica: 5). **(F) Redondeo a 2 decimales con preservación de fórmulas (§5.A23)** — algoritmo half-up con fallback ceiling cuando fórmulas dependientes lo requieren. Caso validado: Synuptic D13 = 3,79 (ceiling) preserva G13 = 4,35. **(G) Anti-Roboto (§5.A22)** — `font_name: "Manrope"` obligatorio en TODO `format_ranges`. **(H) Notas obligatorias en headers y configuración (§5.A24 + ANEXO B)** — catálogo verbatim de notas por celda en B4, B5, E6, F6, G6, K6, L6, A26, B26, C26, B24, B25, F7:F14, F27:F29, C18, G19, etc. **(I) Cambio arquitectónico Informe!B27 (§5.A21)** — usar `SUMAR.SI` sobre Pivot Table en lugar de referencia directa `'PO Breakdown'!G34` para robustez frente a reestructuraciones futuras. **(J) Cliente con sistema preexistente (§3.4.ter)** — 3 opciones A/B/C (Migrar/Coexistir/Manual). Validado en Gonher Mayo (3 informes quincenales previos → Coexistir). **(K) Inventario automático de anomalías al cierre (§3.10.bis)** — 6 chequeos: time entries sin task, no-Reinicia, cross-cliente, tarjetas duplicadas, soporte sin MIN/MAX, dry-run vs oficial. Incluir en comentario al PO. **(L) 3 reglas técnicas nuevas (5.A19, 5.A20, 5.A21)** — Manrope fallback Roboto (catálogo fuentes usuario), re-formato pisa formato previo (orden crítico construcción pestaña), inserción de filas rompe referencias externas (justifica SUMAR.SI). **(M) Patrón row 3 nota italic (§5.A28)** — `wrap_text: false` + `row_height: 20` fijo + bordes blancos. **(N) Cabeceras col A del Informe (§5.A29)** — `wrap_text: true` + `row_height: 30` para etiquetas largas. **(O) Col B glosario sin wrap (§6.bis.E)** — `wrap_text: false` (desborda lateralmente, más legible). **(P) Leyenda col A negra bold (§7.7)** — sobre `#F2F2F2`, distinto del Informe (verde menta). |
+| **v1.5** | 2026-05-17 | Néstor + Claude | Aprendizajes de bugs y patrones canónicos tras ejecución Avaderm v2 (01/05/2026 a 17/05/2026, workbook `egjr6793a20a2f473419bbbb04bf6d28fda97`). Sin cambios estructurales en las 7 pestañas. Cambios en §10 Limitaciones técnicas conocidas: **(A) §10.8 RECTIFICADA** — la entrada anterior decía que `clickup_get_time_entries` solo devuelve entries del usuario autenticado. Es FALSO. La tool SÍ devuelve entries de cualquier usuario del workspace pasando `assignee_id` + `start_date` + `end_date` + `workspace_id=762713`. Esta corrección elimina la limitación reportada en v1.0/v1.1. **(B) §10.15 NUEVA** — Bug `clickup_get_task_time_entries` devuelve `200 OK` con array vacío en tarjetas con tiempo imputado real (verificado en `869c23tnw` Refinamiento y `869d2rmd6` Gestión Mayo de Avaderm). Patrón canónico de recopilación: invertir el bucle a "por persona" en lugar de "por tarjeta", usando `clickup_get_time_entries(assignee_id, start_date, end_date)` para cada miembro del equipo Reinicia y filtrando por `task.id` perteneciente a las tarjetas del cliente. Incluye IDs canónicos del equipo Reinicia para referencia rápida. Este patrón aplica siempre en §3.2.5 y §4.3, no es un workaround temporal. **(C) §10.16 NUEVA** — Bug intermitente `task.id = "invalid_type"` en algún entry concreto del response de `clickup_get_time_entries` (visto con José Barreiro `87739095` en `869c23tnw`). Workaround documentado: heredar del informe v_anterior si existe, o registrar en §3.10.bis chequeo 1 como anomalía si no. Umbral de bloqueo: >10% del total de horas afectado. **(D) §10.17 NUEVA** — Bug metodológico de acumulación de error por redondeo en subtotales. Si la skill calcula subtotales redondeando cada uno a 2 decimales antes de sumarlos, acumula error `±0,03h` por bloque. Patrón canónico obligatorio: sumar siempre en minutos enteros internamente, redondear SOLO al escribir en celda destino. La Pivot Table es la fuente de verdad para Informe + PO Breakdown. Ejemplo real Avaderm v2: cálculo erróneo 11,11h vs. correcto 10,73h (Pivot 10,76h por redondeo en celdas escritas). Algoritmo en pseudo-Python incluido. |
 
 ---
 
@@ -1614,19 +2169,36 @@ Restas de fechas devuelven número con formato fecha heredado. Envolver con `ENT
 - ✅ **Reglas técnicas**: 5.A14 a 5.A18 (5 nuevas)
 - ✅ **Sección 13 NUEVA**: pasos previos al envío al cliente
 
-### 12.2 Para v1.4 (medio plazo, próximo)
+### 12.1.ter Cumplido en v1.4 (referencia)
+
+- ✅ **Lavado base PASO 0** (§3.4.bis) — REGLA DEL LIENZO LIMPIO con fill + border simultáneos
+- ✅ **Localización pestañas cara cliente** (§6.0) — Informe/Histórico ES, Report/Historical EN
+- ✅ **Patrón canónico "Tabla Reinicia"** (§5.A25) — banner+nota+header+datos+TOTAL pegado, col A negra bold
+- ✅ **Patrón "bloque de configuración"** (§5.A26) — verde menta + gris validación
+- ✅ **Espaciado canónico 5 filas vacías** (§5.A27) entre bloques
+- ✅ **Col G facturable en lavanda + bold** en TODAS las tablas con horas finales
+- ✅ **Redondeo a 2 decimales con preservación** (§5.A23) — algoritmo half-up + fallback ceiling
+- ✅ **Anti-Roboto** (§5.A22) — `font_name: "Manrope"` obligatorio
+- ✅ **Notas obligatorias en headers y configuración** (§5.A24 + ANEXO B con catálogo verbatim)
+- ✅ **Cambio arquitectónico Informe!B27** (§5.A21) — `SUMAR.SI` sobre Pivot Table
+- ✅ **Cliente con sistema preexistente** (§3.4.ter) — 3 opciones A/B/C
+- ✅ **Inventario automático de anomalías al cierre** (§3.10.bis) — 6 chequeos
+- ✅ **Reglas técnicas nuevas**: 5.A19 (Manrope fallback Roboto), 5.A20 (re-formato pisa), 5.A21 (inserción rompe externas), 5.A22 (anti-Roboto), 5.A23 (redondeo con preservación), 5.A24 (notas obligatorias), 5.A25 (Tabla Reinicia), 5.A26 (bloque config), 5.A27 (5 filas vacías), 5.A28 (row 3 nota italic), 5.A29 (cabeceras Informe)
+
+### 12.2 Para v1.5 (medio plazo, próximo)
 
 - **Plantilla canónica en Workdrive** que la skill duplique con `ZohoSheet_copy` en lugar de generar pestaña a pestaña (gran ahorro de llamadas API)
-- **Automatización de los pasos manuales de Sección 13** si la API MCP los expone en el futuro (ocultar pestañas, reordenar pestañas, Protect Sheet)
+- **Automatización de los pasos manuales de Sección 13** si la API MCP los expone en el futuro (ocultar pestañas, reordenar pestañas, Protect Sheet, formato porcentaje)
 - **Manual de estilo Resolution Summary y Original Request completo**: 5-10 ejemplos por categoría, glosario terminológico, longitud óptima medida
 - **Catálogo de clientes activos** para acelerar elicitación: lista, listas ClickUp conocidas, idioma, PO Cliente, modelo contractual por defecto
 - **Modo B completo**: flujo de diff visual entre versiones, gestión sistemática de merges, recálculo automático del semáforo con disparo condicional de comentarios
 - **Cron de programación automática** (depende de skills hermanas, ver 12.4)
 - **Custom field "Fecha refinamiento Claude" en ClickUp** (depende de skill `soporte-procesamiento-clickup-reinicia` v1.9+ y `soporte-correo-clickup-reinicia` v1.x+): que esas skills escriban un timestamp limpio al cerrar el refinamiento, en vez de inferirlo de `time_in_status` heurísticamente. Una vez disponible, columna L de PO Breakdown leería directamente del custom field.
 - **Diferenciación PO en Soporte vs Gestión** (Q-G futuro): cómo discriminar qué imputa el PO contra qué bolsa
-- **Información adicional en Report**: comparativa con periodos anteriores, top 3 items por horas, SLA de respuesta/resolución
-- **Información adicional en Historical**: modelo de contrato vigente, % variación entre periodos, carry-over rolado explícito
+- **Información adicional en Informe**: comparativa con periodos anteriores, top 3 items por horas, SLA de respuesta/resolución
+- **Información adicional en Histórico**: modelo de contrato vigente, % variación entre periodos, carry-over rolado explícito
 - **Ocultar pestañas vía API**: si Zoho expone el método `worksheet.hide` en el MCP en el futuro, automatizar el paso 13.1
+- **Endurecer §3.10.bis (inventario anomalías)**: añadir chequeos de productos retrasados (DOING con fecha límite vencida), productos sin actividad >2 sprints, time entries de fin de semana.
 
 ### 12.3 Para v2.0 (largo plazo)
 - **Export a Word/PDF** para Dirección
@@ -1724,55 +2296,6 @@ Si tras revisar con los POs hay cambios, **subir versión** del nombre del fiche
 ### 13.6 Compartir con el cliente
 
 Tras todos los pasos anteriores, compartir el sheet con permisos de **solo lectura** desde Workdrive UI.
-
-### 13.7 CHECKLIST de cierre del informe *(NUEVA v1.3)*
-
-⚠️ **Antes de dar el informe por cerrado**, el PO ejecuta esta checklist completa en orden. La skill cierra la subtarea de generación SOLO cuando todos los puntos están marcados.
-
-#### A. Cuadre interno (Claude lo verifica antes de avisar al PO)
-
-- [ ] **Bonus History** tiene una entrada por cada producto/fila del informe (16 Bonus + N Management + N Refinement). Sin huérfanos en PO Breakdown sin entrada en Bonus History.
-- [ ] **PO Breakdown tabla principal** col F devuelve valor en todas las filas (no `#N/A!`). BUSCARV resuelve correctamente contra Bonus History.
-- [ ] **PO Breakdown tabla Operational Planning** col F devuelve valor en todas las filas. Defaults `B27` y `B28` configurados.
-- [ ] **G21 TOTAL tabla principal** = suma correcta de G7:G20.
-- [ ] **G34 TOTAL Operational Planning** = suma correcta de G30:G33.
-- [ ] **Report B26** = SUMAR.SI Support + Inquiry del DETAIL — coincide con suma manual.
-- [ ] **Report B27** = `='PO Breakdown Preparation'!G34` (referencia directa, no SUMAR.SI).
-- [ ] **Report B16** = B26 + B27 + B28 + B29.
-- [ ] **Report B17** = B15 − B16. No negativo si % < 100%.
-- [ ] **Report B18** = `B16/B15` formateado como `XX,XX%` (coma decimal).
-- [ ] **Report C18** semáforo coherente: 🟢 <50%, 🟡 50-75%, 🟠 75-100%, 🔴 ≥100%.
-- [ ] **Report F20** Estimated exhaustion en formato `dd/MM/yyyy`.
-- [ ] **Report E47** Subtotal billable DETAIL = B16.
-- [ ] **Report E57** TOTAL CONSUMED = B16.
-- [ ] **Historical** última fila refleja el periodo actual con valores cuadrados.
-
-#### B. Validación visual (Claude lo verifica antes de avisar al PO)
-
-- [ ] Ninguna pestaña tiene celdas mergeadas (regla de oro 5.7).
-- [ ] Banners y headers de sección tienen `fill_color` extendido al rango completo + texto solo en celda A + celdas a la derecha vacías.
-- [ ] AUX cells del Report (G19:I20) tienen `font_color: #FFFFFF`.
-- [ ] Anchos de columna verificados con factor 4/3 (regla 5.A13).
-- [ ] Bordes blancos hasta Z100 en pestañas auxiliares (Bonus History, Leyenda).
-- [ ] Notas insertadas en celdas correctas (no huérfanas tras movimientos).
-
-#### C. Pasos manuales del PO (Claude le pasa la lista al cerrar)
-
-- [ ] **Reordenar pestañas** al orden canónico: Report → Historical → PO Breakdown → Pivot Table → ClickUp Data → Bonus History → Leyenda. Arrastrar manualmente desde la UI (la API MCP no expone `worksheet.move`).
-- [ ] **Aplicar formato porcentaje** a las celdas que la API no permite (`B4` PO Breakdown, `C6:CN` Bonus History).
-- [ ] **Eliminar notas huérfanas** si las hay (la API no permite borrar notas, solo sobrescribir).
-- [ ] **Ocultar pestañas internas**: PO Breakdown, Pivot Table, ClickUp Data, Bonus History, Leyenda. Quedan visibles solo Report e Historical.
-- [ ] **Protect Sheet** activado en Report (al menos cols G:I row 20 con las AUX cells).
-- [ ] **Revisar con los POs** (Óscar Díez / Pablo Losada / Paolo / quien corresponda).
-- [ ] **Subir versión** del fichero si hay cambios (v4 → v5) — renombrado manual desde Workdrive UI.
-- [ ] **Compartir con el cliente** con permisos de solo lectura desde Workdrive UI.
-
-#### D. Cierre operativo en ClickUp
-
-- [ ] **Comentario al PO Cliente** en la tarea del periodo con resumen ejecutivo y enlace al sheet.
-- [ ] **Cerrar subtarea** "Generación informe dedicación..." en la tarea de Gestión mensual.
-- [ ] **Imputar tiempo** del PO + Claude en la subtarea de generación.
-- [ ] **Si semáforo 🟠 High o 🔴 Exceeded**: comentario adicional avisando al PO y a Néstor sobre necesidad de renegociación.
 
 ---
 
@@ -1933,16 +2456,18 @@ CREACIÓN WORKBOOK
 □ Nombre canónico por idioma (ES o EN)
 □ ZohoSheet_create_workbook
 □ Validar status=1, nombre exacto, display_url_name limpio
-□ Renombrar Hoja1 → Report
-□ Crear 5 pestañas: PO Breakdown / Pivot Table / ClickUp Data / Historical / **Bonus History**
+□ **Renombrar Hoja1 → Informe (ES) o Report (EN)** (v1.4)
+□ Crear 5 pestañas con nombre localizado: PO Breakdown / Pivot Table / ClickUp Data / **Histórico** (ES) o Historical (EN) / **Bonus History** / Leyenda
+□ **LAVADO BASE PASO 0 (v1.4)**: format_ranges con fill_color:#FFFFFF + border:{#FFFFFF, solid, all_border} + font_name:"Manrope" en A1:Z100 de TODAS las pestañas ANTES de poblar (§3.4.bis)
 
 CONTENIDO POR PESTAÑA
-□ ClickUp Data: header + filas en lotes de ~10 entries (CSV)
+□ ClickUp Data: header + filas con cells.content.set en lotes ≤50 (NO csvdata.set por bug coma decimal — memoria #30)
 □ Pivot Table: header + filas con SUMAR.SI sobre ClickUp Data + Total
-□ **Bonus History (v1.2)**: banner + nota + header + filas heredadas de informes anteriores + entradas nuevas
-□ PO Breakdown Preparation (v1.2): banner + nota + bloque B4-B5 config + header + items (cols A-J + K-L-M fechas) con BUSCARV en F a Bonus History + G uplift + M BUSCARV fecha + Total
-□ Historical: banner + nota + header + fila del periodo actual
-□ Report: cabecera, SUMMARY (con celdas auxiliares D19-F20), BREAKDOWN en A-B (Q-F: GUARANTEE a 0), DETAIL (Hours=BUSCARV con 0, **col L Original Request v1.2**), GLOSSARY (con Consumption levels, statuses ordenados al ciclo de vida v1.2), Contacto solo PO
+□ **Bonus History (v1.2/v1.3)**: banner + nota + header + filas heredadas de informes anteriores + entradas nuevas
+□ PO Breakdown Preparation (v1.4): banner + nota + bloque B4-B5 config (verde menta + gris validación) + header + items rows 7-14 con G en lavanda + bold + TOTAL row 15 + **5 filas vacías rows 16-20** + banner Operational Planning row 21 + nota row 23 + bloque B24-B25 + header row 26 + filas Management/Refinement + TOTAL
+□ Histórico: banner + nota italic (row_height:20, wrap_text:false) + header + fila del periodo actual con cifras a 2 decimales
+□ Informe: cabecera (col A wrap_text + row_height:30), SUMMARY (con celdas auxiliares G19:I20), BREAKDOWN en A-B (Q-F: GUARANTEE a 0, **B27 con SUMAR.SI sobre Pivot Table v1.4**), DETAIL (Hours=BUSCARV con 0, col L Original Request), GLOSSARY (con Consumption levels, statuses ordenados al ciclo de vida, **col B wrap_text:false v1.4**), Contacto solo PO
+□ **Leyenda**: 4 secciones (Informe / PO Breakdown / Pestañas auxiliares / Notas operativas), col A texto negro bold + bordes blancos (v1.4)
 
 VALORES Y FÓRMULAS — REGLAS CRÍTICAS
 □ Decimales con coma es-ES ("24,26", no 24.26)
@@ -1952,6 +2477,8 @@ VALORES Y FÓRMULAS — REGLAS CRÍTICAS
 □ ENTERO() en restas de fechas
 □ TEXTO(;"0,00%") para porcentajes
 □ Fórmulas en español (locale ES)
+□ **Redondeo a 2 decimales en cara cliente** (v1.4 §5.A23) con preservación de fórmulas dependientes (half-up + fallback ceiling)
+□ **Informe!B27 = SUMAR.SI sobre Pivot Table** (v1.4) en lugar de referencia directa a celda
 
 CELDAS NOMBRADAS (con notación de rango B6:B6)
 □ Hours_contracted = B6:B6
@@ -1962,37 +2489,52 @@ CELDAS NOMBRADAS (con notación de rango B6:B6)
 □ Carry_over_previous = B29:B29 (no D29:D29)
 
 ANCHOS DE COLUMNA (usar ZohoSheet_column_width, NO format_ranges)
-□ Report A=200, ..., K=380, **L=456** (v1.2)
+□ Informe A=200, ..., K=380, **L=456** (v1.2)
 □ PO Breakdown Preparation A=350, B=130, ..., M=187 (v1.2)
 □ Pivot Table A=120, B=350, ..., E=120
 □ ClickUp Data A=120, ..., H=325
-□ Historical A=180, ..., H=450
+□ Histórico A=180, ..., H=450
 □ **Bonus History (v1.2)** A=160, B=213, C=213, D=480
+□ Leyenda A=240, B=200, C=600
 
-FORMATO CANÓNICO (sección 6.bis)
-□ Bordes blancos por defecto en todas las pestañas
-□ Banner row 1 con bordes invisibles (color = fondo) en Report (A1:L1) / PO Breakdown (A1:M1) / Historical
-□ Cabecera y SUMMARY: col A #D1FAF2, cols B-F #F2F2F2
+FORMATO CANÓNICO (sección 6.bis + v1.4)
+□ **font_name: "Manrope" OBLIGATORIO en CADA format_ranges** (§5.A22)
+□ Bordes blancos por defecto en todas las pestañas (§3.4.bis)
+□ Banner row 1 con bordes invisibles (color = fondo) en Informe (A1:L1) / PO Breakdown (A1:M1) / Histórico
+□ Cabecera y SUMMARY: col A #D1FAF2, cols B-F #F2F2F2 — **col A wrap_text:true + row_height:30** (v1.4 §5.A29)
 □ BREAKDOWN en A-B con header azul, datos col A #D1FAF2 col B #F2F2F2, total #D9D0FB
 □ DETAIL: A-L en #F2F2F2 SIN zebra (v1.2), chips status col J, col L Original Request wrap_text+middle, subtotales A-L #D9D0FB, TOTAL CONSUMED A-L #3812CF blanco bold con bordes #3812CF
 □ Statuses glossary en orden ciclo de vida (v1.2): Open → Product Backlog → Sprint Backlog → Doing → Validation Client → Closed → Parking
-□ GLOSSARY: banner #545454 extendido A-L (v1.2), sub-secciones col A #D1FAF2 cols B-L #F2F2F2
-□ PO Breakdown cols K-L-M (v1.2): fondo #EBEBEB (NO #F2F2F2 — distinto del Report), bordes blancos, formato fecha dd/MM/yyyy HH:mm en K-L y dd/MM/yyyy en M
-□ PO Breakdown fila 23 TOTAL: lavanda extendido A-M (v1.2)
-□ Pestañas internas: datos #F2F2F2 o #EBEBEB según pestaña, total #D9D0FB extendido, cols laterales y rows extra blanco
+□ GLOSSARY: banner #545454 extendido A-L (v1.2), sub-secciones col A #D1FAF2 cols B-L #F2F2F2, **col B wrap_text:false** (v1.4)
+□ PO Breakdown rows 7-14 col G: **fondo lavanda #D9D0FB + font #3812CF + bold** (Hours final destacado, v1.4)
+□ PO Breakdown rows 27-29 col G: **fondo lavanda + bold** (Billed hours destacadas, v1.4)
+□ PO Breakdown bloques config rows 4-5 + 24-25: **verde menta #D1FAF2 + bold para A:B; gris #F2F2F2 + italic para C** (v1.4 §5.A26)
+□ PO Breakdown rows 16-20: **5 filas vacías** entre tabla principal y Operational Planning (v1.4 §5.A27)
+□ PO Breakdown cols K-L-M (v1.2): fondo #EBEBEB (NO #F2F2F2 — distinto del Informe), bordes blancos, formato fecha dd/MM/yyyy HH:mm en K-L y dd/MM/yyyy en M
+□ PO Breakdown fila TOTAL row 15: lavanda extendido A-M (PEGADO a row 14, v1.4)
+□ Pestañas internas: datos #F2F2F2 o #EBEBEB según pestaña, total #D9D0FB extendido, cols laterales y rows extra blanco (§3.4.bis)
+□ Leyenda col A: **texto NEGRO bold sobre #F2F2F2** (no azul Reinicia, v1.4 §7.7)
 □ Banner del semáforo extendido C18:F18 con color del estado
 □ C18 con wrap_text:false (texto desborda)
-□ Celdas auxiliares D19-F20 gris claro F5F5F5
+□ Celdas auxiliares G19:I20 ocultas con texto blanco (v1.3 §5.A14)
 □ Resolution Summary col K wrap_text + vertical top + size 9
 □ Original Request col L wrap_text + vertical middle + alineación start + Manrope (v1.2)
-□ Fuente Manrope en todo
+□ Row 3 nota italic en TODAS las pestañas: wrap_text:false + row_height:20 + bordes blancos (v1.4 §5.A28)
 
-NOTAS EN CELDA
+NOTAS EN CELDA *(catálogo completo en ANEXO B v1.4)*
 □ C18 (semáforo) con thresholds
 □ B29 (Carry-over previous) explicando que el PO lo actualiza
-□ D19 (AUX) avisando "do not edit"
-□ **F7:F22 PO Breakdown (v1.2)**: "Frozen from informe vN — Bonus aplicado: X%..."
-□ **M6 PO Breakdown (v1.2)**: explicar BUSCARV a Bonus History
+□ G19 (AUX cells) explicando algoritmo del ritmo de consumo
+□ **B4 PO Breakdown** (Default Bonus %): explicación UPLIFT, fórmula, rangos
+□ **B5 PO Breakdown** (Bonus bounds): fórmula validación
+□ **E6, F6, G6 PO Breakdown** (headers tabla principal)
+□ **K6, L6 PO Breakdown** (headers fechas)
+□ **B24, B25 PO Breakdown** (defaults Operational Planning)
+□ **A26, B26, C26 PO Breakdown** (headers Operational)
+□ **F7:F14 PO Breakdown**: "Frozen from informe vN — Bonus aplicado: X%..."
+□ **F27:F29 PO Breakdown**: "Frozen from informe vN — Type [X], % aplicado Y%..."
+□ **E27:E29 PO Breakdown** (% override Operational): cascada prioridad
+□ **M6 PO Breakdown**: explicar BUSCARV a Bonus History
 
 RESOLUTION SUMMARY + ORIGINAL REQUEST (v1.2 — manual de estilo sección 6.bis-G y 6.bis.D)
 □ Borrador 1-3 frases por ítem en idioma del informe (col K)
@@ -2007,10 +2549,18 @@ RESOLUTION SUMMARY + ORIGINAL REQUEST (v1.2 — manual de estilo sección 6.bis-
 □ Escribir en cols K y L rows correspondientes
 
 ORDEN DE FILAS (v1.2)
-□ PO Breakdown items 7-22: por **Fecha entrada DESC** (date_created)
-□ Report billable items 36..N: por **Start Date DESC**
-□ Report in-warranty items N+4..M: por **Start Date DESC**
+□ PO Breakdown items 7-14: por **Fecha entrada DESC** (date_created) — máx 8 productos individuales en v1.4 (antes 16 hasta row 22)
+□ Informe billable items 36..N: por **Start Date DESC**
+□ Informe in-warranty items N+4..M: por **Start Date DESC**
 □ **VALIDACIÓN POST-REORDENAMIENTO obligatoria**: get_content_of_worksheet del rango y verificar orden contra criterio
+
+INVENTARIO ANOMALÍAS DE CIERRE *(NUEVA v1.4 §3.10.bis)*
+□ Time entries sin task asociada → listar
+□ Time entries de personas no del equipo Reinicia → listar
+□ Time entries cross-cliente del equipo → listar
+□ Tarjetas duplicadas (mismo name) → listar
+□ Tarjetas de Soporte sin Tiempo MIN/MAX → listar
+□ Si dry-run con ClickUp Data agregada → advertir repoblar individual en oficial
 
 COMENTARIOS AUTOMÁTICOS (si semáforo 🟠 o 🔴)
 □ Comentario al PO Cliente con texto según modelo (A/B/C) — mencionar agotamiento bolsa Y fin contrato
@@ -2018,13 +2568,323 @@ COMENTARIOS AUTOMÁTICOS (si semáforo 🟠 o 🔴)
 □ Si 🔴: comentario adicional a Néstor
 
 COMENTARIO FINAL AL PO
-□ En producto Gestión [Mes en curso], NO en subtarea
+□ En producto Gestión [Mes en curso] **del cliente** (ej. Gestión Mayo 2026 [SYNUPTIC]), NO en lista Gestión Reinicia interna, NO en subtarea
 □ Asignado al PO Cliente
-□ Incluye: enlace + datos clave + revisar + productos sin MIN/MAX + aviso aux cells D19-F20
+□ Incluye: enlace + datos clave + revisar + productos sin MIN/MAX + **inventario anomalías (v1.4 §3.10.bis)** + aviso aux cells G19:I20
+□ Si después se aplican refinamientos visuales: comentario ADICIONAL (no borrar el original)
 
 CIERRE
 □ Buscar subtarea "Generación informe dedicación..."
 □ Si existe: marcar como Closed
 □ Si NO existe: crearla con nombre canónico + cerrarla inmediatamente
-□ Avisar pendientes manuales (logo, notas que dieron "No approval received", rename de fichero si aplica)
+□ Avisar pendientes manuales (logo, notas que dieron "No approval received", rename de fichero si aplica, formato porcentaje a B4/B24/B25/C6:CN Bonus History, ocultar pestañas internas, Protect Sheet)
 ```
+
+---
+
+## ANEXO B — Catálogo de notas obligatorias por celda *(NUEVA v1.4)*
+
+Texto verbatim de las notas que la skill debe aplicar con `set_note_to_cell` para garantizar trazabilidad y autodocumentación del workbook. **Todas las notas en castellano** (uso interno del equipo Reinicia), independientemente del idioma del informe.
+
+### Pestaña Informe (cara cliente)
+
+**C18 — Semáforo de consumo:**
+```
+Semáforo de consumo (4 niveles):
+  🟢 Healthy (≤ 60%): consumo dentro de previsión, sin acciones requeridas.
+  🟡 Monitor (60-80%): seguir de cerca, alertar al cliente del ritmo.
+  🟠 Negotiate (80-100%): comentario automático al PO Cliente y a Néstor (§3.8).
+  🔴 Exceeded (>100%): regularización inmediata, comentario adicional a Néstor.
+
+Valor actual: [estado calculado en B18].
+
+Conclusión operativa: [calculada según semáforo].
+```
+
+**G19 — AUX cells (algoritmo ritmo de consumo):**
+```
+Celdas auxiliares de cálculo del ritmo de consumo proyectado:
+  G19 = horas tracked en el periodo (= B16)
+  H19 = días laborables transcurridos del periodo (= ENTERO((HOY()-B7)×5/7))
+  I19 = velocidad diaria laborable (= G19/H19)
+  G20 = horas restantes de la bolsa (= B17)
+  H20 = días laborables hasta fin de contrato (= ENTERO((B9-HOY())×5/7))
+  I20 = días laborables que duraría la bolsa al ritmo actual (= G20/I19)
+
+Fecha de agotamiento proyectada (B20) = HOY() + I20×7/5 días naturales.
+
+⚠️ NO MODIFICAR ESTAS CELDAS. Son cálculo intermedio.
+Ocultas con texto blanco. Para inspeccionarlas, seleccionar A19:I20.
+```
+
+### Pestaña PO Breakdown Preparation (interna)
+
+**B4 — Default Bonus % (UPLIFT):**
+```
+Default Bonus % aplicable a productos NUEVOS este periodo.
+
+Es un UPLIFT (porcentaje que se SUMA a las horas raw) para cubrir overhead no imputado por los consultores: análisis previo, contexto, comunicaciones, micro-interrupciones, revisiones internas y micro-tareas no trackeadas.
+
+Fórmula aplicada en la tabla principal:
+  Hours final = ENTERO(Hours raw × (1 + Bonus %) × 100) / 100
+
+Ejemplo: 1,45h raw × (1 + 0,15) = 1,66h final.
+
+Rangos:
+  • 0% — sin uplift (no recomendado)
+  • 15% — default Reinicia
+  • 25% — máximo permitido
+
+Los productos PREEXISTENTES (que ya aparecieron en informes anteriores) conservan su % congelado en Bonus History y NO se ven afectados por este default.
+
+Para sobrescribir manualmente el % de un producto en este informe, rellenar la columna E (Bonus % override) de la fila correspondiente.
+```
+
+**B5 — Bonus % bounds (validación):**
+```
+Regla de validación del Bonus %:
+
+Fórmula:
+  =SI(O($B$4<0;$B$4>0,25);"⚠ Out of range 0% - 25%";"0% – 25% OK")
+
+Verifica que el valor en B4 esté dentro del rango permitido [0%, 25%].
+
+Política Reinicia: el bonus UPLIFT no debe exceder 25% porque el cliente percibiría una sobrefacturación no justificada por overhead razonable. Si se necesita una facturación mayor por circunstancias excepcionales (ej. trabajo fuera de horario, urgencias), no usar el bonus: documentarlo como concepto aparte en la propuesta comercial.
+
+La misma fórmula MAX(0;MIN(0,25;$B$4)) se aplica en cada fila (col F) para clampear el % aplicado al rango válido.
+```
+
+**E6 — Bonus % override (header):**
+```
+Bonus % override (opcional, manual del PO)
+
+Permite sobrescribir el bonus % aplicado a esta fila concreta sin afectar al default global (B4) ni al resto de productos.
+
+Uso típico:
+  • Vacío (recomendado): la fila usa Bonus History (si el producto ya apareció en informes anteriores) o el default B4 (si es producto nuevo).
+  • Con valor: el PO impone manualmente un % para este producto en este informe. Solo afecta a esta versión del informe; las versiones posteriores recuperarán el % congelado en Bonus History.
+
+Rangos válidos: 0 a 0,25 (0%-25%). Valores fuera de rango se clampean automáticamente.
+```
+
+**F6 — Bonus % applied (header):**
+```
+Bonus % applied (calculado, frozen)
+
+% efectivo que se aplica a esta fila. Calculado con prioridad descendente:
+  1. Si E (override) tiene valor → ese %.
+  2. Si NO hay override pero el Task ID está en Bonus History → el % congelado allí (preserva continuidad entre informes).
+  3. Si no existe en Bonus History → cae al default B4.
+
+Fórmula:
+  =SI(ESBLANCO(En);SI.ERROR(BUSCARV(Bn;'Bonus History'!$A$6:$C$25;3;0);MAX(0;MIN(0,25;$B$4)));MAX(0;MIN(0,25;En)))
+
+Cláusula MAX(0;MIN(0,25;...)) asegura que el valor siempre esté entre 0% y 25% incluso si el override está fuera de rango.
+
+Propósito de congelar: el % de un producto NO debe cambiar entre informes salvo decisión explícita del PO.
+```
+
+**G6 — Hours final (header):**
+```
+Hours final (horas finales facturables)
+
+Horas facturables al cliente para este producto, tras aplicar el uplift del bonus %.
+
+Fórmula:
+  =ENTERO(D × (1+F) × 100) / 100
+
+Desglose:
+  • D = Hours raw (horas tracked en ClickUp por todo el equipo de entrega)
+  • F = Bonus % applied
+  • (1 + F) = factor multiplicador (1,15 para 15% default)
+  • ENTERO(...×100)/100 = truncado a 2 decimales
+
+Ejemplo numérico:
+  Producto con D = 1,45h y F = 0,15:
+  G = ENTERO(1,45 × 1,15 × 100) / 100 = ENTERO(166,75) / 100 = 1,66h
+
+Estas horas se trasladan al Subtotal facturable del Informe (cara cliente).
+```
+
+**K6 — Fecha entrada (header):**
+```
+Fecha entrada
+
+Fecha y hora en que la tarea fue creada en ClickUp (date_created). Es el primer punto de trazabilidad temporal del producto.
+
+Formato: dd/MM/yyyy HH:mm (timezone Europe/Madrid, ajustado automáticamente para DST).
+
+Origen del dato: campo date_created del objeto tarea de ClickUp.
+
+Uso operativo:
+  • Ordenar la tabla principal por esta columna (DESC) para ver los productos más recientes arriba.
+  • Calcular antigüedad del producto: HOY() - Fecha entrada.
+  • Detectar productos que llevan mucho tiempo sin moverse al backlog.
+```
+
+**L6 — Fecha refinamiento (header):**
+```
+Fecha refinamiento
+
+Fecha en que la tarea fue movida por primera vez a uno de los estatus product backlog o sprint backlog (el primero que ocurra). Marca el momento en que el PO consideró la petición lista para entrar al backlog formal.
+
+Formato: dd/MM/yyyy HH:mm (timezone Europe/Madrid).
+
+Origen del dato: array time_in_status / status_history del objeto tarea en ClickUp.
+
+Celda vacía: la tarea nunca pasó por backlog (típicamente Gestión mensual, o creada manualmente y saltada directamente a Doing).
+
+⚠️ Heurística temporal: es la mejor aproximación disponible vía API hasta que ClickUp incorpore un custom field tipo fecha "Fecha refinamiento" para uso de Reinicia.
+```
+
+**B24 — Default % Management a facturar:**
+```
+Default % Management a facturar
+
+Fracción de las horas de Gestión mensual (Account Management) que se facturan al cliente.
+
+A diferencia del Bonus UPLIFT (B4), aquí el % MULTIPLICA en lugar de sumar:
+  Billed hours = ENTERO(Raw hours × % × 100) / 100
+
+Por qué 80% (default Reinicia):
+  La Gestión mensual incluye coordinación interna, planificación, refinamiento, comunicaciones, follow-ups internos y otros gastos que no todos son repercutibles al 100% al cliente. El default 80% refleja la política de facturación estándar.
+
+Ejemplo numérico:
+  14,87h tracked en Gestión Abril × 0,80 = 11,89h facturables.
+
+Rangos válidos: 0%-100%. La fórmula de validación en C24 controla este límite.
+
+⚠️ Cada fila de Operational Planning puede sobrescribir este default rellenando la col E (% override) de esa fila.
+```
+
+**B25 — Default % Refinement a facturar:**
+```
+Default % Refinement a facturar
+
+Fracción de las horas de Refinamiento anual que se facturan al cliente.
+
+Fórmula:
+  Billed hours = ENTERO(Raw hours × % × 100) / 100
+
+Por qué 50% (default Reinicia):
+  El Refinamiento es una actividad interna que beneficia tanto al cliente (mejor priorización y estimación de sus productos) como al equipo de Reinicia (mejor comprensión del backlog). Se considera apropiado repercutir el 50% al cliente.
+
+Desagregación por mes:
+  La tarjeta ClickUp Refinamiento es ANUAL, pero en Operational Planning se desagrega por mes en filas paralelas a Management, para coherencia visual y trazabilidad temporal.
+
+Ejemplo numérico:
+  3,2h tracked en Refinamiento Mayo × 0,50 = 1,60h facturables.
+
+Rangos válidos: 0%-100%. La fórmula de validación en C25 controla este límite.
+
+⚠️ Cada fila de Refinamiento puede sobrescribir este default rellenando la col E (% override) de esa fila.
+```
+
+**A26 — Item Key (header Operational):**
+```
+ClickUp task / Item Key
+
+Clave única que identifica esta fila para los BUSCARV a Bonus History.
+
+Formato según tipo:
+  • Management: nombre exacto de la tarjeta ClickUp — ej. "Gestión Mayo 2026 [SYNUPTIC]"
+  • Refinement: clave compuesta con periodo — ej. "Refinamiento 2026 [SYNUPTIC] - Mayo 2026"
+
+Por qué distinto del Task ID:
+  La tabla principal usa Task ID (col B) como clave de Bonus History porque cada producto individual tiene su task_id único. En Operational Planning, en cambio:
+  • Las tarjetas de Gestión son mensuales y cambian de task_id mes a mes — mejor usar el nombre humano.
+  • Las filas de Refinement comparten una sola tarjeta anual — mejor usar clave compuesta con mes.
+
+El BUSCARV en Bonus History (col A = Identifier) acepta tanto task_ids como nombres compuestos sin colisión.
+```
+
+**B26 — Type (header Operational):**
+```
+Type (tipo de fila Operational)
+
+Valores permitidos:
+  • Management — fila correspondiente a una tarjeta de Gestión mensual del cliente.
+  • Refinement — fila correspondiente a una desagregación mensual de la tarjeta Refinamiento anual del cliente.
+
+La columna Type controla qué % default toma la fila:
+  • Management → mira $B$24 (Default % Management = 80%)
+  • Refinement → mira $B$25 (Default % Refinement = 50%)
+
+⚠️ Otros valores no soportados. Si se introduce un valor distinto, la fórmula F devolverá el default Refinement (50%) como fallback.
+```
+
+**C26 — Period (header Operational):**
+```
+Period (rango temporal de la fila)
+
+Rango de fechas que cubre esta fila, en formato dd/MM/yyyy - dd/MM/yyyy.
+
+Para filas Management: coincide con el mes natural cubierto por la tarjeta de Gestión.
+  Ej. Gestión Abril 2026 → 01/04/2026 - 30/04/2026
+  Ej. Gestión Mayo 2026 (informe cortado a media de mes) → 01/05/2026 - 14/05/2026
+
+Para filas Refinement: el mes desagregado del Refinamiento anual.
+
+Por qué truncar por periodo de informe:
+  El informe se cierra en una fecha concreta (Period end). Las horas de gestión del mes en curso se truncan a esa fecha para no facturar tiempo futuro al cliente.
+```
+
+**F7:F14 — Frozen % UPLIFT (por fila individual):**
+```
+Frozen from informe v[N] — primera aparición del producto. Bonus aplicado: [X]%. Valor heredado vía BUSCARV a Bonus History. Para sobrescribir en este informe, rellena la columna E (Bonus % override).
+```
+
+**E27:E29 — % override Operational (por fila):**
+```
+% override (manual del PO, opcional)
+
+Permite sobrescribir el % aplicado a esta fila concreta de Operational Planning sin afectar al default global (B24 para Management, B25 para Refinement).
+
+Uso típico:
+  • Vacío (recomendado): la fila usa Bonus History (si la entrada ya apareció en informes anteriores) o el default según Type (col B).
+  • Con valor: el PO impone manualmente un % para esta fila en este informe.
+
+Rangos válidos: 0 a 1 (0%-100%).
+
+⚠️ Cualquier override aquí se congela en Bonus History al cerrar el informe, igual que los % default. En informes posteriores, esa fila usará el override histórico salvo nuevo override.
+```
+
+**F27:F29 — Frozen % Operational (por fila individual):**
+```
+Frozen from informe v[N] — primera aparición de esta fila [Type]. % aplicado: [X]% (default [Type]). Valor heredado vía BUSCARV a Bonus History. Para sobrescribir en este informe, rellena la columna E.
+```
+
+### Pestaña Histórico (cara cliente)
+
+Sin notas obligatorias específicas más allá de la nota descriptiva del banner en row 3.
+
+### Pestaña Bonus History (interna)
+
+**A5 — Header Identifier:**
+```
+Identifier
+
+Clave única que se busca desde PO Breakdown Preparation (BUSCARV col B → A5+).
+
+Para productos individuales: task_id de ClickUp (ej. "869d71qj5").
+Para filas Management: nombre de la tarjeta de Gestión (ej. "Gestión Mayo 2026 [SYNUPTIC]").
+Para filas Refinement: clave compuesta con mes (ej. "Refinamiento 2026 [SYNUPTIC] - Mayo 2026").
+
+NO modificar manualmente: la skill mantiene esta columna automáticamente.
+```
+
+**E5 — Header Type:**
+```
+Type
+
+Discrimina la categoría de la fila:
+  • Bonus — producto individual con UPLIFT
+  • Management — fila de Gestión mensual con % multiplicativo
+  • Refinement — fila de Refinamiento mensual con % multiplicativo
+
+Las fórmulas de PO Breakdown consultan Bonus History por Identifier (col A), no por Type, porque las claves son únicas dentro del dataset. Type es informativo para el equipo Reinicia al auditar el histórico.
+```
+
+### Pestaña Leyenda (interna)
+
+Sin notas obligatorias en celda — el contenido es ya descriptivo por sí mismo. Excepción: si la columna C de algún concepto no es autoexplicativa con ejemplo numérico, añadir nota.

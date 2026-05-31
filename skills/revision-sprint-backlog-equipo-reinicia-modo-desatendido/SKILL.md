@@ -1,28 +1,18 @@
 ---
 name: revision-sprint-backlog-equipo-reinicia-modo-desatendido
 description: >
-  Versión desatendida (cloud) de revision-sprint-backlog-equipo-reinicia para ejecución en Claude Code
-  Routines a las 7AM laborables. Procesa todos los AUTOIA del sprint actual sin intervención humana
-  aplicando reglas deterministas en cada punto donde la versión supervisada pediría confirmación al PO.
-  Al terminar, postea un reporte de ejecución en Zoho Cliq (canal Metodología, ID T45816000000085077).
+  Versión desatendida (cloud) de revision-sprint-backlog-equipo-reinicia para ejecución en Claude Code Routines a las 06:00 los días laborables (lun–vie, Europe/Madrid). Procesa los Sprint Backlogs del sprint vigente sin intervención humana aplicando reglas deterministas donde la supervisada pediría confirmación al PO. Al terminar, postea un reporte en Zoho Cliq (canal Metodología, ID T45816000000085077).
 
-  Actívala SOLO cuando se ejecute la Routine programada o cuando un humano pida explícitamente
-  "ejecuta la revisión desatendida". Para procesamiento supervisado interactivo, usa la skill
-  hermana `revision-sprint-backlog-equipo-reinicia` (v3.4 supervisada).
+  Actívala SOLO cuando se ejecute la Routine programada o cuando un humano pida explícitamente "ejecuta la revisión desatendida". Para procesamiento supervisado interactivo, usa la skill hermana revision-sprint-backlog-equipo-reinicia.
 
-  v1.0 (17/05/2026): primera versión. Sincronizada con revision-sprint-backlog-equipo-reinicia v3.4.
-
-  synced_from_supervised_version: v3.4 (16/05/2026)
-  sync_discipline: Cada vez que se actualice la skill supervisada (v3.5, v4.0...), revisar este
-    SKILL.md y replicar los cambios manteniendo los overrides del MODO DESATENDIDO documentados en
-    el PASO 0 BIS. Actualizar synced_from_supervised_version al cerrar la sincronización.
+  v1.3 (31/05/2026): sincronizada con la supervisada v3.7; sección de configuración del automatismo en Claude Code; detección determinista de sprint; resolución producto→tarea; compuerta DoD por evidencia. Historial completo en la tabla de Versiones.
 ---
 
 # SKILL: Revisión de Sprint Backlog — MODO DESATENDIDO (cloud Routine)
 
 ## Propósito
 
-Mantener al día los **Sprint Backlogs individuales** de cada miembro del Equipo Operativo durante el sprint, sincronizándolos con las horas reales trabajadas en ClickUp **sin intervención humana**. Esto permite que cada mañana laborable a las 7AM el Equipo encuentre su AUTOIA actualizado con el trabajo del día anterior listo para consultar.
+Mantener al día los **Sprint Backlogs individuales** de cada miembro del Equipo Operativo durante el sprint, sincronizándolos con las horas reales trabajadas en ClickUp **sin intervención humana**. Esto permite que cada mañana laborable a las 06:00 el Equipo encuentre su AUTOIA actualizado con el trabajo del día anterior listo para consultar.
 
 - **Visibilidad temprana de desvíos** entre lo planificado y lo ejecutado.
 - **Captura sistemática del trabajo no planificado** (productos fuera de plan, soporte, microcampañas, ceremonias).
@@ -30,6 +20,53 @@ Mantener al día los **Sprint Backlogs individuales** de cada miembro del Equipo
 - **Detección de problemas operativos**: productos de Soporte sin estimación, sobrecarga estructural, dependencias entre miembros del equipo, motivos de desvío reincidentes.
 
 La skill **NO planifica** (eso lo hace `sprint-planning-reinicia` al inicio del sprint) ni **crea productos en ClickUp**. Solo lee de ClickUp y escribe en el Sprint Backlog del Zoho Sheet.
+
+---
+
+## ⚙️ CONFIGURACIÓN DEL AUTOMATISMO EN CLAUDE CODE (ROUTINE)
+
+> ⚠️ **Sección de setup — no forma parte del runtime.** Documenta cómo queda configurada la Routine de Claude Code que dispara esta skill. El runtime empieza en el PASO 0 BIS.
+
+### Repositorio y ubicación de la skill
+- Repo: `agencia-reinicia/claude-skills`.
+- Ruta de esta skill: `revision-sprint-backlog-equipo-reinicia-modo-desatendido/SKILL.md`.
+- La supervisada hermana (`revision-sprint-backlog-equipo-reinicia/SKILL.md`) vive en el mismo repo. Toda mejora de correctitud se hace primero en la supervisada y se sincroniza después aquí.
+
+### Programación (cron)
+- Expresión: `0 6 * * 1-5` (lunes a viernes a las **06:00 hora de Madrid**).
+- Zona horaria: **Europe/Madrid**.
+- Arranque del piloto: **automático desde el día 1** (lunes 01/06/2026). No requiere disparo manual.
+
+### Alcance del piloto
+- Sprint objetivo: **Sprint 7-26** (`kl62t6524c6834c8c4a769c7fa2b5eaa44eac`). La carpeta vigente se detecta de forma **determinista** en cada ejecución (Override 1.0; raíz `i6aloc646e871a46d46cab983dd7a6704ef9b`) con cross-check contra el sprint activo en ClickUp. El ID hardcodeado del Sprint 6-26 queda **eliminado**.
+- Equipos / miembros: durante el piloto, **allowlist temporal** `["Fabián", "Paolo"]` (Override 1.2; excluida "Camila" por alta nueva). Tras validar, se retira la allowlist y se procesa todo el Equipo Operativo detectado por el patrón `Excel-Clickup-Sprint-…` (Override 1.1). Sin lista hardcoded permanente.
+
+### Conectores MCP requeridos y permisos
+| Conector | Permiso | Uso |
+|---|---|---|
+| ClickUp | Lectura (time entries + tareas, workspace `762713`) | Horas reales, estatus (Col D), nombres de tarea e IDs para los enlaces HYPERLINK |
+| Zoho Workdrive (Sheet) | Lectura + escritura | Repoblar Data, escribir Tiempos / Tabla2 / Tabla21 / Log y sellos |
+| Zoho Cliq | Publicación en canal | Reporte de ejecución del PASO 9, canal Metodología `T45816000000085077` |
+
+No se requiere ningún otro conector. Verificar que el token de integración de ClickUp (Néstor) tiene acceso a las tareas del periodo: las tareas privadas sin acceso provocan la anomalía API documentada en la Mejora 13.
+
+### Prompt de disparo de la Routine
+Texto exacto que ejecuta la Routine programada:
+```
+Ejecuta la revisión desatendida de Sprint Backlogs del Equipo Operativo para el sprint vigente (la carpeta se detecta de forma determinista, Override 1.0, con cross-check contra ClickUp). Sigue íntegramente la skill revision-sprint-backlog-equipo-reinicia-modo-desatendido: detección dinámica de Equipos y miembros (patrón Excel-Clickup-Sprint), allowlist de piloto si está activa, reglas deterministas del PASO 0 BIS, y al terminar postea el reporte de ejecución en el canal Metodología de Zoho Cliq (T45816000000085077).
+```
+
+### Identificador de la Routine
+- Al crear la Routine en Claude Code se genera un `routine_id`. Anotarlo aquí y sustituir el placeholder `[routine_id]` del PASO 9 por el valor real, para trazabilidad del reporte en Cliq.
+- `routine_id` actual: **[pendiente de rellenar al crear la Routine]**.
+
+### Checklist pre-piloto
+- [ ] Skill subida al repo `agencia-reinicia/claude-skills` (esta + la supervisada).
+- [ ] Conectores MCP ClickUp / Workdrive / Cliq verificados en Claude Code.
+- [ ] Carpeta del Sprint 7-26 localizada en Workdrive y AUTOIA de cada miembro presentes.
+- [ ] Routine creada con cron `0 6 * * 1-5` (Europe/Madrid) y el prompt de disparo de arriba.
+- [ ] `routine_id` anotado y placeholder del PASO 9 sustituido.
+- [ ] Primera ejecución (01/06, 06:00) revisada en el canal Metodología de Cliq.
 
 ---
 
@@ -43,26 +80,44 @@ Esta skill se ejecuta sin PO delante. Cada vez que el contenido del documento m�
 
 **No preguntar al PO qué Equipos ni qué miembros procesar.** Aplicar la siguiente regla determinista:
 
-1. **Equipos activos** = espacios de ClickUp en el workspace `762713` cuyo nombre empiece literalmente por `"Equipo "` Y que tengan al menos un AUTOIA del sprint actual en la carpeta `Sprint X-AA` de Workdrive (`8zevxe63a29fcd85546798f0b5d150a7e51db` para Sprint 6-26 — confirmar carpeta del sprint vigente al inicio).
+**1.0 — Detección determinista de la carpeta del sprint vigente** (v1.3):
+- Listar las subcarpetas de la raíz de Sprint Backlogs individuales: `i6aloc646e871a46d46cab983dd7a6704ef9b`.
+- Filtrar por regex `^Sprint\s+0?(\d+)\s*-\s*0?(\d+)$` (tolera ceros a la izquierda y espacios alrededor del guion).
+- Carpeta vigente = la de mayor `(año, N)` entre las que casen. Guardar su `folder_id`.
+- **Cross-check** contra el sprint activo en ClickUp: si no coincide → **ABORTAR** y postear en Cliq un aviso de discrepancia. Empate entre dos carpetas o **0 coincidencias** → **ABORTAR**.
+- ⛔ **ELIMINADO el ID hardcodeado del Sprint 6-26** (`8zevxe...`). Ya no se usa en ningún punto.
+- Vigente hoy (31/05/2026): **Sprint 07 - 26** = `kl62t6524c6834c8c4a769c7fa2b5eaa44eac`.
 
-2. **Miembros a procesar** = todas las personas cuyo fichero AUTOIA aparece en esa carpeta del sprint, detectados por nombre de fichero (patrón `*AUTOIA*[NOMBRE]*` o equivalente). El nombre del fichero es la fuente de verdad estable: si una persona tiene AUTOIA, se procesa; si no, no.
+**1.1 — Patrón de ficheros de miembro** (CORRIGE v1.3 — los ficheros ya NO contienen "AUTOIA" en el nombre):
+- Patrón: `^Excel-Clickup-Sprint-\d+-\d+-(.+)$` → el grupo capturado es el **nombre de la persona**.
+- Normalizar acentos a **NFC** al comparar y al capturar el nombre.
+- **Excluir**: subcarpetas (p.ej. `Informes Ejecutivos...`), el fichero `(eliminar)` y cualquier zsheet que no case el patrón.
+- El nombre del fichero sigue siendo la fuente de verdad estable: si una persona tiene fichero que casa el patrón, se procesa; si no, no.
 
-3. **Personas transversales**: si un miembro aparece físicamente en AUTOIAs de varios Equipos, procesar TODOS los AUTOIAs en los que aparezca y reportar en Cliq la duplicidad como hallazgo, sin actuar sobre ella.
+**1.2 — Allowlist de piloto** (TEMPORAL — retirar tras validar el piloto):
+- `PILOTO_MIEMBROS = ["Fabián", "Paolo"]`. Procesar SOLO a estas personas mientras dure el piloto.
+- Excluir explícitamente a **"Camila"** (alta nueva).
+- Cuando el PO líder dé el piloto por validado, **retirar esta allowlist** y volver a procesar todo el Equipo Operativo detectado en 1.1.
 
-4. **Amigos Reinicia sin AUTOIA** (caso Síntaris, Chisco, etc.): **NO procesar, NO crear AUTOIA, NO añadir nada al Informe Ejecutivo desde esta skill desatendida**. Solo registrar en el reporte Cliq como "personas con horas tracked pero sin AUTOIA — pendiente de tratamiento manual por PO líder".
+**1.3 — Equipos activos** = espacios de ClickUp en el workspace `762713` cuyo nombre empiece literalmente por `"Equipo "` Y que tengan al menos un fichero de miembro (patrón 1.1) en la carpeta del sprint vigente (1.0).
+
+**1.4 — Personas transversales**: si un miembro aparece físicamente en ficheros de varios Equipos, procesar TODOS los ficheros en los que aparezca y reportar en Cliq la duplicidad como hallazgo, sin actuar sobre ella.
+
+**1.5 — Amigos Reinicia sin fichero de Sprint Backlog** (caso Síntaris, Chisco, etc.): **NO procesar, NO crear fichero, NO añadir nada al Informe Ejecutivo desde esta skill desatendida**. Solo registrar en el reporte Cliq como "personas con horas tracked pero sin Sprint Backlog — pendiente de tratamiento manual por PO líder".
 
 ### Override 2 — Decisión sobre la pestaña Data (sustituye Sub-paso 3b)
 
-**No preguntar al PO entre las opciones A/B/C/D.** Aplicar SIEMPRE la **Opción D: refresco incremental quirúrgico**:
+> 🚨 **ACTUALIZADO EN v1.1 (sincronización v3.5): este override queda DEROGADO por la Mejora 12.** Desde v3.5, el modo desatendido **NO usa refresco incremental Opción D**: aplica **refresco retroactivo completo del periodo** (relee todo el sprint desde ClickUp y reconstruye Data por entero en cada ejecución). Decisión de Néstor (26/05/2026): prioriza no perder información sobre el coste de tool calls. Ver PASO 6c Mejora 12. El texto histórico de la Opción D se conserva debajo solo como referencia.
 
-- Calcular `filas_a_añadir = entries_totales_del_periodo_ClickUp − filas_Data_ya_escritas_para_esa_task` para cada producto.
-- Escribir EXACTAMENTE las nuevas filas en Data, sin tocar las existentes.
-- Si `filas_a_añadir == 0 && horas_delta != 0`: anomalía registrada en Cliq y NO se tocan las filas existentes.
-- Si `filas_a_añadir != 0 && horas_delta == 0`: anomalía registrada en Cliq y se omite el pegado.
+**~~No preguntar al PO entre las opciones A/B/C/D. Aplicar SIEMPRE la Opción D: refresco incremental quirúrgico~~** (DEROGADO — ahora retroactivo completo, ver Mejora 12):
 
-**Justificación**: en ejecución diaria a 7AM, los entries nuevos esperables son los del día laborable anterior — entre 1 y 30 entries por miembro. El refresco completo (Opción A) destruiría las filas con cuadre ya consolidado y reintroduciría los bugs Unicode/decimal por reprocesado. Refresco incremental es la única opción segura para automatización diaria.
+- ~~Calcular `filas_a_añadir = entries_totales_del_periodo_ClickUp − filas_Data_ya_escritas_para_esa_task` para cada producto.~~
+- ~~Escribir EXACTAMENTE las nuevas filas en Data, sin tocar las existentes.~~
+
+**Comportamiento v1.1 (vigente)**: repoblar Data desde cero con TODO el periodo del sprint (Mejora 12) + verificación de integridad (cada fila con horas en Data debe tener K reflejándolas; si 0,00 con Data detrás → reparar fórmula + NFC). Esto elimina el riesgo de horas perdidas silenciosamente que tenía el incremental. La validación de cuadre se hace contra ClickUp API en vivo (Mejora 5, PASO 8).
 
 ### Override 3 — Renames en Tiempos (sustituye PASO 4 — renames)
+
 
 **Política Opción B canónica del PO líder.** Aplicar sin preguntar:
 
@@ -1397,7 +1452,144 @@ Aplicar en este orden estricto para evitar conflictos con renumeración de filas
 3. **Mejora 2** (insertar 4 filas + auxiliares + semáforo K_fila_cap+1). Las fórmulas de Mejora 1 se autoajustan a sus nuevas posiciones (Fabián G94→G98, etc.).
 4. **Mejora 3** (renombrar pestaña, reescribir Leyenda con las referencias de celda YA reposicionadas tras Mejora 2).
 
+---
 
+### PASO 6c — Mejoras de integridad y trazabilidad (v3.5)
+
+⚠️ **Diez mejoras adicionales** consolidadas en v3.5 (sincronizadas desde la supervisada). Refuerzan la integridad del cuadre, la trazabilidad y el orden estructural del AUTOIA.
+
+> 🤖 **OVERRIDE DESATENDIDO global del PASO 6c**: en todas las mejoras donde la versión supervisada dice "reportar al PO" o "pedir validación", el modo desatendido **NO interrumpe ni pregunta**: aplica la regla determinista correspondiente y **acumula el hallazgo para el reporte Cliq final** (PASO 9). Nunca abortar el pase por un hallazgo aislado de estas mejoras (ver Override 7 del PASO 0 BIS).
+
+#### Mejora 12 — Refresco retroactivo del periodo completo (SIEMPRE)
+
+🚨 **El modo desatendido adopta el retroactivo completo** (igual que supervisado v3.5), derogando el refresco incremental Opción D del Override 2 para la reconstrucción de horas. Razón validada por Néstor: prioriza no perder información sobre el coste de tool calls del cron.
+
+Cada pase **relee TODO el periodo del sprint desde ClickUp** y reconstruye/verifica la pestaña Data completa + todas las fórmulas SUMAR.SI. El modelo incremental dejaba horas perdidas silenciosamente (casos 22/05: Johanna 1,5h, Alejandro 3,28h).
+
+**Verificación de integridad obligatoria tras repoblar Data**: por cada fila del plan/huérfana, si tiene horas en Data, su celda K (SUMAR.SI) debe reflejarlas. Si muestra `0,00` teniendo entries detrás → reparar la fórmula + normalizar NFC en AMBOS extremos (Col E de Tiempos + Data!Column20). Ver Bug 4 y Bug 6.
+
+> 🤖 Este override deroga el Override 2 del PASO 0 BIS (refresco incremental Opción D). El PASO 0 BIS queda actualizado: la reconstrucción de Data es retroactiva completa, no incremental.
+
+#### Mejora 13 — Anomalía API ClickUp: entries corruptas (fragmentación binaria)
+
+`clickup_get_time_entries` devuelve a veces un **Output validation error** con `task.id`/`task.name` undefined en entries concretas. Una sola entry corrupta hace fallar TODA la llamada del rango.
+
+**Procedimiento (disparo REACTIVO)**:
+1. Intentar la llamada normal del periodo completo. Si devuelve el validation error → fragmentar.
+2. **Fragmentación binaria por rango temporal** (mitades sucesivas hasta aislar la entry corrupta; las sanas alrededor se recuperan).
+3. **Suelo: 1 hora**. Si un rango de 1h sigue fallando → `ENTRY_NO_RECUPERABLE`.
+4. Registrar en Log: tipo `ANOMALIA_API` + horario + user_id.
+5. 🤖 **OVERRIDE DESATENDIDO**: NO reportar al PO en chat → **acumular para el reporte Cliq** con la causa raíz. NO abortar el pase (la persona se procesa con las entries recuperables; las irrecuperables quedan para imputación manual).
+
+⚠️ **Causa raíz más probable a señalar en el reporte Cliq**: el usuario afectado ha creado en ClickUp **tarea(s) privada(s)** sin acceso para el usuario de integración (Néstor). La entry existe pero su `task` no es visible para el token → `task.id`/`task.name` undefined. Incluir en Cliq: *"Anomalía API en N entries de [persona] ([horarios]). Causa probable: tarea(s) privada(s) en ClickUp sin acceso. Pedir a [persona] que revise la privacidad de sus tareas del periodo. Entries pendientes de imputación manual: N."*
+
+#### Mejora 7 — Limpieza de prefijos `[BORRADO ClickUp]` huérfanos
+
+Al **inicio** de cada revisión, detectar entries en Data con prefijo `[BORRADO ClickUp]` y verificar si la tarea aún existe en ClickUp:
+- **Sigue existiendo** → quitar el prefijo automáticamente + Log. NO re-añadir el prefijo en el mismo pase.
+- **Ya no existe** → dejar el prefijo + 🤖 **acumular para reporte Cliq** (trabajo imputado a tarea borrada).
+
+#### Resolución producto→tarea (v1.3 — refunde y precede a las Mejoras 6 y 11)
+
+Antes de aplicar las Mejoras 6 (Col D) y 11 (Col E), **resolver CADA fila de plan** a `{task_id, status_vivo, url}` por orden de prioridad de fuente:
+
+1. **HYPERLINK ya guardado en Col E** → fuente preferente (el `task_id` viaja dentro del enlace).
+2. **Lista del cliente** (`Cliente → list_id`) + **match EXACTO de nombre** (normalizado NFC).
+3. **Asignado SOLO como desempate** — nunca como fuente principal.
+
+Producir un artefacto de resolución reutilizable por ambas mejoras:
+```
+resolucion[] = { fila, concepto, task_id, status_vivo, url, resuelto }
+```
+
+**Desambiguación** (aprendizaje del piloto en seco de Paolo):
+- Ante **homónimos** en la lista → desempatar por **tag de sprint** (`"sprint - 07 - 2026"`) + **asignado**.
+- Aceptar **solo match EXACTO normalizado**. Ejemplo: `"Despliegue X"` ≠ `"PreDespliegue X"`.
+- Sin match único → `MATCH_AMBIGUO`. 🤖 **OVERRIDE DESATENDIDO**: cuenta como **NO resuelta** y va al reporte Cliq. **Nunca adivinar.** (En la supervisada, este caso se pregunta al PO.)
+
+**Producto no resuelto = bandera dura**: registrar `PRODUCTO_NO_RESUELTO` en el Log + 🤖 **acumular para reporte Cliq**. **NO inventar estatus** (Mejora 6) ni **dejar un enlace inventado** (Mejora 11): la fila queda explícitamente sin resolver.
+
+🗓️ **Clasificación de ceremonias** (convención Néstor 31/05/2026): las **ceremonias de cierre** (Sprint Planning, Retrospective, Daily) se imputan al **SPRINT ENTRANTE** aunque se traqueen el día 1 del sprint.
+
+#### Mejora 6 — Refresco de Col D (Status) desde ClickUp (ClickUp = fuente de verdad)
+
+Para cada fila **resuelta** (artefacto `resolucion[]`), `D ← status_vivo` (el `status` leído en vivo de la tarea en ClickUp). 🚨 **PROHIBIDO escribir Col D desde el snapshot del time entry** — solo desde el status vivo de la tarea resuelta.
+
+🚨 **Estatus NATIVOS de ClickUp, SIN unificaciones**. El AUTOIA es interno: estados tal cual (`Product Backlog`, `Sprint Backlog`, `DOING`, `Doing Amigos`, `Validación Reinicia`, `Validación Cliente`, `parking e incidencias`, `done`, `closed`). **NO** colapsar `done+closed` ni `doing+doing amigos` (esas unificaciones son de la skill de Plan de Proyecto cara cliente, NO de esta).
+
+- Cada cambio → Log de Cambios (anterior → nuevo, fila, concepto, fuente ClickUp).
+- **Incoherencias** (saltos sospechosos) → Log + 🤖 **acumular para reporte Cliq y para el Informe Ejecutivo de Equipo**.
+
+#### Mejora 11 — Enlaces HYPERLINK a la ficha ClickUp
+
+En Col E de Tiempos, envolver el nombre en `=HYPERLINK("https://app.clickup.com/t/XXXXX";"Nombre exacto [CLIENTE]")`. Validado: el motor evalúa el HYPERLINK como su `cell_text`, no rompe SUMAR.SI. Para cada **fila resuelta sin enlace** (artefacto `resolucion[]`), `E = HYPERLINK(url; nombre)` con el `url` resuelto; el `task_id` queda embebido en el enlace. Verificar que `K` (SUMAR.SI) NO cae a 0 tras envolver.
+
+- **Filas con enlace**: plan + huérfanas con task ID + Gestiones Cliente de Tabla21 Bloque B. SIN enlace: ceremonias y Metodología interna.
+- **Match aproximado + corrección de nombre desde ClickUp** (triple umbral):
+  - **Alta confianza** (prefijo exacto, o coincide ignorando truncamiento/espacios/tildes) → corregir nombre al canónico + enlace + Log.
+  - **Dudoso** (varios candidatos) → 🤖 **OVERRIDE DESATENDIDO**: NO tocar el nombre, NO enlazar, **acumular candidatos para reporte Cliq** (nunca adivinar en desatendido).
+  - **Sin match** → sin enlace, acumular para reporte Cliq.
+- 🚨 **Doble renombrado obligatorio**: si se corrige el nombre en Col E (solo en alta confianza), renombrar TAMBIÉN Data!Column20 en el mismo pase. Log de cada corrección.
+
+#### Mejora 9 — Atribución NÉSTOR-PO (rediseño): de fila paralela a nota en Col M
+
+🚨 **Deroga el patrón de fila paralela `[NÉSTOR-PO]`.** Comportamiento:
+- **Eliminar** la fila paralela `[NÉSTOR-PO]` de Tabla2.
+- La hora de Refinamiento Automático queda **solo en Tabla21 Bloque A**.
+- En la **fila original**, **añadir en Col M** una nota que incluya el literal **"Refinamiento IA"**.
+- **Col A NO se toca**.
+
+🚨 **Col M es multi-información, se escribe por APPEND con saltos de línea**: nunca borrar "Refinamiento IA"; preservar siempre el contenido previo (leer, concatenar con salto de línea, escribir).
+
+#### Mejora 14 — Peticiones duplicadas del cliente
+
+La skill **NO fusiona ni borra automáticamente**:
+- **Dejar las dos filas**, consecutivas. La **buena es la 2ª** (corregida, por fecha de creación ClickUp).
+- En **Col A de la MALA (la 1ª)**: anteponer `Duplicado. ` a su contenido actual (ej. `Duplicado. 🤖 Soporte/WIP`). La buena conserva su Col A.
+- **Horas (Opción 1)**: la buena conserva SUMAR.SI y refleja TODAS las horas del concepto; la mala con **K vacía**. El tiempo cuenta una vez.
+- 🤖 **OVERRIDE DESATENDIDO**: NO reportar al PO en chat → **acumular para reporte Cliq** (limpieza manual en ClickUp pendiente).
+
+⚠️ **Limitación conocida (capacidad)**: el tiempo duplicado-pero-cobrable entra en capacidad vía la fila buena. Ver "Evolución prevista v3.6" (tabla aparte de "tiempo facturable no productivo").
+
+#### Mejora 8 — Limpieza global + estructura de bloques + colchón permanente
+
+**Estructura canónica de Tabla2**:
+
+```
+Bloque Plan (Sprint Planning)
+[3 filas vacías — separador deliberado]
+Bloque Soporte estimado
+[3 filas vacías — separador deliberado]
+Bloque Huérfanas (entran durante el sprint)
+[buffer ≥ 3 filas vacías formateadas]
+```
+
+Las huérfanas forman un **tercer bloque visualmente separado** con su propia separación de 3 filas. Tabla21 empieza **siempre vacía**.
+
+- **8.1 Limpieza global**: eliminar filas completamente vacías intercaladas en Tabla2 (verificación previa Bug 8). **Excepciones**: los dos separadores de 3 filas y el buffer final.
+- **8.2 Preservar bloques**: respetar los 3 bloques y sus separadores de 3 filas (sagrados).
+- **8.3 Colchón permanente (Tabla2 Y Tabla21)**: garantizar **≥3 filas vacías formateadas de buffer al final** de cada tabla tras cada pase. Insertar fila debajo (hereda formato) ANTES de cubrir la última vacía. **Nunca agotar la tabla** (vistos AUTOIAs con Tabla21 llena hasta el borde).
+
+#### Mejora 5 — Validación de cuadre contra ClickUp API en VIVO
+
+🚨 Ver PASO 8 (reescrito v3.5). Validación contra ClickUp API en vivo (no contra Data). Umbrales escalonados; el bloqueo (>0,5h) en desatendido → no sella + reporta a Cliq.
+
+#### Mejora 10 — Cierre canónico atómico
+
+🚨 Ver PASO 8b (reescrito v3.5). Checklist indivisible: verificación estatus + cuadre + colchón + Log + doble sello.
+
+#### Orden recomendado de aplicación del PASO 6c
+
+1. **Mejora 12** (retroactivo completo) — base del pase.
+2. **Mejora 13** (anomalía API) — solo si falla la lectura.
+3. **Mejora 7** (limpieza `[BORRADO ClickUp]`).
+4. **Mejora 6** (refresco Col D Status).
+5. **Mejora 14** (duplicados) y **Mejora 9** (NÉSTOR-PO) — durante la clasificación.
+6. **Mejora 11** (HYPERLINK + nombres).
+7. **Mejora 8** (limpieza + bloques + colchón).
+8. **Mejora 5 + Mejora 10** (validación + cierre atómico) — PASO 8 y 8b.
+
+---
 
 Cuando la columna **Diferencia horas (K)** es negativa, significa que el tiempo registrado supera al estimado. La norma Reinicia exige rellenar dos campos en esa fila:
 
@@ -1440,19 +1632,31 @@ Solo desvíos REALES que requieren justificación.
 
 Estos motivos y comentarios se llevarán al Informe Ejecutivo del Equipo correspondiente para tener visibilidad de causas reincidentes y poder mejorar el sprint siguiente.
 
-### PASO 8 — Validación matemática
+### PASO 8 — Validación matemática contra ClickUp API en vivo (v3.5)
+
+🚨 **Mejora 5 — La validación se hace contra el total REAL de ClickUp leído en vivo, NO contra la pestaña Data.** El refresco retroactivo completo (Mejora 12) garantiza que se ha leído todo el periodo de ClickUp.
 
 ```
-Tiempos!J[TOTAL DISPONIBLES] (suma SUMAR.SI Sprint Backlog principal)
-+ Tiempos!J[TOTAL METODOLOGÍA Y GESTIÓN]
-= Total real ClickUp del miembro en el sprint
+suma(SUMAR.SI Tabla2 Sprint Backlog principal)
++ suma(Tabla21 Metodología y Gestión)
+==  total_ClickUp_API_live(persona, periodo completo del sprint)
 ```
 
-Si no cuadra:
-- Diferencia < 0,1h: aceptable (redondeo).
-- Diferencia significativa: hay conceptos huérfanos no clasificados o renames pendientes. Volver al Paso 4.
+**Umbrales escalonados**:
 
-Registrar en Log de Cambios: `[timestamp] | VALIDACION | Cuadre AUTOIA | Plan: [X]h, Metodología: [Y]h, Total: [X+Y]h | ClickUp real: [Z]h | Match: [OK/KO]`.
+| Discrepancia | Acción |
+|---|---|
+| **≤ 0,1h** | Cuadre OK. Cierre normal. |
+| **0,1h – 0,5h** | Cierra, pero 🤖 **acumula AVISO para el reporte Cliq** (margen de redondeos acumulados). |
+| **> 0,5h** | **BLOQUEA el cierre**: NO sella, NO actualiza Log de sello. 🤖 **Reporta el descuadre a Cliq** con desglose. La persona queda sin cerrar; el resto del Equipo continúa (no abortar el pase global — Override 7). |
+
+**Desglose obligatorio cuando hay aviso o bloqueo** (en el reporte Cliq):
+- **Entries fantasma**: en el AUTOIA pero NO en ClickUp API live → candidatas a eliminar.
+- **Entries faltantes**: en ClickUp API live pero NO en el AUTOIA → candidatas a añadir.
+
+Registrar en Log: `[timestamp] | VALIDACION | Cuadre AUTOIA | Plan: [X]h, Metodología: [Y]h, Total: [X+Y]h | ClickUp API live: [Z]h | Discrepancia: [D]h | Resultado: [OK / AVISO / BLOQUEO]`.
+
+Si bloquea (>0,5h): la persona se marca como NO CERRADA en el reporte Cliq; revisar en la siguiente ejecución supervisada (Paso 4 + Mejora 7).
 
 ### PASO 8b — Sello de actualización y estilo final del Log
 
@@ -1514,6 +1718,48 @@ Registrar en Log de Cambios:
 - `[timestamp] | Tiempos | 1 | E | - | [sello previo o vacío] | [sello nuevo] | SELLO_ACTUALIZACION | Skill | Sello de fin de ejecución`
 - `[timestamp] | Log de Cambios | 1 | M | - | [sello previo o vacío] | [sello nuevo] | SELLO_ACTUALIZACION | Skill | Sello de fin de ejecución`
 
+#### 🆕 Mejora 10 (v3.5) — Cierre canónico ATÓMICO (checklist obligatorio e indivisible)
+
+🚨 **Tras procesar cada AUTOIA se ejecuta SIEMPRE este checklist de cierre completo.** Orden estricto:
+
+1. **(a) Verificación de estatus de los productos** — Mejora 6: Col D refrescada contra ClickUp (estatus NATIVOS, sin unificar) en todas las filas con task ID resoluble; incoherencias en Log + acumuladas para Cliq + Informe Ejecutivo.
+2. **(a-bis) Enlaces a ClickUp** — Mejora 11: Col E envuelta en `=HYPERLINK(...)` en productos del plan + huérfanas con task ID + Gestiones Cliente (Tabla21 Bloque B). Tras escribir, verificar que el `K` (SUMAR.SI) de CADA fila enlazada NO cae a 0 (el `cell_text` debe ser el nombre NFC exacto de Data). Matches dudosos / sin match → NO enlazar, acumular para Cliq (Override desatendido: nunca adivinar).
+3. **(b) Validación de cuadre** — Mejora 5 (PASO 8): contra ClickUp API live. **Si bloquea (>0,5h): NO sellar, marcar persona como NO CERRADA, acumular para Cliq.** Continuar con el resto del Equipo.
+4. **(c) Verificación de colchón** — Mejora 8.3: ≥3 filas vacías formateadas al final de Tabla2 Y Tabla21.
+5. **(d) Entradas en Log de Cambios** — registrar TODO lo modificado en el pase.
+6. **(e) Doble sello** — `Tiempos!E1` Y `Log de Cambios!M1` → "Última actualización: DD/MM/AAAA HH:MM:SS — Sprint XX-XX".
+
+Si (b) bloquea, la persona queda explícitamente sin cerrar (sin (d) ni (e) para ella) y se reporta a Cliq; el pase global continúa con las demás personas.
+
+##### 🚦 Compuerta de sellado — Definición de Hecho (DoD) OBLIGATORIA (v1.3 — por evidencia)
+
+🚨 **El doble sello (e) NO se escribe nunca sin pasar la compuerta DoD.** Como no hay PO delante, la compuerta es DETERMINISTA, se computa **desde el sheet real + el artefacto de Resolución** (no de memoria) y se deja registrada por escrito:
+
+1. **Releer literalmente** el PASO 6c (Resolución producto→tarea + Mejoras 6 y 11) y este PASO 8b antes de cerrar cada persona.
+2. **Recomputar los conteos reales** desde el sheet y el artefacto `resolucion[]`:
+```
+n_plan        = filas de plan
+n_resueltas   = filas con task_id resuelto
+n_drifts      = Col D modificadas (status_vivo ≠ anterior)
+n_resolubles  = filas resueltas que deben llevar enlace
+n_enlazadas   = filas con HYPERLINK efectivo (K intacto)
+n_ambiguas    = filas MATCH_AMBIGUO
+```
+3. **Criterios de la compuerta** (cada uno ✅/❌):
+```
+(a)     Col D / Mejora 6   → ✅ solo si  n_resueltas == n_plan  Y  n_ambiguas == 0
+(a-bis) Enlaces / Mejora 11 → ✅ solo si  n_enlazadas == n_resolubles
+(b)     Cuadre vs ClickUp   → ✅ si  |dif| ≤ 0,1 h
+(c)     Colchón             → ✅ si ≥3 filas en Tabla2 Y en Tabla21
+(d)     Log escrito         → ✅
+```
+4. **Registrar en Log (`DOD_CIERRE`) y en el reporte Cliq con los conteos reales**:
+```
+🚦 DoD [Persona]: (a) Col D ✅/❌ [n_resueltas/n_plan, ambiguas=N] · (a-bis) Enlaces ✅/❌ [n_enlazadas/n_resolubles] · (b) Cuadre ✅/❌ [Δ X,XXh] · (c) Colchón ✅/❌ · (d) Log ✅/❌
+```
+5. **REGLA DURA:** PROHIBIDO sellar si **(a) o (a-bis) están por debajo del 100%** o si cualquier ítem resulta ❌ o no verificable. El sello (e) solo se escribe con (a)–(d) TODOS en ✅.
+6. 🤖 **[SOLO DESATENDIDA]** Si (a)/(a-bis) <100% o hay anomalía API → marcar la persona como **NO CERRADA (DoD incompleta)** en Cliq, con el **detalle de los productos** no resueltos / no enlazados / ambiguos, y continuar con el resto del Equipo (Override 7). **Nunca sellar a ciegas.**
+
 ### PASO 9 — Reporte y siguientes pasos
 
 ```
@@ -1555,6 +1801,8 @@ Si quedan miembros pendientes y el modo es por defecto (preguntar antes de cada 
 ## REGLA DEL DELTA Y VALIDACIÓN DE CUADRE
 
 ⚠️ **Regla añadida en Sprint 6-26 Día 2** tras detectar un fallo silencioso de duplicación al procesar el Día 2 con Día 1 ya escrito.
+
+> 🚨 **DEROGADA POR LA MEJORA 12 (v3.5), TAMBIÉN EN MODO DESATENDIDO.** Desde v3.5 el modo desatendido **repuebla Data retroactivamente desde cero con todo el periodo del sprint en cada ejecución** (decisión de Néstor: prioriza no perder información sobre el coste de tool calls del cron). Esto **deroga el Override 2 del PASO 0 BIS** (refresco incremental Opción D). Esta sección se conserva como referencia histórica y porque el razonamiento de cuadre task-by-task sigue siendo válido como verificación de integridad.
 
 ### El modo de fallo silencioso
 
@@ -1934,7 +2182,19 @@ Resultado: convierte `"11.77 horas"` → `"11.77"` → `"11,77"` → `11,77` num
 
 (Detectado en sesión Sprint 6-26 Día 10 al implementar Mejoras 1 y 2 sobre los 5 AUTOIAs del Equipo Operativo.)
 
+#### Bug 11 — Fallo silencioso de `cell.content.set` (singular) en celdas dentro de tabla
 
+**Síntoma**: al escribir en una celda **dentro del rango lógico de una tabla** (Tabla2 / Tabla21) con `cell.content.set` (singular, `set_content_to_cell`), la operación **no extiende el rango lógico de la tabla** y la SUMAR.SI asociada devuelve **`0,00` silencioso**. Reaparición en Fabián f19 (22/05/2026).
+
+**Causa**: el método singular no registra la celda como parte de la tabla estructurada, por lo que las referencias `Tabla2[@Concepto]` / `Tabla21[@...]` no la "ven".
+
+**Solución (REGLA GENERAL)**: para escribir en **cualquier celda dentro de Tabla2 o Tabla21**, usar SIEMPRE `cells.content.set` (plural, `set_content_to_multiple_cells`), aunque sea una sola celda. El método singular solo se usa para celdas **fuera de tablas** (p. ej. sello `Tiempos!E1`).
+
+(Catalogado junto al Bug 10 en v3.5.)
+
+---
+
+#### Diagnóstico ante 0,00 inesperado en Col J/K de una fila
 
 Si Col J de una fila devuelve `0` pero ClickUp reporta horas reales para ese concepto:
 
@@ -1944,6 +2204,8 @@ Si Col J de una fila devuelve `0` pero ClickUp reporta horas reales para ese con
 4. Si Col K muestra `#VALUE!` (no `0`) → probar Bug 2 (Col J como texto), reescribir con número numérico.
 5. ¿La fórmula referencia `Tabla1[[#All];[Column20]]` cross-sheet? → probar Bug 6, sustituir por `'Data Entries'!$T$2:$T$N` con referencia absoluta a la hoja correcta.
 6. ¿Hay `T#REF!` en celdas adyacentes? → probar Bug 7 (propagación relativa), reescribir con `$T$2:$T$N` absoluto.
+7. ¿La celda se escribió con `cell.content.set` (singular) dentro de una tabla? → probar Bug 11, reescribir con `cells.content.set` (plural).
+8. ¿Hay prefijo `[BORRADO ClickUp]` en la entry de Data? → probar Mejora 7 (PASO 6c): si la tarea existe en ClickUp, quitar el prefijo en ambos extremos.
 
 ### Checklist rápido ante errores al escribir muchas celdas
 
@@ -2002,8 +2264,8 @@ Estado global: ✅ OK / ⚠️ Con avisos / ❌ Con errores
 [Si hay personas con horas tracked pero sin AUTOIA:]
   • [Persona] — [Xh] tracked en sprint actual. Pendiente decisión PO líder.
 
-Próxima ejecución: mañana [DD/MM/AAAA] 07:03 Madrid (si laborable).
-Fuente: skill `revision-sprint-backlog-equipo-reinicia-modo-desatendido` v1.0 / Routine [routine_id].
+Próxima ejecución: mañana [DD/MM/AAAA] 06:00 Madrid (si laborable).
+Fuente: skill `revision-sprint-backlog-equipo-reinicia-modo-desatendido` v1.3 / Routine [routine_id].
 ```
 
 ### Casos especiales del reporte
@@ -2016,7 +2278,7 @@ Fuente: skill `revision-sprint-backlog-equipo-reinicia-modo-desatendido` v1.0 / 
 
 ### Trazabilidad
 
-Cada mensaje de reporte incluye al final una línea con `Fuente: skill ... v1.0 / Routine [routine_id]` para que el Equipo sepa identificar qué versión generó el mensaje y poder rastrear bugs.
+Cada mensaje de reporte incluye al final una línea con `Fuente: skill ... v1.3 / Routine [routine_id]` para que el Equipo sepa identificar qué versión generó el mensaje y poder rastrear bugs.
 
 ---
 
@@ -2027,6 +2289,9 @@ Cada mensaje de reporte incluye al final una línea con `Fuente: skill ... v1.0 
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|
 | **v1.0 (desatendido)** | 2026-05-17 | Néstor + Claude | Primera versión desatendida. Duplicado de `revision-sprint-backlog-equipo-reinicia` v3.4 + PASO 0 BIS con 7 overrides para automatización en Claude Code Routine + PASO 9 de reporte a Zoho Cliq (canal Metodología `T45816000000085077`). Sin preguntas humanas: detección dinámica de Equipos por nombre de espacio ClickUp + presencia de AUTOIA en carpeta sprint; refresco incremental Opción D forzado; renames Opción B (triviales auto + no triviales a Log + Col N); motivos desvío con sugerencia automática por heurística; alertas acumuladas en reporte Cliq. Sincronizada con v3.4 supervisada. |
+| **v1.1 (desatendido)** | 2026-05-26 | Néstor + Claude | Sincronización con la supervisada v3.5. Incorpora el **PASO 6c con 10 mejoras de integridad y trazabilidad** (M5 cuadre contra ClickUp API en vivo con umbrales escalonados; M6 refresco Col D Status estatus nativos sin unificaciones; M7 limpieza `[BORRADO ClickUp]`; M8 limpieza global + estructura de 3 bloques + colchón ≥3 filas; M9 atribución NÉSTOR-PO vía Col M con saltos de línea; M10 cierre atómico con doble sello; M11 enlaces HYPERLINK con match triple umbral + doble renombrado; M12 refresco retroactivo completo; M13 anomalía API con fragmentación binaria; M14 duplicados de cliente) + **Bug 11** (`cell.content.set` singular falla dentro de tabla). **Override 2 DEROGADO por la Mejora 12**: el modo desatendido pasa de refresco incremental Opción D a **refresco retroactivo completo** (decisión Néstor 26/05: prioriza no perder información sobre coste de tool calls). Todos los puntos de las mejoras que en supervisado reportan al PO → en desatendido **acumulan para el reporte Cliq** (canal Metodología `T45816000000085077`) sin interrumpir el pase; bloqueo de cuadre >0,5h marca la persona como NO CERRADA y continúa con el resto del Equipo. `synced_from_supervised_version: v3.5`. |
+| **v1.2 (desatendido)** | 2026-05-30 | Néstor + Claude | Sincronización con la supervisada v3.6. Incorpora la **Compuerta de sellado — Definición de Hecho (DoD)** en el PASO 8b (Mejora 10): **Mejora 11 (enlaces HYPERLINK) añadida como ítem explícito (a-bis)** del checklist atómico, y compuerta determinista antes del doble sello — computar (a) estatus Col D, (a-bis) enlaces, (b) cuadre, (c) colchón, (d) Log; **registrar el resultado ✅/❌ por ítem en el Log (`DOD_CIERRE`) y en el reporte Cliq**; si cualquier ítem (a)–(d) resulta ❌, NO sellar, marcar la persona como NO CERRADA (DoD incompleta) en Cliq y continuar con el resto del Equipo (Override 7). Verificación de que el `K` de cada fila enlazada no cae a 0. `synced_from_supervised_version: v3.6`. |
+| **v1.3 (desatendido)** | 2026-05-31 | Néstor + Claude | **Sincronización con la supervisada v3.7 + arranque del automatismo (pilotos en seco Fabián y Paolo, Sprint 7-26).** (A) Añadida la sección **«⚙️ Configuración del automatismo en Claude Code (Routine)»** (repo `agencia-reinicia/claude-skills`, cron `0 6 * * 1-5` → 06:00 Europe/Madrid, prompt de disparo, conectores MCP y permisos ClickUp/Workdrive/Cliq, alcance, checklist pre-piloto, hueco `routine_id`); corregidas las referencias horarias 7AM/07:03 → **06:00**. (B) **Override 1 reescrito**: detección **determinista** de la carpeta del sprint vigente (raíz `i6aloc…`, regex `^Sprint\s+0?(\d+)\s*-\s*0?(\d+)$`, mayor (año,N), **cross-check contra ClickUp → ABORTAR si no coincide/empate/0**, eliminado el ID hardcodeado `8zev…`); **patrón de fichero `^Excel-Clickup-Sprint-\d+-\d+-(.+)$`** (NFC) en vez de `*AUTOIA*`; **allowlist de piloto `[Fabián, Paolo]`** (excluida «Camila»). (C) **PASO 6c — Resolución producto→tarea**: prioridad HYPERLINK Col E → lista del cliente + match EXACTO → asignado solo desempate; artefacto `resolucion[]`; desambiguación por tag de sprint + asignado; `MATCH_AMBIGUO` y `PRODUCTO_NO_RESUELTO` a Cliq sin adivinar; Mejora 6 escribe Col D **solo desde status_vivo** (prohibido snapshot del time entry); Mejora 11 HYPERLINK portante del `url` resuelto; **ceremonias de cierre (Planning/Retro/Daily) al sprint entrante**. (D) **Compuerta DoD por evidencia**: recomputa `n_plan/n_resueltas/n_drifts/n_resolubles/n_enlazadas/n_ambiguas`; (a) ✅ solo si `n_resueltas==n_plan` y `n_ambiguas==0`; (a-bis) ✅ solo si `n_enlazadas==n_resolubles`; **prohibido sellar si (a) o (a-bis) <100%**; NO CERRADA con detalle de productos a Cliq y continuar. `synced_from_supervised_version: v3.7`. |
 
 ### Historial heredado de la skill supervisada origen
 
