@@ -1,6 +1,6 @@
 ---
 name: soporte-procesamiento-clickup-reinicia
-description: Procesa tareas brutas de soporte llegadas por formulario ClickUp en las listas Soporte [CLIENTE] de los clientes activos configurados en la sección 2 de la skill (15 clientes en v1.8 — Equipo Proactive y Columbia). Aplica el patrón canónico de tarjeta editando SIEMPRE el form_response original (jamás creando canónicas paralelas), clasifica dominio (Zoho/Web/WABA), asigna PO Técnico y PO Cliente, publica comentario con propuesta de nivel de servicio, detecta duplicados, mueve a Product Backlog y publica resumen diario en la tarea mensual del cliente. Activación manual ("procesa el soporte", "refina el soporte") o desde tarea programada de Cowork cada 2 horas. No usar para productos en General ni para microcampañas.
+description: Procesa tareas brutas de soporte llegadas por formulario ClickUp en las listas Soporte [CLIENTE] de los clientes activos configurados en la sección 2 de la skill (15 clientes en v1.10 — Equipo Proactive y Columbia). Aplica el patrón canónico de tarjeta editando SIEMPRE el form_response original (jamás creando canónicas paralelas), clasifica dominio (Zoho/Web/WABA), asigna PO Técnico y PO Cliente, publica comentario con propuesta de nivel de servicio, detecta duplicados, mueve a Product Backlog y publica resumen diario en la tarea mensual del cliente. Activación manual ("procesa el soporte", "refina el soporte") o desde tarea programada de Cowork (Lun–Vie 08:00/11:00/14:00/17:00/22:00 Europe/Madrid). No usar para productos en General ni para microcampañas.
 triggers:
   - procesa el soporte
   - procesa las tareas de soporte
@@ -41,19 +41,57 @@ El PO escribe en una conversación de Claude alguno de los triggers (`procesa el
 
 ### 1.2 Disparo programado (Claude Cowork)
 
-La skill se registra como **tarea programada de Claude Cowork** con cadencia **cada 2 horas**. La tarea programada usa exactamente el siguiente prompt como instrucciones:
+La skill se registra como **tarea programada de Claude Cowork** con cadencia **de lunes a viernes a las 08:00, 11:00, 14:00, 17:00 y 22:00 (Europe/Madrid)**. La tarea programada usa exactamente el siguiente prompt como instrucciones:
 
 ```
-Aplica la skill soporte-procesamiento-clickup-reinicia. Procesa todas las tareas
-brutas de soporte pendientes en las listas Soporte [CLIENTE] de los clientes
-configurados en la sección 2 de la skill. Si es la primera ejecución del día con
-actividad detectada, publica además el resumen consolidado del día anterior en la
-tarea mensual de cada cliente que haya tenido actividad. Modelo: Opus 4.7.
+Aplica la skill soporte-procesamiento-clickup-reinicia.
+
+Procesa todas las tareas brutas de soporte pendientes (form_response en estado Open
+en cuya conversación de comentarios NO aparezca el comentario-marker "Primer
+Refinamiento Individual Realizado") en las listas Soporte [CLIENTE] de TODOS los
+clientes configurados en la sección 2 de la skill. No enumeres clientes en este
+prompt: la sección 2 de la skill es la única fuente de verdad. Si un cliente tiene
+lista Soporte en ClickUp pero NO está en la sección 2, no lo proceses y regístralo
+como pista (no se puede asignar PO sin su fila en la sección 2).
+
+Cadencia: esta tarea se ejecuta de lunes a viernes a las 08:00, 11:00, 14:00, 17:00
+y 22:00 (Europe/Madrid). Cada ejecución arranca sin memoria de las anteriores:
+reconstruye el contexto leyendo ClickUp. La marca de "ya procesada" vive en la propia
+tarea como comentario — respeta la idempotencia de todos los markers (sección 1.3).
+
+Resumen consolidado diario:
+- En la ejecución de las 22:00 (hora local de Madrid ≥ 22:00) publica el resumen
+  consolidado en la tarea mensual de cada cliente con actividad sin resumir. La
+  ventana es "desde el último resumen publicado hasta ahora" (sección 12.1): en
+  lunes abarca automáticamente viernes-noche, fin de semana y lunes. Respeta el
+  marker de resumen (sección 12.5) para no duplicarlo.
+- En las ejecuciones de 08:00–17:00 NO publiques resumen, salvo recuperación: si en
+  la ejecución de las 08:00 la pasada de las 22:00 del día hábil anterior no publicó,
+  publicálo entonces.
+
+Modelo: Opus 4.8.
 ```
 
-**Nota:** se evita listar los clientes en el prompt para no obligar a actualizarlo cada vez que cambia la tabla. La fuente de verdad es siempre la sección 2.
+**Nota:** se evita listar los clientes en el prompt para no obligar a actualizarlo cada vez que cambia la tabla. La fuente de verdad es siempre la sección 2. El `Primer Refinamiento Individual Realizado` es un **comentario** en la form_response (no un tag de ClickUp; ver sección 1.3) y se comprueba leyendo comentarios con `clickup_get_task_comments` + `clickup_get_threaded_comments`, nunca por etiquetas.
 
-**Cuando la sesión empieza nueva cada vez (sin memoria entre ejecuciones):** la skill reconstruye todo el contexto leyendo ClickUp en cada ejecución. La marca de "ya procesada" vive en la propia tarea (comentario "Primer Refinamiento Individual Realizado" + estado `Product Backlog`), no en memoria local.
+**Expresión cron equivalente** (Europe/Madrid): `0 8,11,14,17,22 * * 1-5`.
+
+**Cuando la sesión empieza nueva cada vez (sin memoria entre ejecuciones):** la skill reconstruye todo el contexto leyendo ClickUp en cada ejecución. La marca de "ya procesada" vive en la propia tarea (comentario "Primer Refinamiento Individual Realizado" + estado de backlog), no en memoria local.
+
+### 1.3 Glosario de markers (v1.9)
+
+La skill deja marcas de texto exacto en comentarios y descripciones para coordinar su propio comportamiento entre ejecuciones (recordar que no hay memoria local — la única persistencia es lo que queda escrito en ClickUp). Esta tabla es la **fuente de verdad única** de todos los markers. Cualquier cambio de literal se hace aquí primero y luego en la sección correspondiente.
+
+| Marker (literal exacto) | Dónde vive | Propósito | Sección |
+|---|---|---|---|
+| `Primer Refinamiento Individual Realizado` | Comentario en la form_response | Flag de "ya procesada" (gate de último paso) | 8.6 |
+| `Primer Refinamiento Realizado por Soporte — resumen` | Comentario en la tarea mensual | Identificar el resumen diario previo y no duplicarlo | 12.5 |
+| `[Refinamiento Automático]` (sufijo) | `description` del time entry | Filtro de tiempo del cron en informes | 10.5 |
+| `Requerimientos Cliente preservados por skill` | Comentario en form_response con diálogo de equipo | Preservación literal opción (c) sin pisar al equipo | 3.8 |
+| `Pista 14.6 — Procesamiento Soporte Skill` | Comentario en tarea no-form_response | Anti-repetición de pistas entre ejecuciones | 14.6 / 13.3 |
+| `Pista 14.7 — Procesamiento Soporte Skill` | Comentario en form_response antigua | Anti-repetición de pistas entre ejecuciones | 14.7 / 13.3 |
+
+**Regla transversal:** antes de publicar cualquiera de estos markers, la skill comprueba si ya existe en la tarea (vía `clickup_get_task_comments` + `clickup_get_threaded_comments`). Si ya está, no lo duplica. Esto vale tanto para idempotencia del procesamiento como para la anti-repetición de pistas.
 
 ---
 
@@ -113,7 +151,7 @@ La skill busca en cada lista de Soporte de la tabla las tareas que cumplan **tod
 - **Estado actual = `Open`**. El estado inicial al crearse desde formulario. Si la tarea ya está en `Product Backlog` o cualquier otro estado posterior, se ignora — significa que ya fue procesada o que el PO la promovió manualmente.
 - **Sin comentario "Primer Refinamiento Individual Realizado"**. Si lo tiene, ya fue procesada por la skill y no hay que tocarla.
 - **Sin bloque `## 📥 Requerimientos Cliente` en la descripción**. Si lo tiene, la descripción ya está en formato canónico. Skip.
-- **Sin comentarios sustantivos del equipo Reinicia** (filtro v1.1). Si la tarea ya tiene comentarios de cualquier miembro del equipo Reinicia (excluyendo ClickBot y excluyendo comentarios autogenerados del formulario), la skill **NO la procesa**: pisaría trabajo en curso. La salta con un warning en el reporte final tipo "Tarea X saltada: ya tiene diálogo del equipo vivo (N comentarios)." La decisión de aplicar el patrón canónico retroactivamente queda para el PO manualmente. Esto cubre tres casos prácticos: (a) tareas que el equipo ha empezado a refinar conversacionalmente sin formalizar, (b) tareas en las que el cliente ha aclarado por comentarios la petición original, (c) tareas con diagnóstico previo donde la conversación ya es más útil que el patrón canónico.
+- **Sin comentarios sustantivos del equipo Reinicia** (filtro v1.1). Si la tarea ya tiene comentarios de cualquier miembro del equipo Reinicia (excluyendo ClickBot y excluyendo comentarios autogenerados del formulario), la skill **NO la procesa**: pisaría trabajo en curso. La salta con un warning en el reporte final tipo "Tarea X saltada: ya tiene diálogo del equipo vivo (N comentarios)." La decisión de aplicar el patrón canónico retroactivamente queda para el PO manualmente. Esto cubre tres casos prácticos: (a) tareas que el equipo ha empezado a refinar conversacionalmente sin formalizar, (b) tareas en las que el cliente ha aclarado por comentarios la petición original, (c) tareas con diagnóstico previo donde la conversación ya es más útil que el patrón canónico. **Acción aditiva (v1.9):** aunque la skill no procese estas tareas, sí preserva la petición original literal en un comentario — ver sección 3.8.
 
 ### 3.3 Señales débiles corroborantes (no bloqueantes pero indicativas)
 
@@ -141,6 +179,30 @@ Si una tarea está en `Open` con `taskType: "form_response"` pero no encaja en n
 - `clickup_filter_tasks` con `list_ids=[Soporte HomeEspaña, Soporte Carritech, Soporte Gonher, Soporte Avaderm]` y `statuses=["Open"]`.
 - Para cada tarea retornada, verificar `taskType` en el campo `task_type` de la respuesta y, si es `form_response`, llamar `clickup_get_task` con `subtasks=true` para tener el detalle completo.
 - `clickup_get_task_comments` y `clickup_get_threaded_comments` para verificar la marca de procesamiento, comentarios sustantivos del equipo, y otros comentarios existentes. Filtrar por `user.id` distinto de `-1` (ClickBot) para identificar comentarios humanos.
+
+### 3.8 Preservación literal en tareas con diálogo de equipo — opción híbrida (v1.9)
+
+Cuando una tarea se salta por el cuarto filtro corroborante de la sección 3.2 (**ya tiene comentarios sustantivos del equipo Reinicia**), la skill **no aplica el patrón canónico** — respeta el diálogo vivo del equipo y no pisa nada. Pero, para no perder la submisión original del cliente si el equipo empezó a conversar antes de formalizarla, la skill ejecuta una única acción aditiva:
+
+1. Comprueba si la tarea ya tiene un comentario con el marker `Requerimientos Cliente preservados por skill`. **Si lo tiene, no hace nada** (idempotencia — ya se preservó en una ejecución anterior).
+2. **Si no lo tiene**, publica un comentario con la petición original **literal** del formulario:
+
+```
+Requerimientos Cliente preservados por skill
+
+Petición original del cliente — formulario ClickUp — [fecha de creación de la tarea bruta]
+
+[CONTENIDO LITERAL DE LA DESCRIPCIÓN AUTO-GENERADA POR EL FORMULARIO,
+sin resumir, reformular ni omitir campos.]
+
+[Nombre original de la tarjeta tal como llegó del formulario]
+```
+
+**La skill no toca nada más:** ni el nombre, ni los campos personalizados, ni el estado, ni crea subtareas, ni imputa tiempo. Solo añade ese comentario.
+
+**Por qué:** la convención v1.1 ("no pisar al equipo") sigue intacta — la skill sigue sin aplicar el patrón canónico sobre estas tareas. La única diferencia es que la submisión original del cliente queda capturada como comentario aunque el equipo ya esté trabajando encima, evitando que se pierda si la descripción se reescribe en la conversación. Es una acción mínima, aditiva y reversible.
+
+**Registro de pista:** la skill sigue dejando el warning en el reporte ("Tarea X saltada: ya tiene diálogo del equipo vivo") como hasta ahora, añadiendo "(petición original preservada)" si publicó el comentario en esta ejecución.
 
 ---
 
@@ -339,6 +401,22 @@ La skill rellena los campos personalizados estándar. IDs documentados en las sk
 
 ## 8. Asignaciones y comentarios
 
+### 8.0 Serialización de escrituras sobre una misma tarea (v1.9)
+
+**Regla absoluta:** todas las escrituras de la skill sobre una misma tarjeta se ejecutan **en estricta secuencia, nunca en paralelo**. Esto aplica a los tres comentarios (8.2 comentario al PO Técnico → 8.4 criterios de aceptación → 8.6 marker de procesamiento) y a la creación de las subtareas (sección 9).
+
+**Por qué:** el MCP de ClickUp tiene un límite de concurrencia. Al lanzar 3+ `clickup_create_task_comment` (o `create_task`) simultáneos sobre la misma tarea, las llamadas fallan con `"The connector's server isn't responding"`. Al reintentarse, además, el orden de respuesta del MCP puede alterar el orden cronológico de los comentarios (el marker quedaba publicado antes que el comentario al PO Técnico). Serializar elimina ambos problemas de raíz.
+
+**Orden canónico de publicación de comentarios:**
+
+1. Comentario al PO Técnico (8.2) — esperar confirmación de éxito.
+2. Comentario de criterios de aceptación (8.4) — esperar confirmación de éxito.
+3. Marker `Primer Refinamiento Individual Realizado` (8.6) — **solo si los pasos 1 y 2 confirmaron éxito** (ver gate en 8.6).
+
+Si cualquiera de los pasos 1 o 2 falla tras un reintento serializado, **no se publica el marker** y la tarea se deja sin la marca de procesamiento: la siguiente ejecución del cron la volverá a tomar como bruta (sigue en `Open`, sin marker) y reintentará desde donde se quedó (sección 14.4). Mejor reprocesar que dejar la tarjeta marcada como completa con comentarios a medias.
+
+**Subtareas (sección 9):** se crean también de una en una, en secuencia. Si se observa de nuevo el error de concurrencia en la creación de subtareas, esta misma regla ya las cubre.
+
 ### 8.1 Asignación de la tarea
 
 Doble asignación según equipo:
@@ -442,9 +520,9 @@ Si encuentra una candidata con similitud razonable:
 
 La decisión de fusionar/cerrar/marcar la duplicada es siempre humana.
 
-### 8.6 Comentario de marca de procesamiento
+### 8.6 Comentario de marca de procesamiento (gate de último paso)
 
-Como último paso antes de mover el estado, la skill publica un comentario corto:
+Como **último paso antes de mover el estado**, y **solo tras confirmar el éxito de los comentarios 8.2 y 8.4** (ver regla de serialización 8.0), la skill publica un comentario corto:
 
 ```
 Primer Refinamiento Individual Realizado
@@ -455,7 +533,9 @@ Sin formato. Sin firma adicional. Solo ese texto. Cumple dos funciones:
 1. **Trazabilidad operativa** — el equipo y el cliente (que tiene acceso a algunas listas) ven que la tarjeta ha pasado por una primera revisión.
 2. **Flag técnico para la skill** — al re-ejecutarse, la skill busca este comentario para confirmar que la tarea ya fue procesada (sección 3.2).
 
-La hora del procesamiento queda registrada nativamente por ClickUp en el comentario; no hace falta añadir timestamp manualmente.
+**Por qué es un gate:** este marker es la señal de "tarea completa". Si se publicara antes de confirmar que el comentario al PO Técnico y los criterios se escribieron bien, una tarea con comentarios a medias quedaría marcada como procesada y nunca se reintentaría. Publicándolo en último lugar y condicionado al éxito de los anteriores, una interrupción a media ejecución deja la tarea sin marker → la siguiente ejecución la retoma (sección 14.4).
+
+Antes de publicarlo, la skill comprueba que el marker no exista ya (idempotencia — sección 1.3). La hora del procesamiento queda registrada nativamente por ClickUp en el comentario; no hace falta añadir timestamp manualmente.
 
 ---
 
@@ -526,7 +606,7 @@ Tras crear las subtareas (sección 9) y antes de mover el estado a `Product Back
 - **Duración**: 15 minutos (900 000 milisegundos en la API de ClickUp).
 - **Usuario**: Néstor Tejero (`766716`) — usuario autenticado en la integración del cron.
 - **Tag**: `Refinamiento Automático`.
-- **Descripción**: `Refinamiento automático de soporte por skill soporte-procesamiento-clickup-reinicia v1.8`.
+- **Descripción**: `Refinamiento automático de soporte por skill soporte-procesamiento-clickup-reinicia v1.10`.
 - **Fecha**: timestamp del momento de procesamiento.
 
 ### 10.2 Justificación del valor
@@ -567,7 +647,7 @@ POST /v2/team/{team_id}/time_entries
 Body:
   tid: [task_id de la tarea procesada]
   duration: 900000  (15 min en ms)
-  description: "Refinamiento automático de soporte por skill soporte-procesamiento-clickup-reinicia v1.8 [Refinamiento Automático]"
+  description: "Refinamiento automático de soporte por skill soporte-procesamiento-clickup-reinicia v1.10 [Refinamiento Automático]"
   start: [timestamp actual]
   billable: true (opcional, según configuración del cliente)
 ```
@@ -619,16 +699,26 @@ Si tras los próximos sprints aparecen más tareas con entries duplicadas que es
 
 ## 11. Cambio de estado y cierre del procesamiento individual
 
-Una vez completados todos los pasos anteriores (descripción, campos, asignaciones, comentarios, subtareas e imputación de tiempo), la skill ejecuta:
+Una vez completados todos los pasos anteriores (descripción, campos, asignaciones, comentarios, subtareas e imputación de tiempo), la skill mueve la tarea al estado "listo para backlog".
+
+**⚠️ El nombre del status varía entre listas (v1.9).** No todas las listas de Soporte usan el mismo literal. En la mayoría es `Product Backlog`, pero algunas listas usan variantes como `sprint backlog` (minúsculas) — detectado en la lista Soporte INEFSO-Dinam en la ejecución del 06/05. Si la skill intenta mover a un literal que no existe en la lista, **el cambio falla en silencio**: la tarea se queda en `Open`, la siguiente ejecución la vuelve a tomar como bruta y se entra en un bucle de reprocesamiento en cada ejecución del cron.
+
+**Procedimiento robusto:**
+
+1. Leer los estados disponibles de la lista (de la respuesta de `clickup_get_task`, campo de statuses de la lista, o `clickup_get_list`).
+2. Buscar, sin distinguir mayúsculas/minúsculas, el status destino con esta prioridad: `product backlog` → `sprint backlog` → `backlog` → cualquier status de tipo "backlog/to-do" posterior a `open`.
+3. Mover con el literal **exacto** tal como aparece en la lista:
 
 ```
-clickup_update_task con status="Product Backlog"
+clickup_update_task con status="[literal exacto del status de backlog de la lista]"
 ```
+
+4. **Si ningún status de backlog casa**, no forzar el move: dejar la tarea en `Open`, registrar pista (sección 13.3, categoría `bloqueador-mcp`) con el `list_id`, los statuses disponibles y el `task_id`, y avisar de que el procesamiento quedó completo salvo el cambio de estado.
 
 Esto cumple tres funciones:
 
 1. **Marca visual** — el equipo ve que la tarea ha sido procesada y está lista para refinamiento técnico.
-2. **Filtro técnico** — la siguiente ejecución del cron no la considera bruta (sección 3.2).
+2. **Filtro técnico** — la siguiente ejecución del cron no la considera bruta (sección 3.2: ya tiene marker + descripción canónica, aunque el status no cuadre).
 3. **Punto de control** — el PO Técnico verá la tarea en su backlog con la información ya estructurada y podrá pasarla a sprint cuando proceda.
 
 ---
@@ -637,19 +727,21 @@ Esto cumple tres funciones:
 
 ### 12.1 Lógica de cuándo publicar
 
-La skill **acumula** las tareas procesadas durante el día y publica un resumen consolidado **una vez al día**, no en cada ejecución del cron.
+La skill **acumula** las tareas procesadas y publica un resumen consolidado **una vez al día**, no en cada ejecución del cron. El resumen se publica en la **ejecución de las 22:00** y su ventana es siempre **«tareas procesadas desde el último resumen publicado (exclusive) hasta ahora»**, determinada por cliente leyendo el *timestamp de creación* del comentario-resumen más reciente (marker de la sección 12.5). Esto hace la lógica robusta frente a ejecuciones omitidas, fines de semana y husos horarios: nada se queda sin resumir aunque se procese fuera de la franja monitorizada.
 
 **Algoritmo:**
 
-1. En cada ejecución, además de procesar tareas brutas, la skill comprueba: ¿es la primera ejecución del día con actividad pendiente del día anterior?
-2. Para responder a esa pregunta, busca el último resumen publicado en la tarea mensual de cada cliente (sección 12.5). El resumen lleva una marca específica que lo identifica.
-3. Si el último resumen es de hace ≥ 24h **Y** ha habido tareas procesadas en las últimas 24h en alguna lista de Soporte, publica el resumen del día anterior.
+1. La skill determina la hora local (Europe/Madrid) de la ejecución actual.
+2. Para cada cliente con actividad, calcula la **cota inferior** de la ventana = timestamp del último comentario-resumen publicado (sección 12.5). Si no hay ninguno previo, usa hoy 00:00. La **cota superior** es el momento actual.
+3. **Ejecución de las 22:00 (hora ≥ 22:00):** tras procesar las tareas brutas, publica el resumen de todas las tareas con el comentario-marker "Primer Refinamiento Individual Realizado" cuyo timestamp caiga en esa ventana. Antes de publicar, comprueba que no exista ya un comentario-resumen con timestamp posterior a la cota inferior (idempotencia ante re-ejecución de la pasada de las 22:00).
+4. **Cobertura del fin de semana (lunes):** como el cron no corre sábado ni domingo, el lunes la cota inferior es el resumen del **viernes a las 22:00**, de modo que el resumen del lunes a las 22:00 abarca automáticamente **viernes noche → fin de semana → lunes**. Recoge así cualquier tarea procesada tras el corte del viernes (incluida actividad manual o de personas en otro huso horario). No requiere tratamiento especial: es consecuencia directa de la ventana «desde el último resumen».
+5. **Ejecuciones de 08:00–17:00:** por defecto **no** publican resumen. Excepción de recuperación: en la ejecución de las **08:00**, si detecta que la pasada de las 22:00 del día hábil anterior **no** publicó resumen (no hay comentario-resumen con timestamp en esa fecha) y existen tareas procesadas sin resumir en la ventana, publica entonces el resumen de recuperación con la misma lógica de ventana de los pasos 2–3.
 
 ### 12.2 Cómo construye el resumen
 
 Para cada cliente:
 
-1. Busca en su lista de Soporte las tareas con comentario "Primer Refinamiento Individual Realizado" en las últimas 24h (filtrar por timestamp del comentario).
+1. Busca en su lista de Soporte las tareas con el comentario-marker "Primer Refinamiento Individual Realizado" cuyo timestamp caiga en la **ventana de resumen** definida en la sección 12.1 (desde el último resumen publicado hasta ahora; en lunes, desde el viernes 22:00).
 2. Si hay 0 tareas → omite el resumen para ese cliente. Sin actividad, sin comentario.
 3. Si hay ≥ 1 tarea → construye el resumen.
 
@@ -666,7 +758,7 @@ Para cada cliente:
 ### 12.4 Formato del comentario de resumen
 
 ```
-Primer Refinamiento Realizado por Soporte — resumen [día anterior, formato YYYY-MM-DD]
+Primer Refinamiento Realizado por Soporte — resumen [rango cubierto: YYYY-MM-DD si es un solo día, o YYYY-MM-DD → YYYY-MM-DD si abarca varios (p. ej. lunes con fin de semana)]
 
 Tareas refinadas: [N]
 
@@ -693,11 +785,21 @@ Para que la skill pueda detectar el último resumen publicado y no duplicarlo, e
 Primer Refinamiento Realizado por Soporte — resumen
 ```
 
-Esa cadena es el "marker" que la skill busca en `clickup_get_task_comments` para identificar resúmenes previos.
+Esa cadena es el "marker" que la skill busca en `clickup_get_task_comments` para identificar resúmenes previos. El **timestamp de creación** de ese comentario (no la fecha escrita en el texto) es la cota inferior de la ventana de resumen de la sección 12.1.
 
-### 12.6 Caso HomeEspaña sin tarea mensual
+### 12.6 Cliente sin tarea mensual — escalado tras 3 días (v1.9)
 
-Aplica la opción (a) decidida con el PO: la skill **salta el log de HomeEspaña con warning** hasta que exista la tarea mensual. No autocrea tareas mensuales — eso es responsabilidad del sistema mensual de gestión que ya está en marcha. El warning queda como comentario en la última tarea procesada del día para HomeEspaña.
+Aplica la opción (a) decidida con el PO: la skill **no autocrea tareas mensuales** — eso es responsabilidad del sistema mensual de gestión que ya está en marcha. Si no encuentra ni `Soporte [Mes Año] [CLIENTE]` ni `Gestión [Mes Año] [CLIENTE]` (sección 12.3, paso 3), salta el resumen de ese cliente con un warning como comentario en la última tarea procesada del día.
+
+**Problema detectado:** si una tarea mensual no se crea durante varios días, la skill repite el mismo warning silencioso indefinidamente y nadie se entera de que se están perdiendo resúmenes diarios. Caso típico: HomeEspaña al arrancar el piloto.
+
+**Escalado (v1.9):** la skill lleva la cuenta de cuántos días consecutivos lleva sin poder publicar el resumen de un cliente, usando como traza los warnings previos en las tareas procesadas (no hay memoria local). Cuando detecta que un cliente lleva **≥ 3 días** sin tarea mensual localizable:
+
+1. Publica una pista en el reporte de Cowork (sección 13.3, categoría `otro - configuración pendiente`) con el literal:
+   > "Cliente [CLIENTE] lleva [N] días sin tarea mensual de Gestión/Soporte localizable. Se han perdido [N] resúmenes diarios. El PO líder debe crear la tarea mensual o confirmar que este cliente no la usa."
+2. Menciona a Néstor (`766716`) como PO líder en esa pista para darle visibilidad real.
+
+No bloquea nada — el procesamiento individual de tareas sigue igual; solo escala la falta de destino del resumen para que deje de ser ruido invisible.
 
 ---
 
@@ -733,22 +835,46 @@ Los warnings se acumulan en una sección específica del comentario al PO Técni
 
 La skill **registra explícitamente** las dudas y casuísticas raras encontradas durante cada ejecución. Estas notas son la materia prima para iterar la skill en futuras versiones.
 
-**Mecanismo:** al final de cada ejecución (no en cada tarea procesada — al final del lote completo), si hubo cualquier duda, casuística rara o decisión no trivial, la skill incluye en el reporte de la conversación de Cowork (sección 16) un bloque adicional:
+**Mecanismo:** al final de cada ejecución (no en cada tarea procesada — al final del lote completo), si hubo cualquier duda, casuística rara o decisión no trivial, la skill incluye en el reporte de la conversación de Cowork (sección 16) un bloque adicional. **Las pistas se agrupan por categoría** (v1.9) para que el PO escanee el reporte en segundos en lugar de leer línea a línea:
 
 ```
 🔍 PISTAS PARA ITERACIÓN DE LA SKILL
 
 Durante esta ejecución han surgido los siguientes casos que merecen consideración para futuras versiones:
 
-[Por cada pista, usar formato estructurado v1.7:]
-- Categoría: [bug-cron | falso-positivo-skip | calidad-baja | bloqueador-mcp | otro]
-- Tarea: [URL si aplica]
-- Síntoma observado: [qué se ha visto]
-- Hipótesis de causa: [por qué pasa]
-- Propuesta concreta para v1.X: [qué cambio en la skill resolvería]
+[bug-cron] (N pistas)
+  - Tarea: [URL si aplica]
+    Síntoma: [qué se ha visto]
+    Hipótesis: [por qué pasa]
+    Propuesta v1.X: [qué cambio en la skill resolvería]
 
-[Si no hay nada que reportar, omitir este bloque enteramente.]
+[falso-positivo-skip] (N pistas)
+  - ...
+
+[calidad-baja] (N pistas)
+  - ...
+
+[bloqueador-mcp] (N pistas)
+  - ...
+
+[otro - configuración pendiente] (N pistas)
+  - ...
+
+[otro - limpieza retroactiva] (N pistas)
+  - ...
+
+[Solo se incluyen las categorías con al menos una pista. Si no hay nada que reportar, omitir este bloque enteramente.]
 ```
+
+**Categorías estables** (cerradas — no inventar nuevas sin validación del diseñador): `bug-cron`, `falso-positivo-skip`, `calidad-baja`, `bloqueador-mcp`, `otro - configuración pendiente`, `otro - limpieza retroactiva`.
+
+**Anti-repetición de pistas recurrentes (v1.9):** las pistas de las secciones 14.6 (tarea no-form_response) y 14.7 (form_response antigua dormida) se disparan en cada ejecución del cron sobre las mismas tareas, inundando el reporte con ruido que nadie revisa. Para evitarlo:
+
+1. Antes de añadir una pista 14.6 o 14.7 al reporte, la skill comprueba si la **misma tarea** ya tiene un comentario con el marker `Pista 14.6 — Procesamiento Soporte Skill` o `Pista 14.7 — Procesamiento Soporte Skill` (puesto por la propia skill en una ejecución anterior). **Si lo tiene, la salta sin reportar.**
+2. La **primera vez** que detecta una tarea en estos casos, deja un comentario corto en la propia tarea con el marker correspondiente seguido del mensaje de la sección 14.6 / 14.7. Y la incluye en el reporte de esa ejecución (es nueva).
+3. El reporte de Cowork solo incluye, por tanto, **pistas nuevas** del día — nunca las ya registradas en ejecuciones previas.
+
+Esto convierte el ruido recurrente en un catálogo navegable (ver auditoría dirigida, sección 14.9).
 
 **Qué se considera "pista" digna de reportar:**
 - Patrones de tarea bruta no contemplados en la skill.
@@ -789,18 +915,24 @@ Si una tarea se llegó a procesar parcialmente (ej. se renombró pero se cayó l
 
 Si aparece una tarea bruta en una lista que **no está en la tabla de clientes configurados** (sección 2), la skill la ignora. La tabla es la fuente de verdad de "qué procesa" — no se descubre clientes nuevos al vuelo.
 
-### 14.6 Tarea no-form_response en lista de Soporte (v1.7)
+### 14.6 Tarea no-form_response en lista de Soporte (v1.7, anti-repetición v1.9)
 
-Si la skill encuentra en una lista de Soporte una tarea en `Open` con `task_type` distinto de `form_response` (ej. `Producto Digital`, `null`, `Bug`, etc.), la skill **no la procesa** y la registra como pista en la sección 13.3 con el mensaje:
+Si la skill encuentra en una lista de Soporte una tarea en `Open` con `task_type` distinto de `form_response` (ej. `Producto Digital`, `null`, `Bug`, etc.), la skill **no la procesa**. La primera vez deja un comentario en la propia tarea con el marker y el mensaje, y la incluye como pista en el reporte. En ejecuciones posteriores, si el marker ya existe, la salta sin reportar (anti-repetición, sección 13.3).
 
+Marker + mensaje:
+
+> `Pista 14.6 — Procesamiento Soporte Skill`
 > "Tarea [URL] está en lista Soporte [CLIENTE] con `task_type=[X]` (no es form_response). La lista de Soporte se está usando para tareas que no proceden del formulario; el PO líder debe decidir si moverlas a la lista General [CLIENTE] o gestionarlas aparte."
 
 Casos típicos detectados en producción: tareas creadas a mano por POs con plantilla genérica, tareas de tipo "Producto Digital" arrastradas desde otras listas, tareas creadas por workflows de ClickUp internos.
 
-### 14.7 form_response antigua sin actividad reciente (v1.7)
+### 14.7 form_response antigua sin actividad reciente (v1.7, anti-repetición v1.9)
 
-Si una form_response cumple los criterios de procesamiento (sección 3) pero `date_created` es anterior a 30 días respecto al momento de ejecución, **la skill no la procesa** y la registra como pista en sección 13.3 con el mensaje:
+Si una form_response cumple los criterios de procesamiento (sección 3) pero `date_created` es anterior a 30 días respecto al momento de ejecución, **la skill no la procesa**. La primera vez deja un comentario en la propia tarea con el marker y el mensaje, y la incluye como pista en el reporte. En ejecuciones posteriores, si el marker ya existe, la salta sin reportar (anti-repetición, sección 13.3).
 
+Marker + mensaje:
+
+> `Pista 14.7 — Procesamiento Soporte Skill`
 > "form_response [URL] de [fecha] lleva [N días] en Open sin procesar. La skill no la procesa para no generar actividad artificial sobre tarjetas que el equipo ha dejado dormir. El PO líder debe decidir si procesarla, cerrarla por obsolescencia, o si requiere intervención manual."
 
 La razón: procesar una tarjeta dormida hace 6 meses generaría notificaciones al PO Técnico, time entry de 15 min, y subtareas nuevas — todo ruido sobre algo que el equipo ha decidido tácitamente no atender. Mejor que el PO decida manualmente.
@@ -818,6 +950,12 @@ Si la descripción del form_response no contiene contenido real del cliente y so
 4. Mantiene el estado en `Open` (no la mueve a Product Backlog).
 
 Esto cubre form_response como `869bxtw5z` y `869arfgz0` detectadas en la ejecución del 2026-05-06.
+
+### 14.9 Auditoría dirigida (manual o skill auxiliar) (v1.9)
+
+Los markers `Pista 14.6 — Procesamiento Soporte Skill` y `Pista 14.7 — Procesamiento Soporte Skill` (sección 13.3, anti-repetición) convierten el ruido recurrente en un **catálogo navegable**. Esto habilita una pasada de limpieza periódica (mensual sugerida) en la que el PO líder filtra todas las tareas en lista de Soporte con esos comentarios y decide caso por caso: mover a `General [CLIENTE]`, cerrar por obsolescencia, o procesar manualmente.
+
+Esta auditoría es la extensión natural de la futura skill auxiliar `auditoria-duplicados-soporte-reinicia` (ya nombrada en v1.7), que automatizaría tanto la detección de duplicados form_response ↔ canónica como la recolección de tareas marcadas con `Pista 14.6/14.7`, dejando al PO solo la decisión final. Mientras esa skill no exista, la auditoría se hace a mano filtrando por el texto del marker.
 
 ---
 
@@ -882,7 +1020,7 @@ La salida es la misma — Cowork la guarda en el historial de la tarea programad
 
 | Limitación | Impacto | Mitigación |
 |---|---|---|
-| Tareas programadas de Cowork solo corren con app abierta | Si el portátil está cerrado, las tareas brutas se acumulan | Se procesan todas juntas al abrir la app. El cron sigue siendo cada 2 horas cuando el equipo está activo |
+| Tareas programadas de Cowork solo corren con app abierta | Si el portátil está cerrado, las tareas brutas se acumulan | Se procesan todas juntas al abrir la app. El cron sigue su cadencia habitual (Lun–Vie 08:00/11:00/14:00/17:00/22:00, Europe/Madrid) cuando el equipo está activo |
 | Markdown no soportado en comentarios ClickUp | URLs y formato pierden estructura | Texto plano, URLs en línea separada |
 | Checklists no creables vía MCP | El PO debe copiar criterios manualmente | Comentario "Caso A" con criterios listos |
 | Tags de time entry causaban duplicación silenciosa (bug v1.7) | Cada par de entries duplicadas inflaba AUTOIAs +0,25h | Resuelto en v1.8: el campo `tags` ya no se usa. El marcador `[Refinamiento Automático]` va siempre en `description`. Verificación pre-creación con `clickup_get_task_time_entries` previene reintentos accidentales |
@@ -891,6 +1029,8 @@ La salida es la misma — Cowork la guarda en el historial de la tarea programad
 | Detección de duplicados por similitud de texto | Falsos positivos posibles | Detección informativa, nunca bloqueante. Decisión humana |
 | Clasificación de dominio en casos límite | Errores de clasificación posibles | Caso "Por confirmar" + comentario al PO Técnico para resolver |
 | MCP no expone delete de comentarios | Comentarios "Saltada por skill..." de ejecuciones erróneas previas no se pueden borrar | La skill deja un nuevo comentario "Corrección a comentario anterior" que retracta el anterior (sección 8.2) |
+| Límite de concurrencia del MCP de ClickUp | 3+ `create_task_comment`/`create_task` en paralelo sobre la misma tarea fallan con "The connector's server isn't responding" y el reintento altera el orden cronológico | v1.9: escrituras serializadas sobre una misma tarea (sección 8.0) + marker publicado como gate de último paso (8.6) |
+| Nombre del status de backlog varía entre listas | Mover a `Product Backlog` falla en silencio en listas que usan otro literal (ej. `sprint backlog` en INEFSO-Dinam) → bucle de reprocesamiento | v1.9: leer statuses de la lista y mapear al de backlog disponible; si ninguno casa, warning (sección 11) |
 
 ---
 
@@ -907,6 +1047,8 @@ La salida es la misma — Cowork la guarda en el historial de la tarea programad
 | v1.6 | 2026-05-04 | **Ampliación de alcance: de 4 clientes piloto a 15 clientes activos. Y cambio de cadencia del cron de 30 min a 2 horas.** Cambios: (a) sección 2 — añadidos 11 clientes nuevos (Aicrov, Aunna, Breezom, Estarima, Inefso - Dinam, ISL Agency, Kasblan, Líder System Grupo, Synuptic, Timedi, Worldwide Boat) con su Equipo, listas Soporte/Gestión, POs Técnico y Cliente, y `unique_name` de canal Cliq. Localizada también la lista Gestión de HomeEspaña que estaba pendiente: `900501350944`; (b) sección 2 — añadida nota terminológica: "piloto" pasa a referirse solo al estado del flag `cliq_publish` (todos arrancan en `false`), no al alcance de clientes; (c) sección 2 — añadida fila para Rolf Pinto (`99603566`) en la tabla de personas como PO Técnico de Synuptic, y eliminado el matiz "Zoho Carritech" del rol de Fabián porque ahora cubre múltiples clientes (Carritech, Aicrov, Aunna, Breezom, Inefso - Dinam, Synuptic — aunque el técnico real de Synuptic es Rolf); (d) sección 2 — añadida nota explícita: para los 11 clientes nuevos, el `unique_name` del canal Cliq se ha registrado tal como lo dio el PO líder pero **no se ha verificado el acceso (joined)**; antes de activar `cliq_publish: true` hay que comprobarlo con `ZohoCliq_List_all_channels`; (e) sección 1.2 — el prompt del cron ya no enumera clientes; remite a la sección 2 como fuente de verdad para no obligar a actualizar el prompt cada vez que cambia la tabla; (f) frontmatter `description` actualizada coherentemente; (g) **cadencia del cron cambiada de 30 min a 2 horas** en sección 1.2, sección 19 (puntos 3 y 5), cuadro de limitaciones y sección de manejo de errores. La cadencia más conservadora es prudente al pasar de 4 a 15 listas a chequear por ejecución y reduce el ruido de imputación de tiempo (15 min × N tareas × 12 ejecuciones/día → × 4 ejecuciones/día). **No hay cambios de lógica de procesamiento** — solo de configuración. La lógica v1.5 sigue intacta. **Pendiente operativo antes de la próxima ejecución del cron**: actualizar el prompt y la cadencia en la tarea programada de Cowork; validar acceso a los 11 canales Cliq nuevos cuando se decida activar `cliq_publish` por cliente; mientras `cliq_publish=false` esto no bloquea nada. |
 | v1.7 | 2026-05-06 | **Aprendizajes de la ejecución 2026-05-06 sobre Carritech (4 duplicadas erróneas detectadas) y Gonher/Lider (casuísticas de tareas no procesables).** Cambios: (a) **sección 5.0 nueva** — regla rotunda "la skill SIEMPRE edita el form_response original con `clickup_update_task`; JAMÁS crea canónicas paralelas; única `clickup_create_task` permitida son las 4 subtareas hijas". Esta regla cierra el bug que generó las 4 duplicadas erróneas en Soporte Carritech (`869d5zpe6`, `869d5zpyb`, `869d5zq6u`, `869d5zqv7`); (b) **sección 3.4 reescrita** — form_response con `linked_tasks` apuntando a canónica errónea: procesar normalmente (no saltar) y avisar al PO en el comentario al PO Técnico. La antigua 3.4 ("Excepción tarea ya procesada") pasa a 3.5; antiguas 3.5/3.6 a 3.6/3.7; (c) **sección 6.2 reforzada** — hard cap 60 caracteres en descripción del nombre con patrones explícitos de abreviación (SQs, Opps, flechas, eliminar artículos); (d) **sección 8.2 ampliada** — bloque condicional "Corrección a comentario anterior" para retractar comentarios "Saltada por skill" de ejecuciones previas erróneas + bloque "duplicado canónico erróneo de ejecución previa" en plantilla del comentario al PO Técnico; (e) **sección 10.5 ampliada** — manejo del fallo del tag `Refinamiento Automático` (fallback a sufijo en descripción cuando el tag no existe pre-creado en workspace); (f) **sección 14.6 nueva** — tarea no-form_response en lista de Soporte: no procesar, registrar pista. Cubre casos como `869arfgz0` (task_type=Producto Digital) y `869axy0pz`/`869axxz5u` (task_type=null) detectados en Lider System Grupo; (g) **sección 14.7 nueva** — form_response antigua >30 días sin actividad: no procesar, registrar pista. Cubre las 7+ "(Comentarios Sesión)" de Gonher de noviembre 2025; (h) **sección 14.8 nueva** — form_response con descripción vacía/plantilla genérica: solo renombrar + comentario explicativo, mantener en Open. Cubre `869bxtw5z` y `869arfgz0`; (i) **sección 13.3 estructurada** — formato fijo para pistas (Categoría, Tarea, Síntoma, Hipótesis, Propuesta) para facilitar priorización por el diseñador; (j) **sección 17 ampliada** — añadidas dos limitaciones nuevas: tags de time entry rechazados sin preexistencia, y MCP no expone delete de comentarios; (k) frontmatter `description` actualizada para reflejar la regla 5.0. **Pendiente operativo tras deploy v1.7**: pasada de auditoría manual one-shot sobre las 15 listas de Soporte para detectar y eliminar duplicados form_response ↔ canónica generados por v1.0-v1.6 (preservando form_response). Opcional: skill auxiliar `auditoria-duplicados-soporte-reinicia` que automatice la detección y deje al PO solo el click de eliminación. |
 | v1.8 | 2026-05-14 | **Bug crítico de duplicación silenciosa de time entries del Refinamiento Automático corregido.** Diagnóstico (descubierto durante el cierre de AUTOIAs Sprint 6-26 Día 8): el fallback de `tags` documentado en v1.7 sección 10.5 (intentar con `tags`, si falla repetir sin `tags` añadiendo sufijo en `description`) generaba 2 time entries idénticas en algunos casos. Hipótesis técnica: la API del MCP de ClickUp valida el tag **después** de persistir la entry — cuando el tag no existe en el workspace, devuelve error "Name value is required" pero la entry ya está creada. El paso 2 del fallback creaba entonces una segunda entry. Bug intermitente: solo se disparaba cuando el flujo de validación de tag fallaba con persistencia previa. Casos confirmados Sprint 6-26 (6 tareas, 6 entries fantasma, +1,5h hinchadas en AUTOIAs Equipo Operativo): Avaderm `869d6yc31` (D2), Carritech `869d7cx7p` (D5), Carritech `869d8hzn1` (D6), HomeEspaña `869d8aah5` (D6), Breezom `869d9dg5b` (D8), Breezom `869d9dh4z` (D8). **Cambios v1.8**: (a) **sección 10.5 reescrita completamente** — eliminado el patrón de fallback con dos llamadas. Regla canónica nueva: NUNCA usar el parámetro `tags`. El marcador `[Refinamiento Automático]` va siempre en `description` como sufijo literal (búsqueda por filtro de texto). UNA sola llamada `add_time_entry` por tarea. Si falla: NO reintentar, registrar como pista. Mejor perder una imputación que duplicar todas; (b) **sección 10.5 — protección defensiva**: añadida verificación pre-creación opcional con `clickup_get_task_time_entries` filtrando por `start_date=hoy 00:00`, `user.id=766716`, `description contiene [Refinamiento Automático]`. Si encuentra al menos 1 entry coincidente: abortar imputación y registrar pista informativa. Cubre escenarios de re-ejecución del cron sobre la misma tarea; (c) **sección 10.5 — limpieza retroactiva**: documentadas las 6 tareas conocidas con entries duplicadas del Sprint 6-26 para que el PO líder ejecute limpieza manual one-shot (eliminar la segunda entry de cada par, conservar la primera); (d) **sección 17 limitaciones — entrada actualizada**: "Tags de time entry rechazados si no preexisten" → "Tags de time entry causaban duplicación silenciosa (bug v1.7) — resuelto en v1.8"; (e) **frontmatter `description`** — actualizada referencia v1.7 → v1.8; (f) **description del time entry** — actualizada referencia v1.7 → v1.8 en sección 10.1. **Validación esperada tras deploy v1.8**: 0 duplicaciones nuevas. La verificación es trivial — buscar entries con `start`/`end`/`task_id` idénticos generadas por la skill. **Pendiente operativo tras deploy**: ejecutar limpieza retroactiva de las 6 entries fantasma documentadas. Tras limpieza, los AUTOIAs Fabián, Paolo y Alejandro deberían reflejar el cuadre correcto automáticamente vía SUMAR.SI. |
+| v1.9 | 2026-05-31 | **Robustez de escrituras MCP, corrección de status hardcodeado y merge del backlog de diseño del 12/05 (nunca fusionado).** Cambios: (a) **sección 8.0 nueva** — serialización de escrituras sobre una misma tarea: los 3 comentarios (8.2 → 8.4 → 8.6) y las subtareas se publican en estricta secuencia, nunca en paralelo. Resuelve el bloqueador-mcp "The connector's server isn't responding" al lanzar 3+ comment_create simultáneos (detectado en tarea `869dg2n6p`); (b) **sección 8.6 reescrita como gate de último paso** — el marker "Primer Refinamiento Individual Realizado" solo se publica tras confirmar éxito de 8.2 y 8.4. Elimina la alteración del orden cronológico tras reintentos (también `869dg2n6p`); si los previos fallan, no se marca y la tarea se reprocesa (14.4); (c) **sección 11 reescrita** — corregido el status hardcodeado `Product Backlog`: ahora la skill lee los statuses de la lista y mapea (`product backlog` → `sprint backlog` → `backlog` → primer to-do tras open); si ninguno casa, warning. Cierra el bucle de reprocesamiento detectado en INEFSO-Dinam (status real `sprint backlog`, ejecución 06/05); (d) **sección 3.8 nueva (opción híbrida c)** — en tareas saltadas por diálogo de equipo (3.2), la skill preserva la petición original literal en un comentario con marker `Requerimientos Cliente preservados por skill`, sin tocar nombre/campos/estado; idempotente. Decisión de Néstor 31/05; (e) **sección 12.6 ampliada** — escalado tras 3 días sin tarea mensual de Gestión/Soporte localizable: pista al reporte mencionando a Néstor para dar visibilidad real (antes el warning era silencioso e indefinido); (f) **sección 13.3 ampliada** — anti-repetición de pistas 14.6/14.7 vía marker en la propia tarea (solo se reporta la primera vez; las recurrentes se silencian) + agrupación del bloque 🔍 por categoría (categorías cerradas estables); (g) **secciones 14.6 y 14.7 actualizadas** — dejan marker `Pista 14.6/14.7 — Procesamiento Soporte Skill` la primera vez; (h) **sección 14.9 nueva** — auditoría dirigida sobre el catálogo de markers de pistas, antesala de la futura skill `auditoria-duplicados-soporte-reinicia`; (i) **sección 1.3 nueva** — glosario de markers como fuente de verdad única de todos los literales; (j) **sección 17** — añadidas dos limitaciones: límite de concurrencia del MCP (mitigado por 8.0 + 8.6) y status de backlog variable entre listas (mitigado por sección 11); (k) **frontmatter `description` y description del time entry** — referencia v1.8 → v1.9. **Decisión de diseño registrada**: el tag `error tiempo` que algunas tareas brutas traen del workflow del workspace NO se gestiona ni se retira ni se avisa de él (decisión Néstor 31/05) — la skill lo ignora. **Sin pendientes operativos nuevos**; siguen abiertos los heredados (auditoría one-shot de duplicados v1.7, limpieza de 6 entries fantasma v1.8, config de la tarea Cowork y validación de canales Cliq v1.6). |
+| v1.10 | 2026-05-31 | **Cambio de cadencia del cron y rediseño de la ventana del resumen diario; sin cambios en la lógica de procesamiento individual.** Cambios: (a) **sección 1.2 y frontmatter** — cadencia "cada 2 horas" → "Lun–Vie 08:00/11:00/14:00/17:00/22:00 (Europe/Madrid)"; cron `0 8,11,14,17,22 * * 1-5`. Prompt reescrito: alcance explícito a TODOS los clientes de la sección 2 (ya no "piloto"), guardarraíl para clientes con Soporte fuera de la sección 2, el marker de procesado se describe como **comentario** (no tag, para no confundir con los tags de ClickUp), modelo Opus 4.7 → 4.8; (b) **sección 12.1 rediseñada** — la ventana del resumen pasa de "día en curso / día anterior" a **«desde el último resumen publicado (timestamp del comentario 12.5) hasta ahora»**. El resumen se publica en la pasada de las 22:00; en lunes la ventana arranca en el resumen del viernes 22:00, por lo que cubre automáticamente viernes-noche + fin de semana + lunes (robusto ante actividad manual, husos horarios y ejecuciones omitidas, ya que el cron no corre sáb/dom). Recuperación en la pasada de las 08:00 solo si la de las 22:00 del día hábil anterior no publicó; (c) **sección 12.2** — la ventana de selección de tareas se remite a 12.1 en lugar de "últimas 24h"; (d) **sección 12.4** — cabecera del resumen: fecha única o rango "YYYY-MM-DD → YYYY-MM-DD" cuando abarca varios días; (e) **sección 12.5** — aclarado que el *timestamp de creación* del comentario-resumen es la cota inferior de la ventana; (f) **sección 19** — descripción, cadencia (con cron) y modelo (4.8); (g) **frontmatter `description` y description del time entry** — referencia v1.9 → v1.10. **Motivación:** la franja vespertina quedaba sin resumir hasta el día siguiente y el patrón "día anterior" dejaba huecos en fin de semana / actividad en otros husos. **Sin pendientes operativos nuevos** salvo reconfigurar cadencia y prompt en la tarea Cowork; siguen abiertos los heredados (auditoría one-shot de duplicados v1.7, limpieza de entries fantasma v1.8, validación de canales Cliq v1.6). |
 
 ---
 
@@ -916,10 +1058,10 @@ Cuando el PO registre la tarea programada de Cowork:
 
 1. Comando: abrir Cowork → `/schedule`.
 2. Nombre: `Procesamiento Soporte Reinicia`.
-3. Descripción: `Procesa cada 2 horas las tareas brutas de soporte de los clientes activos configurados en la skill y publica resumen diario consolidado.`
+3. Descripción: `Procesa de lunes a viernes (08:00/11:00/14:00/17:00/22:00, Europe/Madrid) las tareas brutas de soporte de los clientes activos configurados en la skill y publica el resumen diario consolidado en la pasada de las 22:00.`
 4. Prompt: el documentado en sección 1.2.
-5. Cadencia: **cada 2 horas**.
-6. Modelo: **Opus 4.7**.
+5. Cadencia: **lunes a viernes a las 08:00, 11:00, 14:00, 17:00 y 22:00 (Europe/Madrid)**. Cron equivalente: `0 8,11,14,17,22 * * 1-5`. Si el planificador de Cowork no admite cron, registrar las cinco horas como disparos diarios restringidos a Lun–Vie.
+6. Modelo: **Opus 4.8**.
 7. Carpeta: la del proyecto `Asesor Product Owners Reinicia`, para que la tarea programada herede las skills y MCPs disponibles.
 
 Si en algún momento se migra a Routines de Claude Code (background 24/7 sin necesidad de app abierta), la skill funciona idéntica — solo cambia el disparador. Skill agnóstica del mecanismo de scheduling.

@@ -5,7 +5,7 @@ description: >
 
   Actívala SOLO cuando se ejecute la Routine programada o cuando un humano pida explícitamente "ejecuta la revisión desatendida". Para procesamiento supervisado interactivo, usa la skill hermana revision-sprint-backlog-equipo-reinicia.
 
-  v1.3 (31/05/2026): sincronizada con la supervisada v3.7; sección de configuración del automatismo en Claude Code; detección determinista de sprint; resolución producto→tarea; compuerta DoD por evidencia. Historial completo en la tabla de Versiones.
+  v1.4 (31/05/2026): sincronizada con la supervisada v3.8; configuración del automatismo en Claude Code; detección determinista de sprint; resolución producto→tarea; compuerta DoD sin sello parcial (Mejoras 6/11 obligatorias cada pase); Cliq por unique_name. Historial completo en la tabla de Versiones.
 ---
 
 # SKILL: Revisión de Sprint Backlog — MODO DESATENDIDO (cloud Routine)
@@ -46,7 +46,7 @@ La skill **NO planifica** (eso lo hace `sprint-planning-reinicia` al inicio del 
 |---|---|---|
 | ClickUp | Lectura (time entries + tareas, workspace `762713`) | Horas reales, estatus (Col D), nombres de tarea e IDs para los enlaces HYPERLINK |
 | Zoho Workdrive (Sheet) | Lectura + escritura | Repoblar Data, escribir Tiempos / Tabla2 / Tabla21 / Log y sellos |
-| Zoho Cliq | Publicación en canal | Reporte de ejecución del PASO 9, canal Metodología `T45816000000085077` |
+| Zoho Cliq | Publicación en canal | Reporte de ejecución del PASO 9, canal Metodología (unique_name `reiniciametodologa`; channel ID `T45816000000085077` solo de referencia) |
 
 No se requiere ningún otro conector. Verificar que el token de integración de ClickUp (Néstor) tiene acceso a las tareas del periodo: las tareas privadas sin acceso provocan la anomalía API documentada en la Mejora 13.
 
@@ -167,7 +167,7 @@ Todas las sugerencias automáticas se registran en Log de Cambios como `MOTIVO_D
 
 ### Override 6 — Reporte de ejecución al cierre
 
-Tras procesar todos los miembros, postear en Zoho Cliq canal `T45816000000085077` (canal Metodología) un mensaje con la estructura definida en el nuevo PASO 9 (al final de esta skill).
+Tras procesar todos los miembros, postear en Zoho Cliq canal Metodología (herramienta `ZohoCliq_Post_message_in_a_channel` con `unique_name` = `reiniciametodologa`; channel ID `T45816000000085077` solo de referencia) un mensaje con la estructura definida en el nuevo PASO 9 (al final de esta skill).
 
 ### Override 7 — Política de errores
 
@@ -1489,7 +1489,7 @@ Al **inicio** de cada revisión, detectar entries en Data con prefijo `[BORRADO 
 - **Sigue existiendo** → quitar el prefijo automáticamente + Log. NO re-añadir el prefijo en el mismo pase.
 - **Ya no existe** → dejar el prefijo + 🤖 **acumular para reporte Cliq** (trabajo imputado a tarea borrada).
 
-#### Resolución producto→tarea (v1.3 — refunde y precede a las Mejoras 6 y 11)
+#### Resolución producto→tarea (v1.4 — refunde y precede a las Mejoras 6 y 11)
 
 Antes de aplicar las Mejoras 6 (Col D) y 11 (Col E), **resolver CADA fila de plan** a `{task_id, status_vivo, url}` por orden de prioridad de fuente:
 
@@ -1510,6 +1510,8 @@ resolucion[] = { fila, concepto, task_id, status_vivo, url, resuelto }
 **Producto no resuelto = bandera dura**: registrar `PRODUCTO_NO_RESUELTO` en el Log + 🤖 **acumular para reporte Cliq**. **NO inventar estatus** (Mejora 6) ni **dejar un enlace inventado** (Mejora 11): la fila queda explícitamente sin resolver.
 
 🗓️ **Clasificación de ceremonias** (convención Néstor 31/05/2026): las **ceremonias de cierre** (Sprint Planning, Retrospective, Daily) se imputan al **SPRINT ENTRANTE** aunque se traqueen el día 1 del sprint.
+
+🔁 **Ejecución OBLIGATORIA en cada pase (v1.4)**: la resolución `resolucion[]` y las **Mejoras 6 (Col D) y 11 (HYPERLINK) se ejecutan fila a fila en CADA pase**, leyendo ClickUp en vivo. ⛔ **PROHIBIDO "conservar los estatus/enlaces del pase previo"** como atajo: los conteos de la compuerta DoD miden lo ejecutado en **ESTE** pase, no estados heredados. En el **primer pase de un sprint nuevo NO existe pase previo**, así que Col D y los enlaces deben construirse necesariamente. Saltarse esto y sellar igual (aunque se reporte como "parcial") es exactamente el fallo del 29/05 que la compuerta existe para impedir.
 
 #### Mejora 6 — Refresco de Col D (Status) desde ClickUp (ClickUp = fuente de verdad)
 
@@ -1731,18 +1733,18 @@ Registrar en Log de Cambios:
 
 Si (b) bloquea, la persona queda explícitamente sin cerrar (sin (d) ni (e) para ella) y se reporta a Cliq; el pase global continúa con las demás personas.
 
-##### 🚦 Compuerta de sellado — Definición de Hecho (DoD) OBLIGATORIA (v1.3 — por evidencia)
+##### 🚦 Compuerta de sellado — Definición de Hecho (DoD) OBLIGATORIA (v1.4 — por evidencia, sin sello parcial)
 
-🚨 **El doble sello (e) NO se escribe nunca sin pasar la compuerta DoD.** Como no hay PO delante, la compuerta es DETERMINISTA, se computa **desde el sheet real + el artefacto de Resolución** (no de memoria) y se deja registrada por escrito:
+🚨 **El doble sello (e) NO se escribe nunca sin pasar la compuerta DoD.** Como no hay PO delante, la compuerta es DETERMINISTA, se computa **desde el sheet real + el artefacto de Resolución de ESTE pase** (no de memoria, no de estados heredados) y se deja registrada por escrito:
 
-1. **Releer literalmente** el PASO 6c (Resolución producto→tarea + Mejoras 6 y 11) y este PASO 8b antes de cerrar cada persona.
-2. **Recomputar los conteos reales** desde el sheet y el artefacto `resolucion[]`:
+1. **Releer literalmente** el PASO 6c (Resolución producto→tarea + Mejoras 6 y 11, incluida la regla de **ejecución obligatoria en cada pase**) y este PASO 8b antes de cerrar cada persona.
+2. **Recomputar los conteos reales** desde el sheet y el artefacto `resolucion[]` **construido en este pase** (una fila "conservada del pase previo" NO cuenta como ejecutada):
 ```
 n_plan        = filas de plan
-n_resueltas   = filas con task_id resuelto
+n_resueltas   = filas con task_id resuelto en ESTE pase
 n_drifts      = Col D modificadas (status_vivo ≠ anterior)
 n_resolubles  = filas resueltas que deben llevar enlace
-n_enlazadas   = filas con HYPERLINK efectivo (K intacto)
+n_enlazadas   = filas con HYPERLINK (re)escrito en ESTE pase (K intacto)
 n_ambiguas    = filas MATCH_AMBIGUO
 ```
 3. **Criterios de la compuerta** (cada uno ✅/❌):
@@ -1757,8 +1759,8 @@ n_ambiguas    = filas MATCH_AMBIGUO
 ```
 🚦 DoD [Persona]: (a) Col D ✅/❌ [n_resueltas/n_plan, ambiguas=N] · (a-bis) Enlaces ✅/❌ [n_enlazadas/n_resolubles] · (b) Cuadre ✅/❌ [Δ X,XXh] · (c) Colchón ✅/❌ · (d) Log ✅/❌
 ```
-5. **REGLA DURA:** PROHIBIDO sellar si **(a) o (a-bis) están por debajo del 100%** o si cualquier ítem resulta ❌ o no verificable. El sello (e) solo se escribe con (a)–(d) TODOS en ✅.
-6. 🤖 **[SOLO DESATENDIDA]** Si (a)/(a-bis) <100% o hay anomalía API → marcar la persona como **NO CERRADA (DoD incompleta)** en Cliq, con el **detalle de los productos** no resueltos / no enlazados / ambiguos, y continuar con el resto del Equipo (Override 7). **Nunca sellar a ciegas.**
+5. **REGLA DURA — NO EXISTE "SELLO PARCIAL":** o (a)–(d) están **TODOS al 100% / ✅** y se escribe el sello (e), o **NO se escribe E1/M1** y la persona queda **NO CERRADA**. Está PROHIBIDO escribir el doble sello si **(a) o (a-bis) están por debajo del 100%**, aunque se documente como "parcial". Documentar el parcial NO autoriza a sellar: si falta ejecutar Mejora 6/11, se **ejecutan** (son deterministas, no requieren PO) o se deja **NO CERRADA**.
+6. 🤖 **[SOLO DESATENDIDA]** Si tras intentar ejecutarlas (a)/(a-bis) siguen <100%, o hay anomalía API → **NO sellar**; marcar la persona como **NO CERRADA (DoD incompleta)** en Cliq, con el **detalle de los productos** no resueltos / no enlazados / ambiguos, y continuar con el resto del Equipo (Override 7). **Nunca sellar a ciegas ni en parcial.**
 
 ### PASO 9 — Reporte y siguientes pasos
 
@@ -2223,8 +2225,9 @@ Si recibes un error tipo `"Sorry! Only 50 cells can be updated at once"` o `414 
 
 ### Destino
 
-- **Canal**: Metodología (channel ID `T45816000000085077`)
+- **Canal**: Metodología
 - **Herramienta MCP**: `ZohoCliq_Post_message_in_a_channel`
+- 🚨 **Parámetro de canal**: la herramienta requiere el **`unique_name`** del canal, **`reiniciametodologa`** — NO el channel ID. El channel ID `T45816000000085077` es solo referencia documental; pasarlo como nombre de canal falla. Validado en el piloto del 31/05/2026.
 
 ### Estructura del mensaje
 
@@ -2265,7 +2268,7 @@ Estado global: ✅ OK / ⚠️ Con avisos / ❌ Con errores
   • [Persona] — [Xh] tracked en sprint actual. Pendiente decisión PO líder.
 
 Próxima ejecución: mañana [DD/MM/AAAA] 06:00 Madrid (si laborable).
-Fuente: skill `revision-sprint-backlog-equipo-reinicia-modo-desatendido` v1.3 / Routine [routine_id].
+Fuente: skill `revision-sprint-backlog-equipo-reinicia-modo-desatendido` v1.4 / Routine [routine_id].
 ```
 
 ### Casos especiales del reporte
@@ -2278,7 +2281,7 @@ Fuente: skill `revision-sprint-backlog-equipo-reinicia-modo-desatendido` v1.3 / 
 
 ### Trazabilidad
 
-Cada mensaje de reporte incluye al final una línea con `Fuente: skill ... v1.3 / Routine [routine_id]` para que el Equipo sepa identificar qué versión generó el mensaje y poder rastrear bugs.
+Cada mensaje de reporte incluye al final una línea con `Fuente: skill ... v1.4 / Routine [routine_id]` para que el Equipo sepa identificar qué versión generó el mensaje y poder rastrear bugs.
 
 ---
 
@@ -2292,6 +2295,7 @@ Cada mensaje de reporte incluye al final una línea con `Fuente: skill ... v1.3 
 | **v1.1 (desatendido)** | 2026-05-26 | Néstor + Claude | Sincronización con la supervisada v3.5. Incorpora el **PASO 6c con 10 mejoras de integridad y trazabilidad** (M5 cuadre contra ClickUp API en vivo con umbrales escalonados; M6 refresco Col D Status estatus nativos sin unificaciones; M7 limpieza `[BORRADO ClickUp]`; M8 limpieza global + estructura de 3 bloques + colchón ≥3 filas; M9 atribución NÉSTOR-PO vía Col M con saltos de línea; M10 cierre atómico con doble sello; M11 enlaces HYPERLINK con match triple umbral + doble renombrado; M12 refresco retroactivo completo; M13 anomalía API con fragmentación binaria; M14 duplicados de cliente) + **Bug 11** (`cell.content.set` singular falla dentro de tabla). **Override 2 DEROGADO por la Mejora 12**: el modo desatendido pasa de refresco incremental Opción D a **refresco retroactivo completo** (decisión Néstor 26/05: prioriza no perder información sobre coste de tool calls). Todos los puntos de las mejoras que en supervisado reportan al PO → en desatendido **acumulan para el reporte Cliq** (canal Metodología `T45816000000085077`) sin interrumpir el pase; bloqueo de cuadre >0,5h marca la persona como NO CERRADA y continúa con el resto del Equipo. `synced_from_supervised_version: v3.5`. |
 | **v1.2 (desatendido)** | 2026-05-30 | Néstor + Claude | Sincronización con la supervisada v3.6. Incorpora la **Compuerta de sellado — Definición de Hecho (DoD)** en el PASO 8b (Mejora 10): **Mejora 11 (enlaces HYPERLINK) añadida como ítem explícito (a-bis)** del checklist atómico, y compuerta determinista antes del doble sello — computar (a) estatus Col D, (a-bis) enlaces, (b) cuadre, (c) colchón, (d) Log; **registrar el resultado ✅/❌ por ítem en el Log (`DOD_CIERRE`) y en el reporte Cliq**; si cualquier ítem (a)–(d) resulta ❌, NO sellar, marcar la persona como NO CERRADA (DoD incompleta) en Cliq y continuar con el resto del Equipo (Override 7). Verificación de que el `K` de cada fila enlazada no cae a 0. `synced_from_supervised_version: v3.6`. |
 | **v1.3 (desatendido)** | 2026-05-31 | Néstor + Claude | **Sincronización con la supervisada v3.7 + arranque del automatismo (pilotos en seco Fabián y Paolo, Sprint 7-26).** (A) Añadida la sección **«⚙️ Configuración del automatismo en Claude Code (Routine)»** (repo `agencia-reinicia/claude-skills`, cron `0 6 * * 1-5` → 06:00 Europe/Madrid, prompt de disparo, conectores MCP y permisos ClickUp/Workdrive/Cliq, alcance, checklist pre-piloto, hueco `routine_id`); corregidas las referencias horarias 7AM/07:03 → **06:00**. (B) **Override 1 reescrito**: detección **determinista** de la carpeta del sprint vigente (raíz `i6aloc…`, regex `^Sprint\s+0?(\d+)\s*-\s*0?(\d+)$`, mayor (año,N), **cross-check contra ClickUp → ABORTAR si no coincide/empate/0**, eliminado el ID hardcodeado `8zev…`); **patrón de fichero `^Excel-Clickup-Sprint-\d+-\d+-(.+)$`** (NFC) en vez de `*AUTOIA*`; **allowlist de piloto `[Fabián, Paolo]`** (excluida «Camila»). (C) **PASO 6c — Resolución producto→tarea**: prioridad HYPERLINK Col E → lista del cliente + match EXACTO → asignado solo desempate; artefacto `resolucion[]`; desambiguación por tag de sprint + asignado; `MATCH_AMBIGUO` y `PRODUCTO_NO_RESUELTO` a Cliq sin adivinar; Mejora 6 escribe Col D **solo desde status_vivo** (prohibido snapshot del time entry); Mejora 11 HYPERLINK portante del `url` resuelto; **ceremonias de cierre (Planning/Retro/Daily) al sprint entrante**. (D) **Compuerta DoD por evidencia**: recomputa `n_plan/n_resueltas/n_drifts/n_resolubles/n_enlazadas/n_ambiguas`; (a) ✅ solo si `n_resueltas==n_plan` y `n_ambiguas==0`; (a-bis) ✅ solo si `n_enlazadas==n_resolubles`; **prohibido sellar si (a) o (a-bis) <100%**; NO CERRADA con detalle de productos a Cliq y continuar. `synced_from_supervised_version: v3.7`. |
+| **v1.4 (desatendido)** | 2026-05-31 | Néstor + Claude | **Corrección tras el primer Run now del piloto (Fabián y Paolo, Sprint 7-26).** El dry-run selló E1/M1 con (a)/(a-bis) en parcial, "conservando estatus/enlaces del pase previo" — justo lo que la compuerta debe impedir (y siendo el primer pase del sprint, no había pase previo). Cambios: (1) **Ejecución obligatoria en cada pase** — Mejoras 6 (Col D) y 11 (HYPERLINK) se ejecutan fila a fila desde `resolucion[]` en CADA pase; PROHIBIDO "conservar del pase previo"; los conteos miden ESTE pase. (2) **Compuerta DoD sin "sello parcial"** — o (a)–(d) al 100% y se sella, o NO CERRADA sin escribir E1/M1; documentar un parcial NO autoriza a sellar. (3) **Cliq por `unique_name`** — `ZohoCliq_Post_message_in_a_channel` usa `reiniciametodologa`; el channel ID `T45816000000085077` queda solo como referencia. `synced_from_supervised_version: v3.8`. |
 
 ### Historial heredado de la skill supervisada origen
 
