@@ -5,7 +5,7 @@ description: >
 
   Actívala SOLO cuando se ejecute la Routine programada o cuando un humano pida explícitamente "ejecuta la revisión desatendida". Para procesamiento supervisado interactivo, usa la skill hermana revision-sprint-backlog-equipo-reinicia.
 
-  v1.4 (31/05/2026): sincronizada con la supervisada v3.8; configuración del automatismo en Claude Code; detección determinista de sprint; resolución producto→tarea; compuerta DoD sin sello parcial (Mejoras 6/11 obligatorias cada pase); Cliq por unique_name. Historial completo en la tabla de Versiones.
+  v1.5 (06/06/2026): sincronizada con la supervisada v3.9. Mejora 6 vía filter_tasks por tag de sprint en lote (+resiliente a 502) + alcance Col D acotado diario/semanal; la compuerta DoD invalida el sello previo si falla (NO CERRADA, automático); resiliencia de conector (backoff/reintento + run de respaldo); routine_id real en PASO 9. Historial en la tabla de Versiones.
 ---
 
 # SKILL: Revisión de Sprint Backlog — MODO DESATENDIDO (cloud Routine)
@@ -36,6 +36,7 @@ La skill **NO planifica** (eso lo hace `sprint-planning-reinicia` al inicio del 
 - Expresión: `0 6 * * 1-5` (lunes a viernes a las **06:00 hora de Madrid**).
 - Zona horaria: **Europe/Madrid**.
 - Arranque del piloto: **automático desde el día 1** (lunes 01/06/2026). No requiere disparo manual.
+- 🔁 **Run de respaldo (v1.5, recomendado, a crear):** una **segunda Routine** más tarde por la mañana (sugerido `0 9 * * 1-5` → 09:00) con el **mismo prompt**, que actúa como red ante un aborto transitorio del pase de las 06:00 (conector "conectando"/502 al arrancar). Es **idempotente**: relee el sprint y, si los AUTOIA del día ya están sellados correctamente, no reescribe nada; solo "rescata" a quien quedó sin procesar/sellar por un fallo estructural del primer pase. Ver Override 7 (resiliencia). Anotar su `routine_id` junto al principal cuando se cree.
 
 ### Alcance del piloto
 - Sprint objetivo: **Sprint 7-26** (`kl62t6524c6834c8c4a769c7fa2b5eaa44eac`). La carpeta vigente se detecta de forma **determinista** en cada ejecución (Override 1.0; raíz `i6aloc646e871a46d46cab983dd7a6704ef9b`) con cross-check contra el sprint activo en ClickUp. El ID hardcodeado del Sprint 6-26 queda **eliminado**.
@@ -57,8 +58,9 @@ Ejecuta la revisión desatendida de Sprint Backlogs del Equipo Operativo para el
 ```
 
 ### Identificador de la Routine
-- Al crear la Routine en Claude Code se genera un `routine_id`. Anotarlo aquí y sustituir el placeholder `[routine_id]` del PASO 9 por el valor real, para trazabilidad del reporte en Cliq.
-- `routine_id` actual: **[pendiente de rellenar al crear la Routine]**.
+- Al crear la Routine en Claude Code se genera un `routine_id`. El runtime sustituye el placeholder `[routine_id]` del PASO 9 por este valor real, para trazabilidad del reporte en Cliq.
+- `routine_id` (pase principal 06:00): **`trig_011nrUo4Fx9ugWtZUJTB7rbq`** (URL: `https://claude.ai/code/routines/trig_011nrUo4Fx9ugWtZUJTB7rbq`).
+- `routine_id` (run de respaldo 09:00): **[pendiente de crear la 2ª Routine]**.
 
 ### Checklist pre-piloto
 - [ ] Skill subida al repo `agencia-reinicia/claude-skills` (esta + la supervisada).
@@ -181,6 +183,13 @@ Tras procesar todos los miembros, postear en Zoho Cliq canal Metodología (herra
 - ClickUp MCP no responde.
 - Carpeta del sprint actual no encontrada en Workdrive.
 - 0 AUTOIAs detectados (no hay nada que procesar).
+
+🔁 **Resiliencia de conector antes de abortar (v1.5).** Un conector "conectando" o un 502 transitorio en el arranque NO debe tirar el pase del día. Antes de declarar "ClickUp/Workdrive MCP no responde" y abortar:
+1. **Reintentar con backoff** la disponibilidad/llamada del conector: p. ej. 3 intentos con espera creciente (≈30s, 60s, 120s) re-sondeando vía `tool_search` o reintentando la primera llamada. Solo si tras los reintentos el conector sigue sin exponer herramientas / sigue dando error → abortar estructuralmente.
+2. **Para los 502 intermitentes durante el pase** (no en el arranque): reintentar la llamada concreta; y preferir **`clickup_filter_tasks` por tag de sprint en lote** frente a N× `clickup_get_task` (menos llamadas = menos superficie de 502). Esto es resolución de errores aislados (no aborta el pase).
+3. **2º run de respaldo.** El pase de las 06:00 es el principal; existe un **segundo disparo de respaldo** (Routine programada más tarde por la mañana, ver sección de configuración) que **solo actúa si el de las 06:00 abortó** por error estructural, para que un hipo transitorio del conector no deje al Equipo sin actualización ese día. Si el pase de las 06:00 cerró con normalidad, el de respaldo no hace nada (idempotente: relee y, si ya está sellado el día, no reescribe).
+
+Esta política convierte un aborto en **último recurso**, no en la primera reacción ante un conector lento.
 
 ---
 
@@ -1519,6 +1528,13 @@ Para cada fila **resuelta** (artefacto `resolucion[]`), `D ← status_vivo` (el 
 
 🚨 **Estatus NATIVOS de ClickUp, SIN unificaciones**. El AUTOIA es interno: estados tal cual (`Product Backlog`, `Sprint Backlog`, `DOING`, `Doing Amigos`, `Validación Reinicia`, `Validación Cliente`, `parking e incidencias`, `done`, `closed`). **NO** colapsar `done+closed` ni `doing+doing amigos` (esas unificaciones son de la skill de Plan de Proyecto cara cliente, NO de esta).
 
+⚡ **Patrón eficiente y resiliente para leer estatus (v1.5):** refrescar Col D trayendo el estado de todo el sprint en **lote** con `clickup_filter_tasks` por el **tag del sprint vigente** (p. ej. `sprint - 07 - 2026`) y resolver contra ese mapa en memoria. **NO** hacer N× `clickup_get_task`. `get_task` queda solo para tareas que no salgan en el filtro (subtareas, tareas sin tag). Esto reduce drásticamente las llamadas y la exposición a los **502 transitorios** — validado en el piloto (sustituir `get_task` por `filter_tasks` por tag absorbió los 502 sin abortar el pase).
+
+📐 **Alcance del refresco de Col D según cadencia (v1.5):** como esta skill corre **a diario** y un refresco live del 100% de las filas cada día es caro en llamadas y aporta poco a media-sprint, el alcance se acota así:
+- **Pase diario (lun–vie):** refrescar Col D **solo** de (i) filas con actividad (imputación) en ESTE pase y (ii) filas cuya resolución producto→tarea cambió respecto al pase anterior. El resto conserva su estatus.
+- **Pase semanal / de cierre de sprint:** refresco live del **100%** de las filas de plan (vía el `filter_tasks` por tag, que ya trae todo el sprint en un mapa, así que el coste marginal es bajo).
+- El reporte Cliq (PASO 9) debe **declarar con transparencia** qué alcance se aplicó en el pase (diario acotado vs. 100%). La compuerta DoD (a) sigue exigiendo **resolución** completa (`n_resueltas==n_plan`, `n_ambiguas==0`) en TODOS los pases; el alcance acotado afecta solo a la **frescura de Col D** de filas sin actividad, no a la resolución.
+
 - Cada cambio → Log de Cambios (anterior → nuevo, fila, concepto, fuente ClickUp).
 - **Incoherencias** (saltos sospechosos) → Log + 🤖 **acumular para reporte Cliq y para el Informe Ejecutivo de Equipo**.
 
@@ -1733,7 +1749,7 @@ Registrar en Log de Cambios:
 
 Si (b) bloquea, la persona queda explícitamente sin cerrar (sin (d) ni (e) para ella) y se reporta a Cliq; el pase global continúa con las demás personas.
 
-##### 🚦 Compuerta de sellado — Definición de Hecho (DoD) OBLIGATORIA (v1.4 — por evidencia, sin sello parcial)
+##### 🚦 Compuerta de sellado — Definición de Hecho (DoD) OBLIGATORIA (v1.5 — por evidencia, sin sello parcial, invalida sello previo si falla)
 
 🚨 **El doble sello (e) NO se escribe nunca sin pasar la compuerta DoD.** Como no hay PO delante, la compuerta es DETERMINISTA, se computa **desde el sheet real + el artefacto de Resolución de ESTE pase** (no de memoria, no de estados heredados) y se deja registrada por escrito:
 
@@ -1761,6 +1777,7 @@ n_ambiguas    = filas MATCH_AMBIGUO
 ```
 5. **REGLA DURA — NO EXISTE "SELLO PARCIAL":** o (a)–(d) están **TODOS al 100% / ✅** y se escribe el sello (e), o **NO se escribe E1/M1** y la persona queda **NO CERRADA**. Está PROHIBIDO escribir el doble sello si **(a) o (a-bis) están por debajo del 100%**, aunque se documente como "parcial". Documentar el parcial NO autoriza a sellar: si falta ejecutar Mejora 6/11, se **ejecutan** (son deterministas, no requieren PO) o se deja **NO CERRADA**.
 6. 🤖 **[SOLO DESATENDIDA]** Si tras intentar ejecutarlas (a)/(a-bis) siguen <100%, o hay anomalía API → **NO sellar**; marcar la persona como **NO CERRADA (DoD incompleta)** en Cliq, con el **detalle de los productos** no resueltos / no enlazados / ambiguos, y continuar con el resto del Equipo (Override 7). **Nunca sellar a ciegas ni en parcial.**
+7. 🧹 **[SOLO DESATENDIDA] Invalidar sello previo (v1.5):** cuando una persona queda NO CERRADA pero su AUTOIA **ya tenía un sello previo** (de un pase anterior) en `Tiempos!E1` / `Log!M1`, ese sello queda **desfasado y contradictorio** (el fichero diría "cerrado" sin estarlo). No basta con no reescribirlo: **sustituir** `E1`/`M1` por la marca **`NO CERRADA — [fecha/hora] — DoD incompleta`** (no dejar el timestamp viejo) y registrar `DOD_CIERRE` en el Log con el motivo. Como no hay PO delante, esta limpieza es **determinista y automática**: el automatismo no puede depender de una limpieza manual del sello. Reflejarlo en el reporte Cliq.
 
 ### PASO 9 — Reporte y siguientes pasos
 
@@ -2268,7 +2285,7 @@ Estado global: ✅ OK / ⚠️ Con avisos / ❌ Con errores
   • [Persona] — [Xh] tracked en sprint actual. Pendiente decisión PO líder.
 
 Próxima ejecución: mañana [DD/MM/AAAA] 06:00 Madrid (si laborable).
-Fuente: skill `revision-sprint-backlog-equipo-reinicia-modo-desatendido` v1.4 / Routine [routine_id].
+Fuente: skill `revision-sprint-backlog-equipo-reinicia-modo-desatendido` v1.5 / Routine trig_011nrUo4Fx9ugWtZUJTB7rbq.
 ```
 
 ### Casos especiales del reporte
@@ -2281,7 +2298,7 @@ Fuente: skill `revision-sprint-backlog-equipo-reinicia-modo-desatendido` v1.4 / 
 
 ### Trazabilidad
 
-Cada mensaje de reporte incluye al final una línea con `Fuente: skill ... v1.4 / Routine [routine_id]` para que el Equipo sepa identificar qué versión generó el mensaje y poder rastrear bugs.
+Cada mensaje de reporte incluye al final una línea con `Fuente: skill ... v1.5 / Routine trig_011nrUo4Fx9ugWtZUJTB7rbq` para que el Equipo sepa identificar qué versión generó el mensaje y poder rastrear bugs.
 
 ---
 
@@ -2296,6 +2313,7 @@ Cada mensaje de reporte incluye al final una línea con `Fuente: skill ... v1.4 
 | **v1.2 (desatendido)** | 2026-05-30 | Néstor + Claude | Sincronización con la supervisada v3.6. Incorpora la **Compuerta de sellado — Definición de Hecho (DoD)** en el PASO 8b (Mejora 10): **Mejora 11 (enlaces HYPERLINK) añadida como ítem explícito (a-bis)** del checklist atómico, y compuerta determinista antes del doble sello — computar (a) estatus Col D, (a-bis) enlaces, (b) cuadre, (c) colchón, (d) Log; **registrar el resultado ✅/❌ por ítem en el Log (`DOD_CIERRE`) y en el reporte Cliq**; si cualquier ítem (a)–(d) resulta ❌, NO sellar, marcar la persona como NO CERRADA (DoD incompleta) en Cliq y continuar con el resto del Equipo (Override 7). Verificación de que el `K` de cada fila enlazada no cae a 0. `synced_from_supervised_version: v3.6`. |
 | **v1.3 (desatendido)** | 2026-05-31 | Néstor + Claude | **Sincronización con la supervisada v3.7 + arranque del automatismo (pilotos en seco Fabián y Paolo, Sprint 7-26).** (A) Añadida la sección **«⚙️ Configuración del automatismo en Claude Code (Routine)»** (repo `agencia-reinicia/claude-skills`, cron `0 6 * * 1-5` → 06:00 Europe/Madrid, prompt de disparo, conectores MCP y permisos ClickUp/Workdrive/Cliq, alcance, checklist pre-piloto, hueco `routine_id`); corregidas las referencias horarias 7AM/07:03 → **06:00**. (B) **Override 1 reescrito**: detección **determinista** de la carpeta del sprint vigente (raíz `i6aloc…`, regex `^Sprint\s+0?(\d+)\s*-\s*0?(\d+)$`, mayor (año,N), **cross-check contra ClickUp → ABORTAR si no coincide/empate/0**, eliminado el ID hardcodeado `8zev…`); **patrón de fichero `^Excel-Clickup-Sprint-\d+-\d+-(.+)$`** (NFC) en vez de `*AUTOIA*`; **allowlist de piloto `[Fabián, Paolo]`** (excluida «Camila»). (C) **PASO 6c — Resolución producto→tarea**: prioridad HYPERLINK Col E → lista del cliente + match EXACTO → asignado solo desempate; artefacto `resolucion[]`; desambiguación por tag de sprint + asignado; `MATCH_AMBIGUO` y `PRODUCTO_NO_RESUELTO` a Cliq sin adivinar; Mejora 6 escribe Col D **solo desde status_vivo** (prohibido snapshot del time entry); Mejora 11 HYPERLINK portante del `url` resuelto; **ceremonias de cierre (Planning/Retro/Daily) al sprint entrante**. (D) **Compuerta DoD por evidencia**: recomputa `n_plan/n_resueltas/n_drifts/n_resolubles/n_enlazadas/n_ambiguas`; (a) ✅ solo si `n_resueltas==n_plan` y `n_ambiguas==0`; (a-bis) ✅ solo si `n_enlazadas==n_resolubles`; **prohibido sellar si (a) o (a-bis) <100%**; NO CERRADA con detalle de productos a Cliq y continuar. `synced_from_supervised_version: v3.7`. |
 | **v1.4 (desatendido)** | 2026-05-31 | Néstor + Claude | **Corrección tras el primer Run now del piloto (Fabián y Paolo, Sprint 7-26).** El dry-run selló E1/M1 con (a)/(a-bis) en parcial, "conservando estatus/enlaces del pase previo" — justo lo que la compuerta debe impedir (y siendo el primer pase del sprint, no había pase previo). Cambios: (1) **Ejecución obligatoria en cada pase** — Mejoras 6 (Col D) y 11 (HYPERLINK) se ejecutan fila a fila desde `resolucion[]` en CADA pase; PROHIBIDO "conservar del pase previo"; los conteos miden ESTE pase. (2) **Compuerta DoD sin "sello parcial"** — o (a)–(d) al 100% y se sella, o NO CERRADA sin escribir E1/M1; documentar un parcial NO autoriza a sellar. (3) **Cliq por `unique_name`** — `ZohoCliq_Post_message_in_a_channel` usa `reiniciametodologa`; el channel ID `T45816000000085077` queda solo como referencia. `synced_from_supervised_version: v3.8`. |
+| **v1.5 (desatendido)** | 2026-06-06 | Néstor + Claude | **Sincronización con la supervisada v3.9 (lote de endurecimiento tras la semana de piloto Fabián+Paolo).** (1) **Mejora 6 vía `filter_tasks` por tag de sprint en lote** en vez de N× `clickup_get_task` — menos llamadas y mucha menos exposición a 502 (validado en el piloto); `get_task` solo para lo que no salga en el filtro. (2) **Alcance acotado del refresco de Col D por cadencia**: pase diario solo refresca filas con actividad o resolución cambiada; refresco del 100% en el pase semanal/cierre; el reporte Cliq declara el alcance aplicado. La compuerta DoD (a) sigue exigiendo resolución completa en todos los pases. (3) **Invalidación del sello previo si la DoD falla** (punto 7 del PASO 8b): si una persona queda NO CERRADA y tenía sello previo, se sustituye `E1`/`M1` por `NO CERRADA — [fecha] — DoD incompleta` (automático, sin PO) + `DOD_CIERRE` en Log — el automatismo no depende de limpieza manual. (4) **Resiliencia de conector** (Override 7): backoff/reintento (≈30/60/120s) antes de declarar abort estructural, reintento de 502 aislados durante el pase, y **2ª Routine de respaldo** (sugerida 09:00) idempotente que rescata el día si el pase de las 06:00 abortó. (5) **`routine_id` real** del pase principal (`trig_011nrUo4Fx9ugWtZUJTB7rbq`) en el PASO 9 y la línea `Fuente`. `synced_from_supervised_version: v3.9`. |
 
 ### Historial heredado de la skill supervisada origen
 
