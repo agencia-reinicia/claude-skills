@@ -200,24 +200,38 @@ Hay **dos clases de icono**, y **qué tarjetas los llevan lo decide el PO / Equi
 
 **Tamaño estándar:** **40 px** de ancho (alto proporcional).
 
-### Cómo crear los iconos (mecánica del conector)
+### Banco de iconos — Material Symbols (Google Fonts Icons)
+Banco oficial: https://fonts.google.com/icons. Estilo de Reinicia: **Outlined, peso 400, sin relleno**, monocromo (negro).
+
 - Los iconos son **items de imagen** (`Miro:image_create`), **no** van en el DSL de CARDs.
-- **Reutilizar del banco** (plantilla/board de referencia): `Miro:image_get_url` sobre el item del icono → devuelve una URL pública firmada (`r.miro.com/…svg`) → `Miro:image_create(image_url=…, width=40, x, y)` apuntando al frame con `?moveToWidget=<frame_id>` (x/y relativos al frame).
-- ⚠️ **Las URLs firmadas caducan en pocos minutos.** Patrón obligatorio: **refrescar la URL con `image_get_url` JUSTO ANTES de cada `image_create`**. Si un `image_create` falla ("Unable to execute" o similar), casi siempre es URL caducada → refrescar y reintentar.
-- ⚠️ **No existe herramienta para mover ni borrar imágenes** (`layout_update` solo afecta a items del DSL; las imágenes se omiten como "unsupported"). Por tanto: **decidir la colocación antes de crear**. Si hay que reposicionar/cambiar tamaño, el usuario borra a mano en Miro y Claude recrea. Validar tamaño/posición con **un icono de prueba** antes de crear el resto.
+- **Acceso por nombre vía CDN** (no se reutiliza ningún board; se elige el icono semánticamente correcto y las URLs son estables, no caducan):
+  - Sin relleno: `https://cdn.jsdelivr.net/npm/@material-symbols/svg-400@latest/outlined/<nombre>.svg`
+  - Con relleno: `https://cdn.jsdelivr.net/npm/@material-symbols/svg-400@latest/outlined/<nombre>-fill.svg`
+  - `<nombre>` = nombre del icono en Material Symbols, en minúsculas y con guion bajo (p. ej. `home`, `call`, `mail`, `check_circle`, `shopping_cart`, `article`, `map`, `add`, `lock`, `search`).
+  - Crear con `Miro:image_create(image_url=<URL CDN>, width=40, x, y)` apuntando al frame con `?moveToWidget=<frame_id>` (x/y relativos al frame).
 
-### Banco de iconos de referencia (board HomeEspaña `uXjVJMZC4G4=`, iconfinder)
-Reutilizables vía `image_get_url` (placeholder temático inmobiliario; sustituir por un banco específico del sector cuando se acuerde):
-- 🏠 casa/home: `3458764594812751532`
-- 🛒 carrito (compra): `3458764594813160335`
-- ✉️ email/contacto (consulta): `3458764594813482666`
-- ☑️ check/tic (marcador conversión): `3458764594907872030`
-- 📰 artículo/noticia (blog): `3458764594813482376`
-- 🗺️ mapa (ubicaciones): `3458764594813357263`
-- ➕ plus: `3458764594813482319`
-- 🔒 candado (acceso/login): `3458764594815860223`
+**Mapeo orientativo por tipo de nodo / objetivo** (ajustar al sector con el PO):
 
-> **Pendiente de evolución:** acordar un **banco de iconos propio por sector** (golf/eventos, etc.) y buscar iconos **in-situ** en ese banco en lugar de reutilizar los de la plantilla inmobiliaria.
+| Nodo / objetivo | Material Symbol |
+|---|---|
+| Home / raíz | `home` |
+| Teléfono / llamar (consulta) | `call` |
+| Email / contacto / demo (consulta) | `mail` |
+| Conversión por formulario / alta | `check_circle` |
+| Compra / planes / pricing | `shopping_cart` |
+| Blog / artículos | `article` |
+| Ubicaciones / mapa | `map` |
+| Features / funcionalidades | `widgets` (o `add`) |
+| Acceso / login (área privada) | `lock` |
+| Buscador | `search` |
+
+⚠️ **Limitaciones del conector con imágenes (Material Symbols o cualquier otra fuente):**
+- **No existe herramienta para mover ni borrar imágenes** (`layout_update` solo afecta a items del DSL; las imágenes se omiten como "unsupported"). Por tanto: **decidir la colocación antes de crear**, validar tamaño/posición con **un icono de prueba**, y reposicionar = el usuario borra a mano en Miro + Claude recrea.
+- Las URLs de CDN de Material Symbols **no caducan**. Aun así, si un `image_create` falla puntualmente ("Unable to execute" o similar), reintentar.
+
+### Alternativa secundaria — reutilizar iconos de otro board Miro
+Solo si por algún motivo no se usa Material Symbols. Se reutiliza un icono ya presente en un board (p. ej. el banco temático inmobiliario del board HomeEspaña `uXjVJMZC4G4=`): `Miro:image_get_url` sobre el item del icono → URL pública firmada (`r.miro.com/…svg`) → `Miro:image_create(image_url=…, width=40, x, y)`.
+> ⚠️ Esas URLs firmadas **caducan en pocos minutos**: **refrescar con `image_get_url` JUSTO ANTES de cada `image_create`**; si falla, casi siempre es URL caducada → refrescar y reintentar. Iconos de placeholder en ese board: casa `3458764594812751532`, carrito `3458764594813160335`, email `3458764594813482666`, check `3458764594907872030`, noticia `3458764594813482376`, mapa `3458764594813357263`, plus `3458764594813482319`, candado `3458764594815860223`.
 
 ---
 
@@ -332,7 +346,7 @@ Leer con `Miro:layout_read` para reutilizar estructura, spec y decisiones.
 
 1. **Sin conectores/flechas por API** — el árbol se lee por columnas; flechas = pasada manual.
 2. **Imágenes: solo crear** — no hay mover ni borrar. Decidir colocación antes de crear; validar con un icono de prueba; reposicionar = borrar a mano + recrear.
-3. **URLs firmadas de iconos caducan en minutos** — refrescar con `image_get_url` justo antes de cada `image_create`.
+3. **Iconos:** banco principal = **Material Symbols** vía CDN (URLs estables, no caducan). Solo la **alternativa** de reutilizar iconos de otro board usa URLs firmadas que **caducan en minutos** → en ese caso refrescar con `image_get_url` justo antes de cada `image_create`.
 4. **Escrituras requieren aprobación** del usuario en el cliente (el primer intento puede devolver "No approval received").
 5. **`desc` en una sola línea física** — usar `<p>` para saltos; sin comillas dobles internas.
 6. **CARDs sí son editables** vía `layout_update` (find-and-replace sobre el DSL); las imágenes no aparecen en ese DSL.
@@ -345,7 +359,7 @@ Leer con `Miro:layout_read` para reutilizar estructura, spec y decisiones.
 - **Versiones en el mismo board:** frames nuevos a la derecha; nunca boards nuevos por versión; leer el board primero.
 - **Colores:** sistema estándar de 4 colores (`#3812CF` / `#70EED6` / `#EBE31D` / `#D14351`); gris opcional. Si se detecta inconsistencia con la referencia, reportarla para ajustar este estándar.
 - **URL dentro de la tarjeta** (`desc`); etiqueta = solo el nombre.
-- **Iconos:** validar con el PO/Equipo Operativo qué tarjetas y qué clase (interno/externo) y qué banco; 40 px; interno a la derecha dentro (+190/+145), externo ~15 px fuera del borde.
+- **Iconos:** banco = **Material Symbols** vía CDN (Outlined 400, sin relleno). Validar con el PO/Equipo Operativo qué tarjetas y qué clase (interno/externo); 40 px; interno a la derecha dentro (+190/+145), externo ~15 px fuera del borde.
 - **Producto ClickUp:** una sola tarea por proyecto; las versiones se documentan con comentarios/subtareas.
 - **Idioma:** el árbol se genera en el idioma de la web del cliente (castellano para clientes españoles, inglés para internacionales como BirdEase/Carritech), aunque el Sprint Cero esté en otro idioma.
 
@@ -355,5 +369,5 @@ Leer con `Miro:layout_read` para reutilizar estructura, spec y decisiones.
 
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|
-| v2.0 | 2026-06-07 | Néstor + Claude | Reescritura tras el piloto BirdEase: el sitemap pasa de flowchart (`diagram_create`) a **tarjetas** (`layout_create`); spec visual exacta (themes, tamaños 460.335×94.9269 / 350.463×72.27, paso 112.87, Open Sans 36, frame ≈6002×5580); corrección de color azul a `#3812CF` y footer en turquesa+amarillo (gris opcional); URL dentro de la tarjeta (`desc`); nuevo Paso 4b de **iconos** (dos clases, reutilización del banco vía `image_get_url`→`image_create`, 40 px, refresco de URLs caducas, sin mover/borrar); reescritura del Paso 3b de **bloques de contenido dentro de la tarjeta** (modelo URL/Plantilla/Objetivo/Bloques + taxonomía + 4 estados); documentadas limitaciones del conector (sin flechas, aprobación de escrituras). |
+| v2.1 | 2026-06-07 | Néstor + Claude | Banco de iconos pasa a **Material Symbols** (Google Fonts Icons, estilo Outlined peso 400 sin relleno, monocromo negro), con **acceso por nombre vía CDN jsDelivr** (`@material-symbols/svg-400@latest/outlined/<nombre>.svg`) y mapeo orientativo por tipo de nodo; las URLs de CDN son estables (no caducan). La reutilización de iconos de otro board queda **degradada a alternativa secundaria**. Probado con el icono `home` en el board BirdEase. | Reescritura tras el piloto BirdEase: el sitemap pasa de flowchart (`diagram_create`) a **tarjetas** (`layout_create`); spec visual exacta (themes, tamaños 460.335×94.9269 / 350.463×72.27, paso 112.87, Open Sans 36, frame ≈6002×5580); corrección de color azul a `#3812CF` y footer en turquesa+amarillo (gris opcional); URL dentro de la tarjeta (`desc`); nuevo Paso 4b de **iconos** (dos clases, reutilización del banco vía `image_get_url`→`image_create`, 40 px, refresco de URLs caducas, sin mover/borrar); reescritura del Paso 3b de **bloques de contenido dentro de la tarjeta** (modelo URL/Plantilla/Objetivo/Bloques + taxonomía + 4 estados); documentadas limitaciones del conector (sin flechas, aprobación de escrituras). |
 | v1.x | — | Néstor + Claude | Versión inicial basada en flowchart `diagram_create` y bloques de contenido como documento Miro aparte (sustituida por v2.0). |
