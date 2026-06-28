@@ -15,7 +15,7 @@ description: >
 
 # SKILL: Plan de Proyecto — Modo Desatendido (Reconciliación) — Reinicia
 
-> **Versión vigente: v0.7 (esqueleto) — 2026-06-28**
+> **Versión vigente: v0.9 (esqueleto) — 2026-06-28**
 
 > ⚠️ **VERSIÓN ESQUELETO v0.4.** Respecto a v0.3, corrige la clasificación de campos según la
 > aclaración del PO: desaparece la "lista negra pura"; el modelo es ClickUp→Sheet / Sheet→ClickUp /
@@ -79,9 +79,9 @@ fila 1). Filas 3–5 = leyenda de hitos; fila 7 = meses; fila 8 = nº de semana.
 **`40#` Plan Proyecto (cara cliente):**
 | col | Campo | Flujo |
 |---|---|---|
-| 2 | Épica (de negocio, modelo B) | 🟪 Generado por Claude (si vacío → rellena + nota PO; NO del ÉPICA funnel) |
+| 2 | Épica (agrupación: plataforma/fase) | Derivada consistente con el fichero (NO objetivo de negocio; NO del ÉPICA funnel). Filas nuevas: Claude la deriva del tipo/plataforma. |
 | 3 | Tipo Producto | ⬜ ClickUp → Sheet |
-| 4 | Mes | Derivado (de Fecha de entrega) |
+| 4 | Mes | Derivado = **mes de la Fecha de entrega** (col 8). Recomputar al cambiar la fecha. |
 | 5 | PBI de Primer Nivel | ⬜ ClickUp → Sheet; si vacío en ClickUp → Claude rellena en Sheet+ClickUp + nota PO |
 | 6 | Entregable | ⬜ ClickUp → Sheet (nombre de tarea) |
 | 7 | Descripción | ⬜ ClickUp → Sheet (formato historia/resumen) |
@@ -113,9 +113,16 @@ fila 1). Filas 3–5 = leyenda de hitos; fila 7 = meses; fila 8 = nº de semana.
   - **Fecha de validación esperada** (col 9) → fecha de la subtarea "Validación Cliente" en ClickUp.
   - **Notas [Cliente]** (col 11, solo 40#) → informar en ClickUp (🚧 mecanismo: comentario en la
     tarea del producto en `General [CLIENTE]`; confirmar en 1ª pasada).
-- **🟪 Generado por Claude** (criterio, + nota PO): **Épica de negocio** (col 2) y **PBI** (col 5)
-  cuando faltan. La Épica de negocio no se deriva del ÉPICA funnel de ClickUp.
+- **🟪 Generado por Claude** (criterio, + nota PO): **PBI** (col 5) cuando falta en ClickUp. La
+  **Épica** (col 2) NO es objetivo de negocio: es la agrupación que ya usa el fichero (plataforma/
+  fase); en filas nuevas Claude la deriva consistente con el resto, sin inventar.
 
+> **Reflejo completo (no solo divergencias):** en CADA fila que se lee de ClickUp, refrescar TODOS
+> los campos de lista blanca (Tipo, Entregable, Descripción, Notas Reinicia, Estatus, Fecha de
+> entrega), no solo las celdas que cambiaron. **Backfill inicial troceado** para filas antiguas con
+> lista blanca incompleta (p. ej. Tipo de Producto vacío).
+> **due_date null** → escribir **"A definir"** en col 8 (no vaciar) y calendario en blanco.
+> **Al cambiar la fecha de entrega**, recomputar col 4 "Mes" (= mes de col 8) y la marca de calendario.
 > Sin divergencia con la supervisada en la fecha de entrega: ambas la actualizan desde el due_date.
 
 ---
@@ -131,7 +138,7 @@ fila 1). Filas 3–5 = leyenda de hitos; fila 7 = meses; fila 8 = nº de semana.
 - Hitos Gantt: entrega Reinicia `#70EED6` ("Azul Claro Reinicia") · validación Cliente `#EBE31B`
   ("Amarillo Claro Reinicia"). Leyenda en filas 3–5.
 - Bordes blancos `#FFFFFF` sólidos en todas las pestañas.
-- Log Cambios: cabecera `#3812CF`/`#FFFFFF`; fila 2 `#D9D0FB`/`#555555` itálica. Lavado base blanco.
+- Log Cambios: cabecera `#3812CF`/`#FFFFFF`; fila 2 `#D9D0FB`/`#555555` itálica. **Filas de datos nuevas: fill `#EBEBEB` (NUNCA blanco — sobre blanco los bordes blancos no se ven) + bordes blancos `#FFFFFF` sólidos + Manrope, sin banding.** Lavado base blanco.
 - Fuentes Manrope. Azul de marca `#3812CF` (no `#3812CB`).
 
 ---
@@ -149,15 +156,16 @@ fila 1). Filas 3–5 = leyenda de hitos; fila 7 = meses; fila 8 = nº de semana.
 6. **Índices de Estatus/calendario por cabecera leída** (difiere entre 40# y 41#).
 7. **No pisar nunca** col 8 (¡sí se actualiza desde ClickUp!) — matiz: col 8 SÍ se escribe (due_date);
    las que NO se pisan son col 9 y col 11 (origen Cliente, solo lectura→push a ClickUp).
-8. **Log Cambios:** solo añadir al final. **No `Create_New_File`.**
+8. **Log Cambios:** solo añadir al final **y dar formato a las filas nuevas** (fill `#EBEBEB` — NUNCA blanco —, bordes blancos `#FFFFFF` sólidos, Manrope; sin banding) — no dejarlas sin formato. **No `Create_New_File`.**
 
 ---
 
-## REGLA DE PBI / ÉPICA VACÍOS (criterio autónomo)
+## REGLA DE PBI VACÍO (criterio autónomo)
 
 Por fila: leer ClickUp. Campo con valor → sincronizar Sheet (gana ClickUp; nunca pisar ClickUp).
-**PBI** vacío en ClickUp → Claude escribe PBI afinado en Sheet **y** ClickUp + nota PO. **Épica de
-negocio** (col 2) vacía en el Sheet → Claude propone + nota PO (no toca ClickUp). Idempotente.
+**PBI** vacío en ClickUp → Claude escribe PBI afinado en Sheet **y** ClickUp + nota PO. **Épica**
+(col 2) vacía → Claude la deriva de la plataforma/tipo, consistente con el fichero (no objetivo de
+negocio; no toca ClickUp). Idempotente.
 
 ---
 
@@ -190,7 +198,7 @@ Primera fila pendiente por el contenido de la columna PBI. 🚧 criterio exacto 
 
 ### PASO 3 — Reconciliación fila a fila (hasta agotar troceo)
 - Leer tarjeta ClickUp (campos, subtareas, comentarios, checklist, due_date, subtarea Validación Cliente).
-- Aplicar los tres flujos: ⬜ ClickUp→Sheet · 🔼 Sheet→ClickUp (validación + notas Cliente) · 🟪 generar Épica/PBI vacíos.
+- **Reflejo completo** de la lista blanca en CADA fila (no solo divergencias); 🔼 Sheet→ClickUp (validación + notas Cliente); 🟪 PBI vacío → generar; **recomputar Mes y marca de calendario** al cambiar la fecha.
 - Construir Notas Reinicia/Notas (ratios + riesgos ⚠️). (Re)dibujar calendario de cols 8/9 con colores de hito.
 - **Insertar filas (§8)** si falta espacio, ANTES de pegar. Persistir en lotes ≤40.
 
@@ -272,6 +280,8 @@ de Cliente empujadas a ClickUp · Épica/PBI vacíos rellenados · ≤7 ideas en
 | **v0.3** | 2026-06-28 | Néstor + Claude | Mapa de columnas real (40# y 41# difieren); Ideas (§9) y sync de validación dentro del alcance. |
 | **v0.4** | 2026-06-28 | Néstor + Claude | **Corrección de clasificación de campos (PO):** desaparece la lista negra pura. Fecha de entrega esperada (col 8) = due_date de ClickUp (se vuelca, sin divergencia). Fecha de validación (col 9) y Notas [Cliente] (col 11) = Sheet→ClickUp (origen Cliente, nunca pisar, propagar a ClickUp). Notas Reinicia automáticas. Semáforo = desplegable con formato asociado al valor (solo escribir texto). Modelo en 3 flujos: ClickUp→Sheet / Sheet→ClickUp / Generado por Claude. |
 | **v0.5** | 2026-06-28 | Néstor + Claude | Documentado el modo CREACIÓN desatendido como evolución futura. |
+| **v0.9** | 2026-06-28 | Néstor + Claude | Aclaración de formato del Log: el fondo de las filas de datos es `#EBEBEB` y NUNCA blanco (sobre blanco los bordes blancos no se ven como rejilla). Aplicado a mano a las filas 10–12 del fichero de Líder System. El valor `#EBEBEB` ya estaba bien en v0.8; el fallo fue en la aplicación manual. |
+| **v0.8** | 2026-06-28 | Néstor + Claude | **Hallazgos 1ª pasada (Líder System).** Reflejo COMPLETO de lista blanca por fila (no solo divergencias) + backfill inicial de filas viejas. **Mes** confirmado = mes de la fecha de entrega → recomputar Mes y marca de calendario al cambiar la fecha. **due_date null → "A definir"** (no vaciar). **Épica (col 2)** deja de ser objetivo de negocio (modelo B): es la agrupación del fichero (plataforma/fase), derivada consistente; no se inventa. **Log de Cambios: dar formato a las filas nuevas** (fill #EBEBEB, bordes blancos, Manrope). Orden cronológico de filas nuevas → pendiente futuro (de momento, al final). |
 | **v0.7** | 2026-06-28 | Néstor + Claude | Ámbito del piloto: los 3 (Líder System, Carritech, Breezom) los crea la skill en su 1ª pasada (sin creación supervisada previa); arranque escalonado (LS primero, luego Carritech y Breezom). |
 | **v0.6** | 2026-06-28 | Néstor + Claude | **Creación desatendida = modo activo del piloto.** Si falta el fichero v2, la skill lo crea: guardia anti-duplicados (no negociable), copia de plantilla, **idioma inferido** del cliente + nota, **granularidad por defecto = quincenas**, reflejo de ClickUp, criterio (Épica/Descripción/alcance/portada) propuesto y marcado BORRADOR pendiente de validación PO, nota consolidada en Gestión. El almacén de config por cliente pasa a mejora opcional (inferencia+defaults mientras no exista). |
 
@@ -282,7 +292,7 @@ de Cliente empujadas a ClickUp · Épica/PBI vacíos rellenados · ≤7 ideas en
   opcional de la creación desatendida (hoy: inferencia + defaults).
 - Calibrar presupuesto de troceo y criterio de reanudación (1ª pasada).
 - Confirmar mecanismo exacto de "informar Notas [Cliente] en ClickUp" (comentario en la tarea).
-- Confirmar origen de la col 4 "Mes" (derivada) y el dibujo de la marca de calendario.
+- **Orden cronológico** de filas nuevas dentro de cada tabla (futuro; de momento al final, a revisar cuando los POs trabajen los Planes).
 - Especificar tool calls celda a celda del PASO 3 y de los empujes Sheet→ClickUp.
 - Confirmar nomenclatura de la skill.
 - Incorporar Breezom y Carritech cuando tengan fichero v2.
