@@ -13,6 +13,8 @@ description: >
 
 # SKILL: Flujograma WABA en Miro — Reinicia
 
+> **Versión vigente: v1.0 — 21/06/2026** · ver changelog al final (`## Versiones`)
+
 ## Propósito
 Generar el contenido completo de cada nodo de un flujograma conversacional WABA siguiendo
 la plantilla de cards de Reinicia, y crear el documento de referencia en el board de Miro
@@ -473,3 +475,9 @@ con web_search si hay documentación más actualizada:
 - Eazybe Help Docs: https://eazybehelpdesk-meb4m.desk.notaku.site/
 - Meta WhatsApp Business: https://business.whatsapp.com/
 - Meta for Developers (WhatsApp): https://developers.facebook.com/docs/whatsapp
+
+## Versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v1.0 | 21/06/2026 | Néstor + Claude | Estado previo sin versionar, tabulado por primera vez al incorporar el estándar de versionado de Reinicia (21/06/2026). Generación del contenido de flujogramas conversacionales WABA/WhatsApp en Miro según la plantilla de cards de Reinicia. |

@@ -5,6 +5,8 @@ description: "Usa esta skill cuando el usuario quiera revisar, auditar o corregi
 
 # Skill: Revisión y Corrección de Nomenclatura — Reinicia
 
+> **Versión vigente: v1.0 — 21/06/2026** · ver changelog al final (`## Versiones`)
+
 ## Propósito
 
 Esta skill audita los nombres de archivos en las carpetas de Actas de Reunión y Análisis de Llamada de un proyecto o cliente en Zoho Workdrive, identifica los que no siguen la nomenclatura oficial de Reinicia y ejecuta los renombrados validados por el usuario.
@@ -204,3 +206,9 @@ Si algún renombrado falla, indicar el error devuelto por la API y sugerir al us
 - **Fecha de creación como fallback:** Si `created_time` está disponible en los metadatos pero el valor parece anómalo (p.ej. es muy reciente y no encaja con el contenido del nombre), indicarlo con 📅⚠️ y pedir confirmación al usuario antes de usarla.
 - **Nombres ambiguos:** Si el tipo de documento (Acta vs. Análisis) no es inferible del nombre actual, preguntar al usuario antes de proponer un nombre.
 - **Clientes con presencia en múltiples ubicaciones:** Si el ámbito es "Ambos", procesar primero Proyectos Activos y luego Comercial, presentando informes separados por ubicación.
+
+## Versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v1.0 | 21/06/2026 | Néstor + Claude | Estado previo sin versionar, tabulado por primera vez al incorporar el estándar de versionado de Reinicia (21/06/2026). Revisión, auditoría y corrección de la nomenclatura de ficheros en carpetas de Workdrive. |

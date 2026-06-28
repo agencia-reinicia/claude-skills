@@ -19,6 +19,8 @@ description: >
 
 # SKILL: Informes Ejecutivos de Sprint Backlog por Equipo — Reinicia
 
+> **Versión vigente: v0.2 — 26/05/2026** · ver changelog al final (`## Versiones`)
+
 > 📋 **VERSIÓN v0.2 — Primer ciclo real documentado.** Esta versión incorpora los aprendizajes de la primera ejecución de cierre real (Informes Columbia y Proactive, Sprint 06-26, parcial a Día 14): tools MCP confirmadas, mecanismo de duplicación parcial→cierre, patrón de formato de tabla canónico, homogeneización de columnas en pestañas de Detalle, depuración de timers solapados para miembros sin AUTOIA, y una **rutina de validación de formato obligatoria** (nacida de errores reales de filas que quedaron sin maquetar). Sigue sin ser definitiva: el contenido celda a celda exacto de Portada/Resumen/Comparativa se irá refinando en próximos ciclos.
 
 ---
@@ -350,7 +352,7 @@ Confirmadas en v0.2:
 
 ---
 
-## VERSIONES
+## Versiones
 
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|

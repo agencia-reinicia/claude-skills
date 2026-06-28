@@ -20,6 +20,8 @@ triggers:
 
 # SKILL: Auditoría de Duplicados de Soporte — Reinicia
 
+> **Versión vigente: v1.1 — 21/06/2026** · ver changelog al final (`## Versiones`)
+
 > ✅ **VERSIÓN v1.1 — Calibrada + refinada.** Diseño cerrado y calibrado en pasada supervisada read-only sobre Carritech y Gonher (31/05). Confirmados los dos TODOs que bloqueaban lo desatendido (asignación de comentario y tarea destino). v1.1 añade la categoría "submisiones solapadas" (dos `form_response`, nunca borrar) y la detección del Módulo B por prefijo estable. Pendiente la **primera publicación real** validada antes de programar la rutina. Hereda convenciones de `soporte-procesamiento-clickup-reinicia` y `formato-tarjeta-clickup-reinicia`.
 
 ---
@@ -306,3 +308,9 @@ Diseño cerrado, calibrado y refinado. Quedan dos confirmaciones operativas, nin
 2. **Primera publicación**: ejecutar sobre Carritech+Gonher paginando completo y publicar los comentarios por PO en `869bt8w6w`, revisando que el de Pablo (Gonher) salga limpio tras aplicar el flag.
 
 > El par cross-language de Carritech (`869d3ph4d` / `869d5qxja`) quedó resuelto en la pasada v1.0: son dos `form_response` solapadas y ya enlazadas → categoría "submisiones solapadas", REVISAR (no borrar). Incorporado a la lógica en v1.1.
+
+## Versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v1.1 | 21/06/2026 | Néstor + Claude | Versión vigente registrada al incorporar el estándar de versionado de Reinicia. El histórico previo de cambios está descrito en prosa en el cuerpo de la skill y queda pendiente de tabular. |

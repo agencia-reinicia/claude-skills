@@ -12,6 +12,8 @@ triggers:
 
 # SKILL: Soporte por Correo Electrónico — ClickUp Reinicia
 
+> **Versión vigente: v1.1 — 21/06/2026** · ver changelog al final (`## Versiones`)
+
 ## Propósito
 
 Cuando un cliente envía un correo electrónico con una petición de soporte (a Néstor, Óscar, Pablo o cualquier interlocutor de Reinicia), esta skill convierte ese correo en un producto de soporte en ClickUp con la **misma estructura** que tendría si el cliente hubiera rellenado el formulario estándar de ClickUp.
@@ -551,3 +553,9 @@ Qué se considera pista:
 - **No usar** para crear productos en `General [CLIENTE]` — eso es trabajo de las skills `productos-digitales-*-clickup-reinicia`.
 - Si el correo del cliente describe trabajo que claramente NO es soporte sino un proyecto nuevo (alcance grande, presupuesto cerrado necesario), Claude lo detecta y propone redirigir el flujo: "Esto no parece soporte sino proyecto nuevo. ¿Cierro este flujo y abrimos uno con la skill `productos-digitales-*-clickup-reinicia` correspondiente?"
 - **Validación dinámica del formulario:** la primera vez que un nuevo cliente piloto se añada a la tabla (sección 2), conviene ejecutar la skill al menos una vez para que la verificación dinámica (Paso 2) reporte si el formulario tiene algún campo distinto al canónico.
+
+## Versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v1.1 | 21/06/2026 | Néstor + Claude | Versión vigente registrada al incorporar el estándar de versionado de Reinicia. El histórico previo de cambios está descrito en prosa en el cuerpo de la skill y queda pendiente de tabular. |

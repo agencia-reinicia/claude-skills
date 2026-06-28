@@ -12,6 +12,8 @@ triggers:
 
 # SKILL: Procesamiento Automático de Soporte ClickUp — Reinicia
 
+> **Versión vigente: v1.11 — 21/06/2026** · ver changelog al final (`## Versiones`)
+
 ## Propósito
 
 Cuando un cliente rellena un formulario de ClickUp asociado a su lista `Soporte [CLIENTE]`, ClickUp crea automáticamente una tarea en estado `Open` con `taskType: "form_response"`. La descripción se rellena con los pares pregunta/respuesta del formulario tal como los escribió el cliente, sin estructura adicional. El nombre suele incluir un identificador automático del formulario y un timestamp, no el nombre operativo del trabajo.
@@ -1070,3 +1072,9 @@ Cuando el PO registre la tarea programada de Cowork:
 7. Carpeta: la del proyecto `Asesor Product Owners Reinicia`, para que la tarea programada herede las skills y MCPs disponibles.
 
 Si en algún momento se migra a Routines de Claude Code (background 24/7 sin necesidad de app abierta), la skill funciona idéntica — solo cambia el disparador. Skill agnóstica del mecanismo de scheduling.
+
+## Versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v1.11 | 21/06/2026 | Néstor + Claude | Versión vigente registrada al incorporar el estándar de versionado de Reinicia. El histórico previo de cambios está descrito en prosa en el cuerpo de la skill y queda pendiente de tabular. |

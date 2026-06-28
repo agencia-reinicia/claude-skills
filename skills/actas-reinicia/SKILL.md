@@ -5,6 +5,8 @@ description: "Usa esta skill cuando el usuario pida crear un acta de reunión pa
 
 # Skill: Crear Acta de Reunión — Reinicia
 
+> **Versión vigente: v1.4 — 20/06/2026** · ver changelog al final (`## Versiones`)
+
 ## Descripción general
 
 Esta skill genera el acta de una reunión de cliente de Reinicia en formato `.docx` con el estilo corporativo, y registra su creación en ClickUp en la tarea de Gestión del mes correspondiente.
@@ -31,6 +33,7 @@ Antes de ejecutar, Claude debe tener o solicitar:
 
    > ¿Dónde debe guardarse esta acta en Workdrive?
    > - 📁 **Proyectos Activos** — seguimiento de un proyecto en curso
+   > - 🤝 **Amigo Reinicia** — reunión transversal con un colaborador externo (no ligada a un cliente concreto)
    > - 💼 **Comercial** — reunión comercial (carpeta Comercial genérica)
    > - 💬 **Comercial WhatsApp** — contacto comercial iniciado por WhatsApp
    > - 🔵 **Comercial Zoho** — contacto comercial gestionado vía Zoho CRM
@@ -41,11 +44,17 @@ Antes de ejecutar, Claude debe tener o solicitar:
 
 Si falta algún dato no inferable, preguntarlo antes de continuar.
 
+> **Idioma de salida.** Redactar el acta en el **idioma del cliente**: castellano para clientes españoles, inglés para clientes internacionales (p.ej. HomeEspaña, Carritech). Inferirlo de la transcripción y del cliente. **Si no se tiene certeza del idioma preferido, preguntar al usuario** antes de generar. (Coherente con la regla "idioma del cliente" de la skill de diagramas.)
+
 ---
 
 ## Paso 1 — Procesar la transcripción
 
 Leer el fichero `.vtt` adjunto y extraer:
+
+> **Regla de lectura (obligatoria).** Leer **SIEMPRE la transcripción completa** antes de redactar. No saltar entre rangos de líneas asumiendo que ya se captan los temas: un acta parcial que luego hay que fusionar es peor que tardar más en la lectura inicial. Si un fichero es grande, `head` sirve solo para **orientarse**, no para sustituir la lectura íntegra.
+>
+> **Detección de subida duplicada.** Si llega una **segunda transcripción** que "parece aportar temas nuevos", verificar primero si es un **duplicado** de la anterior (comparar fecha interna, participantes, hora de inicio y de fin) antes de asumir que son reuniones distintas. Si es la misma reunión con transcripción más completa, **rehacer/actualizar** el acta existente, no crear una nueva. (Caso real: las dos versiones del acta de HomeEspaña 23/03/2026.)
 
 - **Participantes** separados por empresa (cliente primero, Reinicia después)
 - **Guión** — temas tratados en la reunión
@@ -53,6 +62,7 @@ Leer el fichero `.vtt` adjunto y extraer:
   - **Negrita** → conceptos técnicos clave, soluciones acordadas, datos relevantes (cifras, herramientas, sistemas)
   - *Cursiva* → ejemplos concretos, anécdotas o casos ilustrativos
   - Subrayado → solo en encabezados de bloque (HomeEspaña / Reinicia), nunca en Comentarios
+- **Ideas tratadas** — ideas, propuestas o sugerencias que surgieron en la reunión (aunque no cristalizasen en acción). Para cada una extraer: idea, descripción breve, quién la aportó (nombre + empresa), grado de aceptación del cliente (`Sí` / `Con matices` / `No` / `Pendiente` si no se pronunció) y app(s) involucradas. No forzar ideas inexistentes: si la reunión no tuvo ideas reseñables, omitir el bloque.
 - **Decisiones y acciones** — separadas por responsable (Reinicia primero, cliente después), con fecha concreta si se mencionó
 
 ---
@@ -79,7 +89,8 @@ Usar el script de referencia (`build_acta.js`) que está al final de esta skill.
 Ejecutar con:
 ```bash
 cd /home/claude && node build_acta.js
-python3 /mnt/skills/public/docx/scripts/office/validate.py output.docx
+# build_acta.js escribe /home/claude/<FILENAME>.docx — validar ESE fichero, no "output.docx"
+python3 /mnt/skills/public/docx/scripts/office/validate.py "/home/claude/<FILENAME>.docx"
 ```
 
 ### Reglas estrictas de estilo
@@ -105,6 +116,16 @@ borders: { top: whiteBorder, bottom: whiteBorder, left: whiteBorder, right: whit
 
 La cabecera de la tabla usa fondo lila `#D9D0FB` con texto en negro de heading `#0D0D0D` (alineado con el patrón canónico de la skill `marca-reinicia`). **Nunca azul saturado `#3812CF` con texto blanco**: ese azul se reserva para acentos puntuales (líneas separadoras, énfasis tipográficos), no como fondo de cabecera de tabla.
 
+**5. Tabla de "Ideas tratadas": mismo estilo que la de Decisiones, 5 columnas, sin bloques-categoría.**
+
+La tabla de Ideas usa la misma estética que la de Decisiones (cabecera lila `#D9D0FB` con texto negro `#0D0D0D`, bordes BLANCOS en todas las celdas, filas alternas blanco/`#EBEBEB`), pero **sin filas-categoría** (Reinicia/Cliente): es una tabla plana porque la columna "Aportada por" ya indica el origen de cada idea. Columnas: `Idea | Descripción | Aportada por | Aceptación cliente | App(s) involucradas`.
+
+- **Aceptación cliente**: vocabulario controlado de **cuatro** valores — `Sí` / `Con matices` / `No` / `Pendiente`. "Pendiente" se usa cuando la idea se planteó pero el cliente no se pronunció (típicamente ideas que lanza Reinicia y el cliente aún no valora). No usar otros valores.
+- **Aportada por**: nombre + empresa entre paréntesis, p.ej. `Paolo (Reinicia)` o `Robin (HomeEspaña)`.
+- **App(s) involucradas**: nombres en **texto plano** (Zoho CRM, WordPress, WhatsApp/WABA, Zoho Forms, Cloudways…), coherentes con el vocabulario de sistemas de la casa. **No usar emojis** en el `.docx` (riesgo de render como cajas en Word/LibreOffice).
+- **Orden de filas**: en el orden en que surgieron en la reunión (trazable).
+- Una idea con aceptación `Sí` puede aparecer también en la tabla de Decisiones (con responsable y fecha). No es duplicación: Ideas captura la lente *buy-in + apps*; Decisiones, la de *acción comprometida*.
+
 ### Estructura del documento
 
 ```
@@ -128,7 +149,13 @@ CABECERA (tabla 3 columnas, sin bordes)
   3.1 Subtítulo       [H2 — Manrope Bold 18pt #0D0D0D]
   Texto con negritas, cursivas según patrón
 
-4_Decisiones – Acciones a realizar  [H1]
+4_Ideas tratadas      [H1]
+  [Tabla: Idea | Descripción | Aportada por | Aceptación cliente | App(s) involucradas]
+  Cabecera: fondo lila #D9D0FB, texto negro #0D0D0D negrita, bordes BLANCOS
+  Filas alternas: blanco / #EBEBEB, bordes BLANCOS
+  Aceptación cliente: Sí / Con matices / No / Pendiente (vocabulario controlado)
+
+5_Decisiones – Acciones a realizar  [H1]
   [Tabla: Acción/Decisión | Responsable | Fecha entrega]
   Cabecera: fondo lila #D9D0FB, texto negro #0D0D0D negrita, bordes BLANCOS
   Bloque Reinicia: fondo lila #D9D0FB, bordes BLANCOS
@@ -139,60 +166,93 @@ REVISIÓN PO (sin línea horizontal gris encima — solo espaciado)
   ☐  He revisado el acta y confirmo que refleja correctamente los acuerdos de la reunión.
   Product Owner: _______________     Fecha: _______________
 
-⚠️ Nota: Acta redactada a partir de la transcripción completa...
+⚠️ Nota final: CONDICIONAL según cobertura de la transcripción (ver `NOTA_FINAL` en el script)
+   - Transcripción completa → "Acta redactada a partir de la transcripción completa de la reunión..."
+   - Transcripción parcial   → "Acta redactada a partir de una transcripción parcial...; las partes
+     no cubiertas se han reconstruido a partir del contexto... pendiente de la transcripción completa."
    (sin línea horizontal antes de la nota — solo espaciado)
 ```
 
 ---
 
-## Paso 4 — Buscar tarea de Gestión en ClickUp
-
-Buscar en ClickUp la tarea de Gestión del mes correspondiente:
-
-```
-Búsqueda: "Gestión [Mes] [Año] [CLIENTE]"
-Ejemplo:  "Gestión marzo 2026 HomeEspaña"
-Lista:    Gestión [Cliente] (dentro del espacio Reinicia Clientes)
-```
-
-Usar `clickup_search` con la query anterior. Si hay coincidencia exacta, usar esa tarea. Si no existe todavía, indicarlo al usuario para que la cree.
-
----
-
-## Paso 5 — Añadir comentario en ClickUp
-
-Una vez localizada la tarea, añadir el siguiente comentario (adaptando los datos):
-
-```
-📋 Acta de reunión generada — [DD de Mes de YYYY]
-
-Se ha generado el acta de la reunión de seguimiento del proyecto [Cliente] correspondiente al mes de [Mes YYYY].
-
-Reunión: [Descripción de la reunión]
-Fecha: [DD/MM/YYYY] · [HH:MM–HH:MM] h
-Participantes: [Nombres clave de cada parte]
-
-📁 Ubicación en Zoho Workdrive:
-Proyectos Activos › [Cliente] › 01. Seguimiento › Actas de Reuniones
-Nombre del archivo: [NOMBRE_FICHERO]
-
-🔗 [Enlace al documento en Workdrive si está disponible]
-
-⚠️ Pendiente de revisión y validación por el Product Owner antes de compartir con el cliente.
-```
-
----
-
-## Paso 6 — Entregar el fichero
+## Paso 4 — Entregar el fichero
 
 Copiar el `.docx` generado a `/mnt/user-data/outputs/` y presentarlo al usuario con `present_files`.
 
 Indicar al usuario:
 1. Descargar el `.docx`
-2. Copiarlo a la carpeta correspondiente en Zoho Workdrive vía **Truesync**:
-   `Proyectos Activos › [Cliente] › 01. Seguimiento › Actas de Reuniones`
+2. Copiarlo a la carpeta confirmada en Zoho Workdrive vía **Truesync** (la de la búsqueda dinámica de carpeta)
 3. Abrirlo en Workdrive y convertirlo a **Zoho Writer** (clic derecho → Abrir con → Zoho Writer)
 4. Marcar el **checkbox de revisión** del PO una vez revisado
+
+Entregar el fichero **antes** del Paso 5, para que el usuario pueda subirlo a Workdrive y, si quiere, tener ya el enlace al registrar el acta.
+
+---
+
+## Paso 5 — Registro opcional en ClickUp / Zoho CRM
+
+El registro **ya no es automático**. Preguntar **siempre** al usuario si quiere dejar constancia del acta y, en su caso, dónde. Destino **único** (no multi-destino):
+
+```
+¿Quieres dejar registro de esta acta en algún sitio?
+  🟢 ClickUp — tarea de Gestión del Proyecto del cliente
+  💼 Zoho CRM — Oportunidad (Deal)   → la nota se asocia también al Contacto del Deal
+  👤 Zoho CRM — Ficha de Contacto
+  ⛔ No dejar registro
+```
+
+Si el usuario elige **No dejar registro** → terminar aquí.
+
+### 5.1 Enlace al documento
+
+Antes de publicar, preguntar: *"¿Ya tienes el enlace de Workdrive del acta?"*
+- Si **sí** → incrustar la URL en el cuerpo.
+- Si **no** → dejar la línea `(pega aquí el enlace tras subir el documento a Workdrive)` y recordárselo al usuario al final.
+
+### 5.2 Cuerpo del registro (común a los tres destinos)
+
+Texto **plano**, sin markdown ni hipervínculos, con la URL en su propia línea. Incluir siempre el bloque **Ideas tratadas** si las hubo:
+
+```
+Acta de reunión generada — [DD de Mes de YYYY]
+
+Reunión: [Descripción de la reunión]
+Fecha: [DD/MM/YYYY] · [HH:MM–HH:MM] h
+Participantes: [Nombres clave de cada parte]
+
+Ideas tratadas:
+[Sí] [Idea] ([Aportada por]) — [App(s)]
+[Con matices] [Idea] ([Aportada por]) — [App(s)]
+[No] [Idea] ([Aportada por]) — [App(s)]
+[Pendiente] [Idea] ([Aportada por]) — [App(s)]
+
+Ubicación en Zoho Workdrive: Proyectos Activos › [Cliente] › 01. Seguimiento › Actas de Reuniones
+Archivo: [NOMBRE_FICHERO]
+[URL del documento o placeholder]
+
+Pendiente de revisión y validación por el Product Owner antes de compartir con el cliente.
+```
+
+El prefijo `[Sí]/[Con matices]/[No]/[Pendiente]` reproduce la convención de criterios en corchetes de la casa. Omitir el bloque "Ideas tratadas" si no hubo ideas reseñables.
+
+### 5.3 Destino ClickUp — Gestión del Proyecto
+
+1. Buscar la tarea `Gestión [Mes] [Año] [CLIENTE]` con `clickup_search` en la lista `Gestión [Cliente]` (espacio Reinicia Clientes).
+2. Proponer la tarea encontrada al usuario para confirmar. Si no existe, indicarlo para que la cree.
+3. Publicar el cuerpo como **comentario** (texto plano; ClickUp no admite markdown/HTML/hipervínculos en comentarios — la URL va sola en su línea).
+
+> Caso especial — reunión transversal con Amigo Reinicia: el comentario va a `Gestión [Mes] Marketing [REINICIA]` (lista `3350803`), no a la tarea de Gestión del cliente.
+
+### 5.4 Destino Zoho CRM — Oportunidad (Deal)
+
+1. Buscar el Deal por nombre de cliente (`ZohoCRM_getDealsRecords`, filtrar por nombre) y proponerlo para confirmar.
+2. Crear una **Nota** en el Deal con `ZohoCRM_createNotes` (parent = Deal): `Note_Title` = "Acta de reunión — [Cliente] — [DD/MM/YYYY]", `Note_Content` = el cuerpo del 5.2.
+3. **Asociar también al Contacto del Deal**: leer el Contacto del Deal (campo Contacto principal o sus Contact Roles con `ZohoCRM_getAssociatedContactRoles`) y crear la misma Nota en ese registro de Contacto.
+
+### 5.5 Destino Zoho CRM — Ficha de Contacto
+
+1. Buscar el Contacto por nombre/email del participante y proponerlo para confirmar.
+2. Crear una **Nota** en el Contacto con `ZohoCRM_createNotes` (parent = Contacto), mismo `Note_Title`/`Note_Content` que en 5.4.
 
 ---
 
@@ -203,6 +263,9 @@ Estos IDs son estables y no cambian. Son los puntos de entrada para la búsqueda
 | Carpeta raíz | ID |
 |---|---|
 | Proyectos Activos (Team Folder raíz) | `2km7j8be2bc8587ca4a01b6f044678ca4309e` |
+| Amigos Reinicios (`Agencia Reinicia › 00. Seguimiento y Control › Amigos Reinicios`) | `62rwt1fabec685e80405c8a1e79be2046fe48` |
+| ↳ Agencia Reinicia | `5mzblac5a403d578e4e5eaecf9a153cb6cbe8` |
+| ↳ 00. Seguimiento y Control | `572lgc3c39a1f1e0648968f1bac1ab001ac67` |
 
 > Las carpetas de Comercial, Comercial WhatsApp y Comercial Zoho se localizan dinámicamente desde la raíz del workspace. Si en algún momento se conoce su ID directo, añadirlo aquí para acelerar la búsqueda.
 
@@ -225,6 +288,16 @@ Ejecutar **antes de generar el `.docx`**, una vez el usuario ha indicado el tipo
 1. Usar `ZohoWorkdrive_searchTeamFoldersFiles` con el nombre de la carpeta ("Comercial", "Comercial WhatsApp" o "Comercial Zoho") para localizar la carpeta raíz correspondiente
 2. Dentro de ella, buscar subcarpeta del cliente si existe, o usar la raíz directamente
 3. Proponer al usuario la ruta encontrada para confirmación
+
+**Opción C — Amigo Reinicia (reunión transversal con colaborador externo):**
+Ruta verificada (20/06/2026): `Proyectos Activos › Agencia Reinicia › 00. Seguimiento y Control › Amigos Reinicios › [Amigo]`. ⚠️ La carpeta se llama literalmente **"Amigos Reinicios"** (con -s).
+1. Listar el contenido de "Amigos Reinicios" (`62rwt1fabec685e80405c8a1e79be2046fe48`) con `ZohoWorkdrive_listTeamFolderFilesAndFolders`
+2. Localizar la subcarpeta del Amigo concreto (existen, p.ej. "Sintaris" `p9tic39e50c26029f4891a81debde6e644478`, "Paolo", "GoToMarket", "The Last Dock", "Braulio", "Carlos Garcia del Real"). Usar la subcarpeta de ese Amigo
+3. Proponer al usuario la ruta encontrada para confirmación
+4. **Enrutado del comentario (Paso 5)**: NO va a la Gestión de un cliente, sino a `Gestión [Mes] Marketing [REINICIA]` (lista Gestión Reinicia `3350803`). Ver Paso 5.3.
+
+> Usar esta opción solo para reuniones **transversales** del Amigo (relación, acuerdos, varios clientes). Si la reunión es sobre un cliente concreto, el acta va en la carpeta de ese cliente (Opción A).
+> Anclajes de navegación: Agencia Reinicia `5mzblac5a403d578e4e5eaecf9a153cb6cbe8` › 00. Seguimiento y Control `572lgc3c39a1f1e0648968f1bac1ab001ac67` › Amigos Reinicios `62rwt1fabec685e80405c8a1e79be2046fe48`.
 
 ### Confirmación siempre obligatoria
 
@@ -287,6 +360,11 @@ const H2_COLOR       = "0D0D0D";
 
 // ── ADAPTAR ESTOS VALORES A CADA ACTA ───────────────────────────────────────
 const FILENAME = "YYYYMMDD-Acta-Reunion-Descripcion-CLIENTE";
+
+// Nota final — ELEGIR según la cobertura real de la transcripción (no dejar siempre "completa"):
+const NOTA_FINAL = "⚠️ Nota: Acta redactada a partir de la transcripción completa de la reunión. Pendiente de revisión y validación por parte de los asistentes.";
+// Si la transcripción fue PARCIAL, usar en su lugar (y ajustar qué partes recoge):
+// const NOTA_FINAL = "⚠️ Nota: Acta redactada a partir de una transcripción parcial de la reunión (recoge [qué partes]); las partes no cubiertas se han reconstruido a partir del contexto. Pendiente de revisión y validación por parte de los asistentes una vez se disponga de la transcripción completa.";
 // ────────────────────────────────────────────────────────────────────────────
 
 // Helpers
@@ -408,6 +486,32 @@ const makeDecisionesTable = (reiniciaRows, clienteRows, clienteNombre) => {
   });
 };
 
+// ── Tabla de Ideas tratadas (5 columnas, sin bloques-categoría) ──────────────
+const COLI1 = 1700, COLI2 = 2800, COLI3 = 1500, COLI4 = 1400, COLI5 = 1400;
+const IDEAS_W = COLI1 + COLI2 + COLI3 + COLI4 + COLI5;
+
+const ideaRow = (idea, desc, autor, acept, apps, alt) => new TableRow({ children: [
+  tCell(idea,  { width: COLI1, alt }),
+  tCell(desc,  { width: COLI2, alt }),
+  tCell(autor, { width: COLI3, alt }),
+  tCell(acept, { width: COLI4, alt }),
+  tCell(apps,  { width: COLI5, alt }),
+] });
+
+const makeIdeasTable = (rows) => {
+  const header = new TableRow({ tableHeader: true, children: [
+    tCell("Idea",                { header: true, width: COLI1 }),
+    tCell("Descripción",         { header: true, width: COLI2 }),
+    tCell("Aportada por",        { header: true, width: COLI3 }),
+    tCell("Aceptación cliente",  { header: true, width: COLI4 }),
+    tCell("App(s) involucradas", { header: true, width: COLI5 }),
+  ]});
+  return new Table({
+    width: { size: IDEAS_W, type: WidthType.DXA }, columnWidths: [COLI1, COLI2, COLI3, COLI4, COLI5],
+    rows: [ header, ...rows.map(([i,d,a,ac,ap], idx) => ideaRow(i, d, a, ac, ap, idx % 2 !== 0)) ]
+  });
+};
+
 // ── Logotipo y cabecera (tabla 3 columnas sin bordes + línea azul debajo) ────
 const NO_BORDER = { style: BorderStyle.NONE, size: 0, color: WHITE };
 const noBorders = { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER, insideHorizontal: NO_BORDER, insideVertical: NO_BORDER };
@@ -493,8 +597,17 @@ const doc = new Document({
       { text: "ejemplo en cursiva.", italic: true },
     ]),
 
-    // ── 4. DECISIONES ─────────────────────────────────────────────────────
-    h1("4_Decisiones – Acciones a realizar"),
+    // ── 4. IDEAS TRATADAS ─────────────────────────────────────────────────
+    h1("4_Ideas tratadas"),
+    spacer(),
+    makeIdeasTable([
+      // [idea, descripción breve, "Persona (Empresa)", aceptación, "App(s)"]
+      // aceptación ∈ { "Sí", "Con matices", "No", "Pendiente" }
+      ["[Idea 1]", "[Descripción breve]", "[Persona (Empresa)]", "[Sí / Con matices / No / Pendiente]", "[App(s)]"],
+    ]),
+
+    // ── 5. DECISIONES ─────────────────────────────────────────────────────
+    h1("5_Decisiones – Acciones a realizar"),
     spacer(),
     makeDecisionesTable(
       [  // Filas Reinicia: [acción, responsable, fecha]
@@ -522,7 +635,7 @@ const doc = new Document({
     }),
 
     spacer(),
-    italicNote("⚠️ Nota: Acta redactada a partir de la transcripción completa de la reunión. Pendiente de revisión y validación por parte de los asistentes."),
+    italicNote(NOTA_FINAL),
 
   ]}]
 });
@@ -540,3 +653,15 @@ Packer.toBuffer(doc).then(buffer => {
 - Cuando Zoho MCP habilite el endpoint de upload (`POST /api/v1/upload`), añadir Paso 5b: subida automática a Workdrive
 - Cuando Zoho Writer habilite actualización de contenido (`POST /writer/api/v1/documents/{id}/content`), añadir conversión automática a Writer nativo
 - La tabla de IDs de carpetas por cliente debe mantenerse actualizada a medida que se añadan proyectos
+
+---
+
+## Versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v1.0 | 21/06/2026 | Néstor + Claude | Estado previo sin versionar: generación del acta `.docx` con marca Reinicia, búsqueda dinámica de carpeta en Workdrive y comentario automático en la tarea de Gestión del cliente en ClickUp. |
+| v1.1 | 20/06/2026 | Néstor + Claude | Nuevo bloque `4_Ideas tratadas` (tabla Idea / Descripción / Aportada por / Aceptación cliente [Sí, Con matices, No, Pendiente] / App(s)) antes de Decisiones, con `makeIdeasTable` en `build_acta.js`. Pasos 4–6 reestructurados: Paso 4 = entregar fichero; Paso 5 = Registro opcional en ClickUp/Zoho CRM (pregunta siempre; destino único: Gestión del cliente / Deal+Contacto / Ficha de Contacto), con el bloque de ideas en el cuerpo. |
+| v1.2 | 20/06/2026 | Néstor + Claude | Fix: el comando de validación apuntaba a `output.docx` (inexistente) → ahora valida `/home/claude/<FILENAME>.docx`. Fix: la nota final estaba hardcodeada como "transcripción completa" → ahora es la constante `NOTA_FINAL`, a elegir entre variante completa o parcial según la cobertura real de la transcripción. |
+| v1.3 | 20/06/2026 | Néstor + Claude | Completado el caso "reunión transversal con Amigo Reinicia": nueva opción de destino Workdrive 🤝 Amigo Reinicia (raíz `8dktwacf39023e8274b1bab0ab423a81b5ed3`), Opción C de búsqueda dinámica y enrutado del comentario a `Gestión [Mes] Marketing [REINICIA]` (lista `3350803`). Añadida la regla obligatoria de leer la transcripción completa y de detectar subidas duplicadas (misma reunión con transcripción más completa → actualizar, no duplicar). |
+| v1.4 | 20/06/2026 | Néstor + Claude | Corrección del destino Amigo Reinicia (ruta/ID verificados en vivo contra Workdrive): la carpeta correcta es "Amigos Reinicios" (`62rwt1fabec685e80405c8a1e79be2046fe48`) en `Agencia Reinicia › 00. Seguimiento y Control`, NO la `02. Colaboradores - Amigos Reinicia` (`8dktwacf…`) que estaba anotada por error. Añadida la regla de idioma de salida (idioma del cliente; preguntar si no hay certeza). |

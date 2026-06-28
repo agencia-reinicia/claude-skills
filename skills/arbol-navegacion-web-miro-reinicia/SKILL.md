@@ -5,6 +5,8 @@ description: Skill para crear árboles de navegación (sitemaps) de proyectos We
 
 # SKILL: Árbol de Navegación Web en Miro — Reinicia
 
+> **Versión vigente: v2.1 — 07/06/2026** · ver changelog al final (`## Versiones`)
+
 ## Descripción
 Esta skill permite a los Product Owners de Reinicia crear árboles de navegación (sitemaps) de proyectos Web y WebApp directamente en un board de Miro, siguiendo el estándar visual de Reinicia establecido en los proyectos HomeEspaña y BirdEase. Cubre dos outputs:
 
@@ -365,9 +367,10 @@ Leer con `Miro:layout_read` para reutilizar estructura, spec y decisiones.
 
 ---
 
-## VERSIONES
+## Versiones
 
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|
-| v2.1 | 2026-06-07 | Néstor + Claude | Banco de iconos pasa a **Material Symbols** (Google Fonts Icons, estilo Outlined peso 400 sin relleno, monocromo negro), con **acceso por nombre vía CDN jsDelivr** (`@material-symbols/svg-400@latest/outlined/<nombre>.svg`) y mapeo orientativo por tipo de nodo; las URLs de CDN son estables (no caducan). La reutilización de iconos de otro board queda **degradada a alternativa secundaria**. Probado con el icono `home` en el board BirdEase. | Reescritura tras el piloto BirdEase: el sitemap pasa de flowchart (`diagram_create`) a **tarjetas** (`layout_create`); spec visual exacta (themes, tamaños 460.335×94.9269 / 350.463×72.27, paso 112.87, Open Sans 36, frame ≈6002×5580); corrección de color azul a `#3812CF` y footer en turquesa+amarillo (gris opcional); URL dentro de la tarjeta (`desc`); nuevo Paso 4b de **iconos** (dos clases, reutilización del banco vía `image_get_url`→`image_create`, 40 px, refresco de URLs caducas, sin mover/borrar); reescritura del Paso 3b de **bloques de contenido dentro de la tarjeta** (modelo URL/Plantilla/Objetivo/Bloques + taxonomía + 4 estados); documentadas limitaciones del conector (sin flechas, aprobación de escrituras). |
+| v2.1 | 2026-06-07 | Néstor + Claude | Banco de iconos pasa a **Material Symbols** (Google Fonts Icons, estilo Outlined peso 400 sin relleno, monocromo negro), con **acceso por nombre vía CDN jsDelivr** (`@material-symbols/svg-400@latest/outlined/<nombre>.svg`) y mapeo orientativo por tipo de nodo; las URLs de CDN son estables (no caducan). La reutilización de iconos de otro board queda **degradada a alternativa secundaria**. Probado con el icono `home` en el board BirdEase. |
+| v2.0 | — | Néstor + Claude | Reescritura tras el piloto BirdEase: el sitemap pasa de flowchart (`diagram_create`) a **tarjetas** (`layout_create`); spec visual exacta (themes, tamaños 460.335×94.9269 / 350.463×72.27, paso 112.87, Open Sans 36, frame ≈6002×5580); corrección de color azul a `#3812CF` y footer en turquesa+amarillo (gris opcional); URL dentro de la tarjeta (`desc`); nuevo Paso 4b de **iconos** (dos clases, reutilización del banco vía `image_get_url`→`image_create`, 40 px, refresco de URLs caducas, sin mover/borrar); reescritura del Paso 3b de **bloques de contenido dentro de la tarjeta** (modelo URL/Plantilla/Objetivo/Bloques + taxonomía + 4 estados); documentadas limitaciones del conector (sin flechas, aprobación de escrituras). |
 | v1.x | — | Néstor + Claude | Versión inicial basada en flowchart `diagram_create` y bloques de contenido como documento Miro aparte (sustituida por v2.0). |

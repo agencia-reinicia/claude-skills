@@ -20,6 +20,8 @@ description: >
 
 # SKILL: Propuesta Comercial en Zoho CRM — Reinicia
 
+> **Versión vigente: v1.0 — 21/06/2026** · ver changelog al final (`## Versiones`)
+
 ## Propósito
 
 Crear propuestas comerciales en el módulo Deals de Zoho CRM de forma asistida, siguiendo
@@ -467,3 +469,9 @@ Si los campos custom siguen sin aparecer, crear MCP custom sobre la API REST de 
   del deal recién creado — nunca escribir la firma manualmente
 - **Borrador de correo:** mantener TODA la estructura HTML de la plantilla;
   solo sustituir el cuerpo del contenido y resolver variables en verde
+
+## Versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v1.0 | 21/06/2026 | Néstor + Claude | Estado previo sin versionar, tabulado por primera vez al incorporar el estándar de versionado de Reinicia (21/06/2026). Creación y gestión de propuestas comerciales en el módulo Deals de Zoho CRM (trazabilidad, borrador de correo y comentario en ClickUp). |

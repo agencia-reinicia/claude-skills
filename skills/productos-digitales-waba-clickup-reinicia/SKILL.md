@@ -14,6 +14,8 @@ description: >
 
 # SKILL: Crear Productos Digitales WABA/WhatsApp en ClickUp — Reinicia
 
+> **Versión vigente: v1.0 — 21/06/2026** · ver changelog al final (`## Versiones`)
+
 ## Descripción
 Esta skill permite a los Product Owners de Reinicia crear tareas de producto digital WABA
 (WhatsApp Business API) en ClickUp de forma asistida. Claude busca la información del proyecto en
@@ -630,3 +632,9 @@ propuestas del producto correspondiente.
   de uso con qué se puede hacer en la plataforma, cuándo y cómo, para evitar acciones
   que afecten al bot o a la cuenta WABA. Aprendizaje de HomeEspaña (Zoho ↔ Web).
   Fuente: metodología interna Reinicia. Dentro del alcance: Sí.
+
+## Versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v1.0 | 21/06/2026 | Néstor + Claude | Estado previo sin versionar, tabulado por primera vez al incorporar el estándar de versionado de Reinicia (21/06/2026). Creación asistida de productos digitales WABA/WhatsApp en ClickUp (elicitación, estructura de backlog, tareas y campos). |

@@ -12,6 +12,8 @@ triggers:
 
 # SKILL: Crear Productos Digitales Zoho en ClickUp — Reinicia
 
+> **Versión vigente: v1.0 — 21/06/2026** · ver changelog al final (`## Versiones`)
+
 ## Descripción
 Esta skill permite a los Product Owners de Reinicia crear tareas de producto digital Zoho (Productos y SPIKEs) en ClickUp de forma asistida. Claude busca la información del proyecto en Workdrive, la web del cliente y LinkedIn, propone primero una **estructura completa de Épicas / PBIs de primer nivel / Productos** para validación del PO, y luego desarrolla el detalle de cada producto uno a uno antes de crearlo en ClickUp.
 
@@ -430,3 +432,9 @@ Usar `ZohoWorkdrive_getFolderFiles` en la carpeta `Plantillas` para encontrar pl
 - **Sprint Cero en referencias:** enlazar versión pública únicamente (sin presupuesto). Si hay pedido Zoho Books enlazado en el Sprint Cero, anotarlo internamente.
 - **Entregables:** enlazar siempre las plantillas de Recursos Comunes Workdrive.
 - **Carpetas inexistentes:** si `00. Información` o `01. Seguimiento` no existen, avisar al PO.
+
+## Versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v1.0 | 21/06/2026 | Néstor + Claude | Estado previo sin versionar, tabulado por primera vez al incorporar el estándar de versionado de Reinicia (21/06/2026). Creación asistida de productos digitales Zoho (Productos y SPIKEs) en ClickUp (elicitación, estructura de backlog, tareas y campos). |

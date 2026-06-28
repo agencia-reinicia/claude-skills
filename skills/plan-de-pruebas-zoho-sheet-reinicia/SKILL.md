@@ -19,6 +19,8 @@ description: >
 
 # SKILL: Plan de Pruebas Funcionales Zoho en Zoho Sheet — Reinicia
 
+> **Versión vigente: v2.0 — 21/06/2026** · ver changelog al final (`## Versiones`)
+
 ## Propósito
 
 Crear y mantener el documento de **Plan de Pruebas Funcionales** de un desarrollo Zoho CRM en Zoho Sheet, siguiendo la plantilla canónica de Reinicia. El Plan de Pruebas es el contrato funcional entre Reinicia y el cliente sobre qué se va a validar en SANDBOX antes de pasar a PRO. Cubre la trazabilidad bidireccional con todas las fuentes de scope (DF + contenido completo de la tarjeta ClickUp + conocimiento del PO) y permite registrar resultados, estados de revisión y enlaces a evidencias (capturas, vídeos).
@@ -663,3 +665,9 @@ Cobertura tipo: pruebas de plantillas, segmentación, A/B test, deliverability, 
 - **Pendientes manuales destacados al cierre:** rename del fichero (solo si fue necesario), enlace público, sustitución de placeholders, envío al cliente para validación.
 - **No olvidar la imputación de tiempo:** preguntar al responsable cuánto apuntar; si la API no permite imputar a otro usuario, avisar para que lo haga manualmente.
 - **Una pestaña de Capturas por prueba (por ahora):** consultable a futuro para simplificar.
+
+## Versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v2.0 | 21/06/2026 | Néstor + Claude | Versión vigente registrada al incorporar el estándar de versionado de Reinicia. El histórico previo de cambios está descrito en prosa en el cuerpo de la skill y queda pendiente de tabular. |

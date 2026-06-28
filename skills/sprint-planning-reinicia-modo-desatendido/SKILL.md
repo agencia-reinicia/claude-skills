@@ -7,6 +7,8 @@ description: >
 
 # SKILL: Sprint Planning — MODO DESATENDIDO (Resumen de estatus) — Reinicia
 
+> **Versión vigente: v0.3 — 21/06/2026** · ver changelog al final (`## Versiones`)
+
 > ⚠️ **Modo desatendido.** Esta skill se ejecuta sin humano delante. Donde la skill
 > supervisada pediría confirmación al PO, aquí se aplica una **regla determinista** (sección 5).
 > Nunca pide input. Cualquier bloqueo se reporta en el aviso final de Cliq y se continúa con el
@@ -337,3 +339,9 @@ Informe de estatus Sprint NN-AA (PDF) en Workdrive:
 | **v0.1** | 2026-06-07 | Néstor + Claude | Esqueleto inicial. Método task-ID + altas por barrido, regla de semana jue→mié, orden kanban, tendencia sin sin-estatus, vista por persona, guardado en Workdrive + comentario + aviso Cliq. |
 | **v0.2** | 2026-06-07 | Néstor + Claude | TASK_REUNION_POS fijado (869bt8w6w). Cron viernes 06:07 (~04:07 Madrid en verano) con aviso DST. Columnas de estatus auto-detectadas desde la cabecera → soporta sprints de 3/4/5 semanas sin tocar la skill, con guarda anti-fallo-silencioso. |
 | **v0.3** | 2026-06-07 | Néstor + Claude | Añadida la cabecera ⚙️ "Configuración del Automatismo en Claude Code (Routine)" (repo, ruta, prompt sugerido, herramientas requeridas, pilotaje, routine_id), al estilo de la skill de revisión desatendida. Runtime (secciones 0–9) sin cambios respecto a v0.2. |
+
+## Versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v0.3 | 21/06/2026 | Néstor + Claude | Versión vigente registrada al incorporar el estándar de versionado de Reinicia. El histórico previo de cambios está descrito en prosa en el cuerpo de la skill y queda pendiente de tabular. |

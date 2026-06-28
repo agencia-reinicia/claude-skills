@@ -13,6 +13,8 @@ triggers:
 
 # SKILL: Crear Productos Digitales Web y WebApp en ClickUp — Reinicia
 
+> **Versión vigente: v1.0 — 21/06/2026** · ver changelog al final (`## Versiones`)
+
 ## Descripción
 Esta skill permite a los Product Owners de Reinicia crear tareas de producto digital web y WebApp en ClickUp de forma asistida. Cubre tres grandes tipos de trabajo: **nueva web o WebApp** (diseño, desarrollo con WordPress, Drupal, React u otras tecnologías, incluidas WebApps embebidas en Zoho como widgets), **soporte y mantenimiento** (soporte operativo continuo, mejoras evolutivas), e **integraciones web** (con Zoho CRM, otros CRMs, ERPs, plataformas de marketing o cualquier plataforma de terceros). Claude busca información del proyecto en Workdrive y proyectos similares en ClickUp, propone primero una **estructura completa de Épicas / PBIs / Productos** para validación del PO, y luego desarrolla el detalle de cada producto uno a uno antes de crearlo en ClickUp.
 
@@ -489,3 +491,9 @@ Recursos Comunes Reinicia: 6y4l6e0b8c445ef5c4d8b825374831009c9ad
 - **Documentos en inglés:** si una plantilla está en inglés (ej. Template-Good-Practices-Guide-SEO), indicar al PO que debe traducirlo al español y convertirlo a Zoho Writer.
 - **Checklist:** no disponible via MCP — siempre recordar al PO con criterios listos para copiar.
 - **Carpetas inexistentes:** si `00. Información` o `01. Seguimiento` no existen en Workdrive, avisar al PO.
+
+## Versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v1.0 | 21/06/2026 | Néstor + Claude | Estado previo sin versionar, tabulado por primera vez al incorporar el estándar de versionado de Reinicia (21/06/2026). Creación asistida de productos digitales Web y WebApp en ClickUp (elicitación, estructura de backlog, tareas y campos). |

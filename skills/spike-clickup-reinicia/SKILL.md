@@ -16,6 +16,8 @@ description: >
 
 # Skill: SPIKE en ClickUp — Reinicia
 
+> **Versión vigente: v1.0 — 21/06/2026** · ver changelog al final (`## Versiones`)
+
 ## Propósito
 
 Cubre el contenido específico de un SPIKE (Solution Probe Investigation Knowledge Effort) en ClickUp para clientes de Reinicia: estructura propia, hipótesis a validar, preguntas de investigación, alcance Sí/No, subtareas tipo de investigación, criterios de aceptación específicos de SPIKE, y flujo de cierre con generación opcional del documento de Diseño Funcional con marca Reinicia.
@@ -357,3 +359,9 @@ Aunque el flujo es transversal, hay matices según el tipo de SPIKE. La skill SP
 | Versión | Fecha | Cambio |
 |---|---|---|
 | v1.0 | 2026-04-23 | Versión inicial. Skill complementaria a las skills madre de Zoho/Web/WABA. Decisiones acordadas con el PO: invocación desde Paso 4 de la skill madre (P23.b), enfoque mixto para hipótesis y preguntas (P24.c), sin categorización formal del SPIKE (P25.b), cierre formal con extensión propia para generación opcional del .docx (P26.b). Flujo con 9 preguntas (S1-S9) en creación + 6 pasos en cierre (7.1-7.6) integrando el flujo formal de cierre de formato-tarjeta-clickup-reinicia. |
+
+## Versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v1.0 | 21/06/2026 | Néstor + Claude | Estado previo sin versionar, tabulado por primera vez al incorporar el estándar de versionado de Reinicia (21/06/2026). Creación y cierre de SPIKEs en ClickUp con contenido específico (hipótesis, preguntas, alcance, criterios) y Diseño Funcional opcional. |

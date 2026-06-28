@@ -5,6 +5,8 @@ description: "Consulta esta skill SIEMPRE que vayas a generar cualquier contenid
 
 # Skill: Marca Reinicia — Identidad y Recursos
 
+> **Versión vigente: v1.1 — 20/06/2026** · ver changelog al final (`## Versiones`)
+
 ## Propósito
 
 Esta skill es la fuente de verdad de marca para cualquier contenido generado en nombre de Reinicia. Debe consultarse **antes** de generar documentos corporativos, propuestas, presentaciones, textos o cualquier output que represente a la empresa.
@@ -516,3 +518,30 @@ Lista consolidada de lo que **nunca** debe aparecer en un documento `.docx` de m
 ## Nota sobre el agency deck en inglés
 
 El agency deck en inglés está en la carpeta Presentaciones Marca y puede ser útil para contactos internacionales, pero **describe a Reinicia principalmente como agencia de marketing digital**. Esta descripción no refleja el alcance actual de la empresa. Al compartirlo o basarse en él, añadir el contexto de que Reinicia es también consultora de CRM y automatización.
+
+---
+
+## Spec canónica de generación `.docx` (referencia para actas y análisis)
+
+> Referencia de consulta para mantener coherencia entre `actas-reinicia` y `analisis-llamadas-reinicia`. **No es una dependencia en ejecución**: cada skill conserva su propio script autocontenido y probado. Al editar una de ellas, contrastar los valores con esta tabla.
+
+**Fuente.** Familias canónicas `Manrope Regular` (regular) y `Manrope Bold` (negrita). **Respaldo:** si esas familias no resuelven en el entorno de render (Zoho Writer / Word), usar `Manrope` general con el flag de negrita. Tamaños: H1 36 pt (sz 72 en docx-js), H2 18 pt (sz 36), cuerpo 12 pt (sz 24).
+
+**Colores** (de la paleta de marca de este documento): azul `#3812CF` (solo línea separadora de cabecera y acentos puntuales), lila `#D9D0FB` (cabeceras y bloques de tabla), gris `#EBEBEB` (filas alternas), texto cuerpo `#545454`, titulares `#0D0D0D`, bordes de tabla siempre blancos `#FFFFFF`, rojo `#D14351` (solo banner de confidencialidad de análisis).
+
+**Cabecera.** Tabla de 3 columnas sin bordes (logo | hueco | nombre de fichero, `vAlign CENTER`) + línea separadora azul `#3812CF` en párrafo independiente DEBAJO de la tabla. Logo real extraído de Workdrive (nunca sintético).
+
+**Tablas.** Bordes blancos en todas las celdas; cabecera lila `#D9D0FB` con texto `#0D0D0D` en negrita; filas alternas blanco/`#EBEBEB`; nunca fusionar celdas.
+
+**Banner de confidencialidad** (SOLO `analisis-llamadas-reinicia`): caja roja `#D14351` con texto blanco en negrita + pie de página en cada hoja. Las actas NO lo llevan (son para el cliente).
+
+**Cuerpo limpio.** Prohibidas las líneas decorativas horizontales fuera de la cabecera; la separación se consigue con espaciado y tipografía.
+
+---
+
+## Versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v1.0 | 21/06/2026 | Néstor + Claude | Estado previo sin versionar: identidad visual y verbal, paleta, tipografía, recursos gráficos en Workdrive e instrucciones del logo real. |
+| v1.1 | 20/06/2026 | Néstor + Claude | Añadida la sección "Spec canónica de generación .docx" como referencia de consulta para `actas-reinicia` y `analisis-llamadas-reinicia` (fuente canónica Manrope Regular/Bold con respaldo a Manrope, colores, cabecera, tablas, banner de confidencialidad). Sin dependencia en ejecución. Incorporado el estándar de versionado. |

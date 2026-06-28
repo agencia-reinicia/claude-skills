@@ -18,6 +18,8 @@ description: >
 
 # SKILL: Revisar Cierre de Gestiones Mensuales en ClickUp — Reinicia
 
+> **Versión vigente: v1.0 — 05/05/2026** · ver changelog al final (`## Versiones`)
+
 ## Propósito
 
 Asegurar que cada Product Owner reciba un recordatorio asignado en ClickUp sobre las
@@ -377,8 +379,8 @@ del mecanismo de scheduling.
 
 ---
 
-## VERSIONES
+## Versiones
 
-| Versión | Fecha | Cambios |
-|---|---|---|
-| **v1.0** | 2026-05-05 | Versión inicial. Cambio de filosofía respecto a borrador previo: la skill **no cierra** tareas ni traslada arrastres. Solo deja un comentario recordatorio asignado al PO cuando la tarea del mes anterior no está en `Done` o `Closed`. Identificación del PO por cascada de fallback (custom field PO → assignee → pregunta al PO líder). Filtros estrictos de no-archivado en carpetas, listas y tareas. Inclusión de tareas internas Reinicia. Idempotencia con marcador `🔔 Recordatorio de cierre —`. Tarea programada "Revisar cierre de gestiones mensuales" día 3 a las 08:15 hora de Madrid. Plan futuro: integración con tabla Catalyst para una v2.0 que pueda listar arrastres específicos o ejecutar el cierre automático con datos fiables. |
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| **v1.0** | 2026-05-05 | Néstor + Claude | Versión inicial. Cambio de filosofía respecto a borrador previo: la skill **no cierra** tareas ni traslada arrastres. Solo deja un comentario recordatorio asignado al PO cuando la tarea del mes anterior no está en `Done` o `Closed`. Identificación del PO por cascada de fallback (custom field PO → assignee → pregunta al PO líder). Filtros estrictos de no-archivado en carpetas, listas y tareas. Inclusión de tareas internas Reinicia. Idempotencia con marcador `🔔 Recordatorio de cierre —`. Tarea programada "Revisar cierre de gestiones mensuales" día 3 a las 08:15 hora de Madrid. Plan futuro: integración con tabla Catalyst para una v2.0 que pueda listar arrastres específicos o ejecutar el cierre automático con datos fiables. |

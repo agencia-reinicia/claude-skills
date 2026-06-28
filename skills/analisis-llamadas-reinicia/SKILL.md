@@ -5,6 +5,8 @@ description: "Usa esta skill cuando el usuario suba una transcripción de una ll
 
 # Skill: Análisis de Llamadas con Cliente — Reinicia
 
+> **Versión vigente: v1.6 — 20/06/2026** · ver changelog al final (`## Versiones`)
+
 ## Descripción general
 
 Esta skill analiza la transcripción de una llamada con un cliente de Reinicia y produce:
@@ -33,11 +35,17 @@ Antes de ejecutar, Claude debe tener o solicitar:
 
 Si falta algún dato no inferable, preguntarlo antes de continuar.
 
+> **Idioma de salida.** Redactar el resumen en chat y el `.docx` en el **idioma del cliente**: castellano para clientes españoles, inglés para internacionales (p.ej. HomeEspaña, Carritech). Inferirlo de la transcripción y del cliente. **Si no se tiene certeza, preguntar al usuario** antes de generar.
+
 ---
 
 ## Paso 1 — Procesar la transcripción
 
 Leer el fichero `.vtt` o texto de transcripción y extraer:
+
+> **Regla de lectura (obligatoria).** Leer **SIEMPRE la transcripción completa** antes de analizar. No saltar entre rangos de líneas: el análisis emocional y el perfil reptil dependen de matices que aparecen en cualquier punto de la llamada. Si el fichero es grande, `head` sirve solo para **orientarse**, no para sustituir la lectura íntegra.
+>
+> **Detección de subida duplicada.** Si llega una **segunda transcripción** que parece aportar contenido nuevo, verificar primero si es **duplicado** de la anterior (fecha, participantes, hora de inicio y fin) antes de tratarla como una llamada distinta. Si es la misma llamada con transcripción más completa, actualizar el análisis, no crear uno nuevo.
 
 - Participantes y sus roles (inferir empresa si no se indica)
 - **Tipo de llamada** — inferirlo del contenido. Categorías orientativas:
@@ -49,6 +57,7 @@ Leer el fichero `.vtt` o texto de transcripción y extraer:
   - *Mixta*: combina elementos de más de una categoría
 - Contenido sustantivo por bloques temáticos
 - Momentos de acuerdo, tensión, duda o resistencia
+- **Ideas tratadas** — ideas, propuestas o sugerencias surgidas en la llamada (aunque no se cierren). Para cada una: idea, descripción breve, quién la aportó (nombre + empresa), grado de aceptación del cliente (`Sí` / `Con matices` / `No` / `Pendiente` si no se pronunció) y app(s) involucradas. No forzar ideas inexistentes: si no hubo, omitir el epígrafe.
 - Compromisos y próximos pasos mencionados
 - Señales emocionales y relacionales por interlocutor
 
@@ -62,7 +71,7 @@ Si el usuario proporciona una URL → usar `web_fetch` para obtener contexto del
 
 ## Paso 2 — Generar el resumen en chat
 
-Presentar directamente en el chat el análisis estructurado en **5 epígrafes**:
+Presentar directamente en el chat el análisis estructurado en **6 epígrafes**:
 
 ---
 
@@ -70,6 +79,8 @@ Presentar directamente en el chat el análisis estructurado en **5 epígrafes**:
 
 ```
 ## 📞 Análisis de llamada — [Cliente] · [Tipo detectado] · [Fecha]
+
+> ⚠️ **Uso interno Reinicia** — contiene análisis emocional y perfil reptil; no compartir con el cliente.
 
 > 🔍 Tipo de llamada detectado: **[Comercial / Seguimiento / Onboarding / Soporte / Fricción / Mixta]**  
 > *(Si no es correcto, indícalo y reajusto el análisis)*
@@ -102,7 +113,19 @@ Desarrollo por bloques temáticos. Usar:
 
 ---
 
-### 4. Decisiones y próximos pasos
+### 4. Ideas tratadas
+Tabla en markdown (omitir el epígrafe si no hubo ideas reseñables):
+
+| Idea | Descripción | Aportada por | Aceptación cliente | App(s) involucradas |
+|------|-------------|--------------|--------------------|---------------------|
+| ...  | ...         | Persona (Empresa) | Sí / Con matices / No / Pendiente | ... |
+
+Orden: en el que surgieron en la llamada. Aceptación cliente: vocabulario controlado
+**Sí / Con matices / No / Pendiente** ("Pendiente" = el cliente no se pronunció).
+
+---
+
+### 5. Decisiones y próximos pasos
 Tabla en markdown:
 
 | Acción | Responsable | Plazo | Estado |
@@ -113,7 +136,7 @@ Ordenar: primero acciones de Reinicia, después acciones del cliente.
 
 ---
 
-### 5. Análisis emocional
+### 6. Análisis emocional
 
 #### Tono general
 [Párrafo breve: ¿cómo fue el clima de la llamada? ¿fluida, tensa, cordial, distante, 
@@ -190,6 +213,7 @@ Si el usuario confirma → preguntar a continuación dónde debe guardarse:
 
 > ¿Dónde debe guardarse este análisis en Workdrive?
 > - 📁 **Proyectos Activos** — cliente en curso
+> - 🤝 **Amigo Reinicia** — llamada transversal con un colaborador externo (no ligada a un cliente concreto)
 > - 💼 **Comercial** — carpeta Comercial genérica
 > - 💬 **Comercial WhatsApp** — contacto iniciado por WhatsApp
 > - 🔵 **Comercial Zoho** — contacto gestionado vía Zoho CRM
@@ -212,14 +236,14 @@ Usar Node.js con `docx` para generar el fichero con el mismo stack que la skill 
 ### Nombre del fichero
 
 ```
-YYYYMMDD-Analisis-Llamada-[Descripcion]-[CLIENTE]
+YYYYMMDD-Analisis-Llamada-[Descripcion]-[CLIENTE]-INTERNO
 ```
 
 Ejemplos:
-- `20260401-Analisis-Llamada-Seguimiento-Zoho-CRM-GONHER`
-- `20260415-Analisis-Llamada-Comercial-Propuesta-Soporte-HOMEESPANA`
+- `20260401-Analisis-Llamada-Seguimiento-Zoho-CRM-GONHER-INTERNO`
+- `20260415-Analisis-Llamada-Comercial-Propuesta-Soporte-HOMEESPANA-INTERNO`
 
-Reglas: sin tildes, sin espacios (guiones), CLIENTE en mayúsculas.
+Reglas: sin tildes, sin espacios (guiones), CLIENTE en mayúsculas. **Sufijo `-INTERNO` siempre**: el análisis contiene perfil reptil y análisis emocional y es de uso interno (ver banner de confidencialidad).
 
 ### Estructura del `.docx`
 
@@ -260,7 +284,7 @@ const headerTable = new Table({
 const separatorLine = new Paragraph({
   spacing: { before: 60, after: 60 },
   border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: "3812CF", space: 1 } },
-  children: [new TextRun({ text: "", font: "Manrope", size: 2 })]
+  children: [new TextRun({ text: "", font: "Manrope Regular", size: 2 })]
 });
 
 return new Header({ children: [headerTable, separatorLine] });
@@ -284,11 +308,53 @@ borders: { top: whiteBorder, bottom: whiteBorder, left: whiteBorder, right: whit
 
 La cabecera de la tabla usa fondo lila `#D9D0FB` con texto en negro de heading `#0D0D0D` (alineado con el patrón canónico de la skill `marca-reinicia`). **Nunca azul saturado `#3812CF` con texto blanco**: ese azul se reserva para acentos puntuales (líneas separadoras, énfasis tipográficos), no como fondo de cabecera de tabla.
 
+**5. Tabla de "Ideas tratadas": mismo estilo que la de Decisiones, 5 columnas, sin bloques-categoría.**
+
+Reutilizar el builder `makeIdeasTable` del stack de la skill de actas (idéntico aquí). Cabecera lila `#D9D0FB` texto negro `#0D0D0D`, bordes BLANCOS en todas las celdas, filas alternas blanco/`#EBEBEB`, **sin filas-categoría** (la columna "Aportada por" ya indica el origen). Columnas: `Idea | Descripción | Aportada por | Aceptación cliente | App(s) involucradas`.
+
+- **Aceptación cliente**: vocabulario controlado `Sí` / `Con matices` / `No` / `Pendiente` ("Pendiente" cuando el cliente no se pronunció). No usar otros valores.
+- **Aportada por**: nombre + empresa entre paréntesis (`Paolo (Reinicia)`, `Robin (HomeEspaña)`).
+- **App(s)**: nombres en **texto plano** (Zoho CRM, WordPress, WhatsApp/WABA, Zoho Forms, Cloudways…). **No usar emojis** en el `.docx`.
+- **Orden**: en el que surgieron en la llamada. Omitir el bloque si no hubo ideas reseñables.
+
+**6. Banner de confidencialidad (OBLIGATORIO en este `.docx`) + pie de página.**
+
+El análisis contiene Perfil reptil y Análisis emocional (datos personales de personas identificadas). Es de **uso interno**. Por eso, a diferencia de las actas, este documento lleva SIEMPRE:
+
+- **Banner arriba del cuerpo**, justo bajo la cabecera y antes del título: caja de una celda a todo el ancho, fondo **Rojo Reinicia `#D14351`**, texto **blanco `#FFFFFF` en negrita**, centrado, bordes blancos. Texto: `CONFIDENCIAL · USO INTERNO REINICIA · NO COMPARTIR CON EL CLIENTE`. (El rojo es color de marca — "generador de atención"; es la única excepción al uso de color fuera de cabecera/tablas, y es intencionada.)
+- **Pie de página en todas las hojas** (`Footer`), texto pequeño rojo `#D14351`: `CONFIDENCIAL · USO INTERNO REINICIA`.
+
+```javascript
+const REINICIA_RED = "D14351";
+const confBanner = new Table({
+  width: { size: 9026, type: WidthType.DXA }, columnWidths: [9026],
+  rows: [ new TableRow({ children: [ new TableCell({
+    width: { size: 9026, type: WidthType.DXA },
+    shading: { fill: REINICIA_RED, type: ShadingType.CLEAR },
+    borders: { top: whiteBorder, bottom: whiteBorder, left: whiteBorder, right: whiteBorder },
+    margins: { top: 80, bottom: 80, left: 120, right: 120 },
+    children: [ new Paragraph({ alignment: AlignmentType.CENTER, children: [ new TextRun({
+      text: "CONFIDENCIAL · USO INTERNO REINICIA · NO COMPARTIR CON EL CLIENTE",
+      font: "Manrope Bold", size: 22, bold: true, color: "FFFFFF"
+    })] }) ]
+  })] }) ]
+});
+// El banner va como primer hijo del cuerpo (children[0]), antes del título H1.
+// Footer en cada página:
+const confFooter = new Footer({ children: [ new Paragraph({ alignment: AlignmentType.CENTER, children: [ new TextRun({
+  text: "CONFIDENCIAL · USO INTERNO REINICIA", font: "Manrope Bold", size: 16, bold: true, color: REINICIA_RED
+})] }) ] });
+// Añadir en la sección:  footers: { default: confFooter }
+```
+
 #### Estructura de contenido
 
 ```
 CABECERA (tabla 3 col sin bordes: logo | hueco | nombre fichero — vAlign CENTER
           + línea separadora azul #3812CF DEBAJO de la tabla)
+
+🔴 BANNER CONFIDENCIAL (primer elemento del cuerpo): caja roja #D14351, texto blanco
+   negrita centrado "CONFIDENCIAL · USO INTERNO REINICIA · NO COMPARTIR CON EL CLIENTE"
 
 Título principal: "Análisis de llamada — [Descripción]"  [H1 grande]
 Bloque metadatos: Cliente · Tipo · Fecha (en línea, SIN línea separadora azul debajo)
@@ -303,30 +369,42 @@ Bloque metadatos: Cliente · Tipo · Fecha (en línea, SIN línea separadora azu
   3.1 [Subtema]          [H2]
   [Texto con negritas/cursivas]
 
-4_Decisiones y próximos pasos  [H1]
+4_Ideas tratadas         [H1]
+  [Tabla corporativa de 5 columnas, mismo estilo que la de Decisiones pero SIN
+   filas-categoría: cabecera #D9D0FB (lila) texto #0D0D0D, filas alternas
+   blanco/#EBEBEB, bordes BLANCOS en todas las celdas]
+  Columnas: Idea | Descripción | Aportada por | Aceptación cliente | App(s) involucradas
+  Aceptación cliente ∈ { Sí, Con matices, No, Pendiente }
+  App(s) en texto plano (sin emojis en el .docx). Omitir el bloque si no hubo ideas.
+
+5_Decisiones y próximos pasos  [H1]
   [Tabla corporativa: cabecera #D9D0FB (lila) con texto #0D0D0D, filas-categoría
    #D9D0FB, filas alternas blanco/#EBEBEB, bordes BLANCOS en todas las celdas]
   Columnas: Acción / Decisión | Responsable | Plazo | Estado
   Bloques: Reinicia primero, cliente después
 
-5_Análisis emocional     [H1]
-  5.1 Tono general       [H2]
+6_Análisis emocional     [H1]
+  6.1 Tono general       [H2]
   [Párrafo]
-  5.2 Momentos clave     [H2]
+  6.2 Momentos clave     [H2]
   [Lista con iconos ⚡ ✅ ❓ 🤝]
-  5.3 Análisis por interlocutor  [H2]
+  6.3 Análisis por interlocutor  [H2]
   [Bloque por persona con etiquetas Postura / Señales positivas / Señales de riesgo / Palanca clave]
-  5.4 Perfil reptil      [H2]
+  6.4 Perfil reptil      [H2]
   [Bloque por interlocutor cliente con: Impulso dominante / Qué lo activa / Riesgo reptil / Palanca reptil]
-  5.5 Recomendación relacional   [H2]
+  6.5 Recomendación relacional   [H2]
   [Párrafo de cierre estratégico integrando lectura reptil si procede]
 
 REVISIÓN PO
   ☐  He revisado el análisis y confirmo que refleja correctamente la llamada.
   Product Owner: _______________     Fecha: _______________
 
-⚠️ Nota: Análisis redactado a partir de la transcripción completa...
+⚠️ Nota final: CONDICIONAL según cobertura/calidad de la transcripción (coherente con las Notas de diseño)
+   - Transcripción completa → "Análisis redactado a partir de la transcripción completa de la llamada..."
+   - Transcripción parcial / baja calidad → indicarlo explícitamente (no afirmar "completa")
    (sin línea horizontal azul antes de la nota — solo espaciado)
+
+PIE DE PÁGINA (todas las hojas): "CONFIDENCIAL · USO INTERNO REINICIA" en rojo #D14351 pequeño
 ```
 
 ### Logo corporativo
@@ -357,7 +435,7 @@ Usar los mismos valores que la skill de actas:
 | Color texto cuerpo | `#545454` |
 | Color headings H1 | `#0D0D0D` |
 | Color headings H2 | `#0D0D0D` |
-| Fuente | `Manrope` (Regular / Bold) |
+| Fuente | `Manrope Regular` / `Manrope Bold` (familias canónicas; respaldo: `Manrope` si no resuelven) |
 | H1 | 36pt |
 | H2 | 18pt |
 | Cuerpo | 12pt |
@@ -366,7 +444,8 @@ Usar los mismos valores que la skill de actas:
 Ejecutar con:
 ```bash
 cd /home/claude && node build_analisis.js
-python3 /mnt/skills/public/docx/scripts/office/validate.py output.docx
+# build_analisis.js escribe /home/claude/<FILENAME>.docx — validar ESE fichero, no "output.docx"
+python3 /mnt/skills/public/docx/scripts/office/validate.py "/home/claude/<FILENAME>.docx"
 ```
 
 ---
@@ -378,10 +457,61 @@ Copiar a `/mnt/user-data/outputs/` y presentar con `present_files`.
 Indicar al usuario:
 1. Descargar el `.docx`
 2. Copiarlo a Zoho Workdrive vía **Truesync**:  
-   `Proyectos Activos › [Cliente] › 01. Seguimiento › Análisis de Llamadas`  
+   `Proyectos Activos › [Cliente] › 01. Seguimiento › Actas de Reuniones`  
    (crear la carpeta si no existe)
 3. Convertirlo a **Zoho Writer** (clic derecho → Abrir con → Zoho Writer)
 4. Marcar el **checkbox de revisión** del PO una vez revisado
+
+---
+
+## Paso 6 — Registro opcional en ClickUp / Zoho CRM
+
+Preguntar **siempre** al usuario si quiere dejar constancia del análisis y, en su caso, dónde. Destino **único** (no multi-destino):
+
+```
+¿Quieres dejar registro de este análisis en algún sitio?
+  🟢 ClickUp — tarea de Gestión del Proyecto del cliente
+  💼 Zoho CRM — Oportunidad (Deal)   → la nota se asocia también al Contacto del Deal
+  👤 Zoho CRM — Ficha de Contacto
+  ⛔ No dejar registro
+```
+
+Si elige **No dejar registro** → terminar aquí. En llamadas comerciales de prospecto sin tarea de Gestión, el destino natural suele ser el Deal o la Ficha de Contacto en Zoho CRM.
+
+### 6.1 Enlace al documento
+Preguntar *"¿Ya tienes el enlace de Workdrive?"*. Si **sí** → incrustar la URL; si **no** → dejar la línea `(pega aquí el enlace tras subir el documento a Workdrive)` y recordárselo al final.
+
+### 6.2 Cuerpo del registro (común a los tres destinos)
+Texto **plano**, sin markdown ni hipervínculos, con la URL en su línea. **Es un resumen**: incluye datos de la llamada, el bloque **Ideas tratadas** y el enlace. **No volcar en la nota/comentario el Análisis emocional ni el Perfil reptil** — son de uso interno y van solo en el `.docx`.
+
+```
+Análisis de llamada — [Cliente] — [DD/MM/YYYY]
+
+Tipo: [Comercial / Seguimiento / Onboarding / Soporte / Fricción / Mixta]
+Participantes: [Nombres clave de cada parte]
+
+Ideas tratadas:
+[Sí] [Idea] ([Aportada por]) — [App(s)]
+[Con matices] [Idea] ([Aportada por]) — [App(s)]
+[No] [Idea] ([Aportada por]) — [App(s)]
+[Pendiente] [Idea] ([Aportada por]) — [App(s)]
+
+Ubicación en Zoho Workdrive: Proyectos Activos › [Cliente] › 01. Seguimiento › Actas de Reuniones
+Archivo: [NOMBRE_FICHERO]
+[URL del documento o placeholder]
+
+Pendiente de revisión y validación por el Product Owner.
+```
+
+Omitir el bloque "Ideas tratadas" si no hubo ideas reseñables.
+
+### 6.3 Destinos
+Misma mecánica que la skill de actas (sección "Paso 5 — Registro opcional"):
+- **ClickUp** → comentario en `Gestión [Mes] [Año] [CLIENTE]` (texto plano; sin markdown/HTML/hipervínculos). Caso especial: si la llamada es transversal con un **Amigo Reinicia**, el comentario va a `Gestión [Mes] Marketing [REINICIA]` (lista `3350803`), no a la Gestión de un cliente.
+- **Zoho CRM – Oportunidad (Deal)** → Nota con `ZohoCRM_createNotes` (parent = Deal) y la misma Nota en el Contacto asociado del Deal (leerlo vía Contacto principal o `ZohoCRM_getAssociatedContactRoles`).
+- **Zoho CRM – Ficha de Contacto** → Nota con `ZohoCRM_createNotes` (parent = Contacto).
+
+Buscar y proponer el registro para confirmar (Deal por nombre de cliente; Contacto por nombre/email del participante), igual que con las carpetas de Workdrive.
 
 ---
 
@@ -392,6 +522,9 @@ Estos IDs son estables y no cambian. Son los puntos de entrada para la búsqueda
 | Carpeta raíz | ID |
 |---|---|
 | Proyectos Activos (Team Folder raíz) | `2km7j8be2bc8587ca4a01b6f044678ca4309e` |
+| Amigos Reinicios (`Agencia Reinicia › 00. Seguimiento y Control › Amigos Reinicios`) | `62rwt1fabec685e80405c8a1e79be2046fe48` |
+| ↳ Agencia Reinicia | `5mzblac5a403d578e4e5eaecf9a153cb6cbe8` |
+| ↳ 00. Seguimiento y Control | `572lgc3c39a1f1e0648968f1bac1ab001ac67` |
 
 > Las carpetas de Comercial, Comercial WhatsApp y Comercial Zoho se localizan dinámicamente desde la raíz del workspace. Si en algún momento se conoce su ID directo, añadirlo aquí para acelerar la búsqueda.
 
@@ -407,13 +540,22 @@ Ejecutar **antes de generar el `.docx`**, una vez el usuario ha indicado el tipo
 1. Listar contenido del Team Folder raíz (`2km7j8be2bc8587ca4a01b6f044678ca4309e`) con `ZohoWorkdrive_getFolderFiles`
 2. Localizar la subcarpeta del cliente (p.ej. "HomeEspaña")
 3. Dentro de ella, localizar la subcarpeta de seguimiento (p.ej. "01. Seguimiento" o similar)
-4. Dentro de ella, localizar "Análisis de Llamadas" (o equivalente; crearla si no existe)
-5. Proponer al usuario: *"He encontrado: `Proyectos Activos › HomeEspaña › 01. Seguimiento › Análisis de Llamadas`. ¿Es correcta esta ubicación?"*
+4. Dentro de ella, localizar "Actas de Reuniones" (los análisis se guardan en la misma carpeta que las actas)
+5. Proponer al usuario: *"He encontrado: `Proyectos Activos › HomeEspaña › 01. Seguimiento › Actas de Reuniones`. ¿Es correcta esta ubicación?"*
 
 **Opción B — Carpetas Comercial:**
 1. Usar `ZohoWorkdrive_searchTeamFoldersFiles` con el nombre de la carpeta ("Comercial", "Comercial WhatsApp" o "Comercial Zoho") para localizar la carpeta raíz correspondiente
 2. Dentro de ella, buscar subcarpeta del cliente si existe, o usar la raíz directamente
 3. Proponer al usuario la ruta encontrada para confirmación
+
+**Opción C — Amigo Reinicia (llamada transversal con colaborador externo):**
+Ruta verificada (20/06/2026): `Proyectos Activos › Agencia Reinicia › 00. Seguimiento y Control › Amigos Reinicios › [Amigo]`. ⚠️ La carpeta se llama literalmente **"Amigos Reinicios"** (con -s).
+1. Listar el contenido de "Amigos Reinicios" (`62rwt1fabec685e80405c8a1e79be2046fe48`) con `ZohoWorkdrive_listTeamFolderFilesAndFolders`
+2. Localizar la subcarpeta del Amigo concreto (p.ej. "Sintaris" `p9tic39e50c26029f4891a81debde6e644478`, "Paolo", "GoToMarket", "The Last Dock", "Braulio", "Carlos Garcia del Real")
+3. Proponer al usuario la ruta encontrada para confirmación
+4. **Enrutado del comentario (Paso 6)**: a `Gestión [Mes] Marketing [REINICIA]` (lista Gestión Reinicia `3350803`), no a la Gestión de un cliente.
+
+> Solo para llamadas **transversales** del Amigo. Si la llamada es sobre un cliente concreto, va en la carpeta de ese cliente (Opción A). Anclajes: Agencia Reinicia `5mzblac5a403d578e4e5eaecf9a153cb6cbe8` › 00. Seguimiento y Control `572lgc3c39a1f1e0648968f1bac1ab001ac67` › Amigos Reinicios `62rwt1fabec685e80405c8a1e79be2046fe48`.
 
 ### Confirmación siempre obligatoria
 
@@ -431,3 +573,18 @@ Nunca guardar sin confirmación explícita del usuario. Proponer siempre la ruta
 - No inventar señales emocionales ni reptiles que no estén respaldadas por la transcripción. Si hay poco material, decirlo explícitamente en lugar de especular.
 - Si la transcripción es parcial o de baja calidad, indicarlo en la nota final.
 - Esta skill **no sustituye al acta de reunión** cuando se requiere un registro formal de seguimiento. Pueden usarse ambas de forma complementaria.
+- **Confidencialidad (uso interno).** El Perfil reptil y el Análisis emocional son datos personales de personas identificadas; el documento es de uso interno de Reinicia y **no se comparte con el cliente**. Por eso lleva banner rojo, pie en cada página y sufijo `-INTERNO`, y se guarda en el árbol interno del cliente (`01. Seguimiento › Actas de Reuniones`), al que el cliente no accede. El registro en ClickUp/Zoho CRM nunca vuelca el reptil ni el emocional (solo resumen + ideas + enlace). No es asesoramiento legal, pero conviene tratarlo con la cautela de un dato sensible.
+
+---
+
+## Versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v1.0 | 21/06/2026 | Néstor + Claude | Estado previo sin versionar: resumen en chat (5 epígrafes con análisis emocional y perfil reptil) y `.docx` opcional con marca Reinicia, sin registro en ClickUp/Zoho CRM. |
+| v1.1 | 20/06/2026 | Néstor + Claude | Nuevo epígrafe `4. Ideas tratadas` (tabla Idea / Descripción / Aportada por / Aceptación cliente [Sí, Con matices, No, Pendiente] / App(s)) en chat y en el `.docx`, antes de Decisiones; renumerado Decisiones→5 y Análisis emocional→6. Nuevo Paso 6 = Registro opcional en ClickUp/Zoho CRM (pregunta siempre; destino único: Gestión del cliente / Deal+Contacto / Ficha de Contacto) con el bloque de ideas en el cuerpo; el registro NO vuelca el análisis emocional ni el perfil reptil (uso interno, solo en el `.docx`). |
+| v1.2 | 20/06/2026 | Néstor + Claude | Fix: el comando de validación apuntaba a `output.docx` (inexistente) → ahora valida `/home/claude/<FILENAME>.docx`. Fix: la nota final del `.docx` ya no afirma siempre "transcripción completa"; es condicional según cobertura/calidad de la transcripción, coherente con las Notas de diseño. |
+| v1.3 | 20/06/2026 | Néstor + Claude | Añadida la regla obligatoria de leer la transcripción completa antes de analizar y de detectar subidas duplicadas (misma llamada con transcripción más completa → actualizar el análisis, no duplicar). |
+| v1.4 | 20/06/2026 | Néstor + Claude | Replicado el destino Amigo Reinicia (opción de menú, Opción C de búsqueda con ruta/ID verificados "Amigos Reinicios" `62rwt1fabec685e80405c8a1e79be2046fe48`, enrutado del comentario a `Gestión [Mes] Marketing [REINICIA]` lista `3350803`). Añadida la regla de idioma de salida (idioma del cliente; preguntar si no hay certeza). |
+| v1.5 | 20/06/2026 | Néstor + Claude | Confidencialidad del perfil reptil/emocional: banner rojo `#D14351` (color de marca) con texto blanco "CONFIDENCIAL · USO INTERNO REINICIA · NO COMPARTIR CON EL CLIENTE" arriba del cuerpo, pie de página en todas las hojas, sufijo `-INTERNO` en el nombre, aviso de uso interno en el resumen de chat y nota de datos personales en Notas de diseño. Corregida la ubicación de guardado a `01. Seguimiento › Actas de Reuniones` (los análisis se guardan junto a las actas; árbol interno sin acceso del cliente). |
+| v1.6 | 20/06/2026 | Néstor + Claude | Alineada la fuente a las familias canónicas `Manrope Regular` / `Manrope Bold` en los fragmentos del `.docx` y la tabla de identidad (banner y pie pasan a `Manrope Bold`), con regla de respaldo a `Manrope` si esas familias no resuelven en el entorno de render. Actas no cambia (ya las usaba). Sin cambio de motor: la generación real hereda del stack de actas. |

@@ -15,6 +15,8 @@ description: >
 
 # Skill: Formato Tarjeta ClickUp — Reinicia
 
+> **Versión vigente: v1.4 — 21/06/2026** · ver changelog al final (`## Versiones`)
+
 ## Propósito
 
 Define el patrón canónico de una tarjeta de producto en ClickUp de Reinicia. Todas las skills de creación de productos en ClickUp se remiten a este patrón para garantizar consistencia visual y estructural en el backlog, y al flujo de cierre formal aquí definido para registrar el resultado de cada producto.
@@ -771,3 +773,9 @@ Claude **no puede** editar el contenido de un Zoho Writer existente vía MCP. Es
 | v1.4 | 2026-05-03 | Sección 2.2 reescrita: la Historia de usuario incorpora ahora la persona concreta del cliente (Nombre + Rol) en lugar de sólo el rol genérico. Documentados los tres casos (única conocida, varias, no conocida todavía) con placeholder visible "(persona pendiente de identificar)". Convención transversal a todos los tipos de producto. Añadido recordatorio en sección 10 para que las skills madre pregunten por la persona durante la elicitación. |
 
 Cualquier cambio futuro al patrón se documenta aquí. Las skills que lo referencian se actualizan en consecuencia.
+
+## Versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v1.4 | 21/06/2026 | Néstor + Claude | Versión vigente registrada al incorporar el estándar de versionado de Reinicia. El histórico previo de cambios está descrito en prosa en el cuerpo de la skill y queda pendiente de tabular. |

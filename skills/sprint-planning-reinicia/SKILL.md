@@ -21,6 +21,8 @@ description: >
 
 # SKILL: Sprint Planning — Reinicia
 
+> **Versión vigente: v1.0 — 21/06/2026** · ver changelog al final (`## Versiones`)
+
 ## Propósito
 
 Procesar las narraciones semanales de Sprint Planning de los Product Owners de Reinicia,
@@ -653,3 +655,9 @@ que aparecen en el Zoho Sheet para:
 
 Los 3 primeros clientes del sheet tienen fondo verde = mayor importancia estratégica.
 Procesarlos siempre primero, respetando el orden del documento.
+
+## Versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v1.0 | 21/06/2026 | Néstor + Claude | Estado previo sin versionar, tabulado por primera vez al incorporar el estándar de versionado de Reinicia (21/06/2026). Procesamiento de transcripciones de Sprint Planning y actualización del backlog de ClickUp proyecto a proyecto. |

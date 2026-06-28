@@ -1,23 +1,17 @@
 ---
 name: plan-proyecto-zoho-sheet-reinicia
 description: >
-  Skill para crear y mantener el Plan de Proyecto de un cliente de Reinicia en Zoho Sheet,
-  sincronizando los productos de la lista General [CLIENTE] en ClickUp con el documento
-  de seguimiento en Workdrive. Cubre dos modos: CREACIÓN (inicio de proyecto) y
-  ACTUALIZACIÓN (sprint a sprint). El Plan de Proyecto es la fuente de verdad compartida
-  entre el PO y el cliente sobre entregas comprometidas, fechas, estatus y progreso.
-
-  Actívala siempre que el PO pida:
-  - "crea el plan de proyecto de [CLIENTE]"
-  - "actualiza el plan de proyecto de [CLIENTE]"
-  - "sincroniza el plan con ClickUp"
-  - "nuevo plan de proyecto para [CLIENTE]"
-  - "actualiza el calendario de entregas de [CLIENTE]"
-  - "rellena el plan de proyecto con lo que hay en ClickUp"
-  - cualquier combinación de "plan", "proyecto", "calendario de entregas" con un cliente
-
-  No usar para crear productos en ClickUp (skill productos-digitales-*-clickup-reinicia)
-  ni para crear actas de reunión (skill actas-reinicia).
+  Crea y mantiene el Plan de Proyecto (y el Plan de Marketing) de un cliente de Reinicia en Zoho
+  Sheet, alineado con las listas General, Soporte y Gestión [CLIENTE] de ClickUp. Dos modos:
+  CREACIÓN y ACTUALIZACIÓN sprint a sprint. Vuelca PBI de Primer Nivel y Tipo de Producto desde
+  ClickUp (y escribe en ClickUp los PBI que falten), aplica el modelo de Épica híbrido (fase de
+  funnel para microcampañas; objetivo de negocio para productos digitales), mantiene estatus con
+  semáforo, fechas de entrega y validación con sus hitos y la sincronización con ClickUp, e
+  inserta filas antes de poblar. Genera la pestaña Ideas (máx. 7 por ronda, tope por fuente) desde
+  actas, notas de Gestión, histórico de productos, referencias de Zoho y proyectos similares de
+  Reinicia, priorizadas por los Objetivos del Cliente. Actívala con: 'crea/actualiza el plan de
+  proyecto de [CLIENTE]', 'sincroniza el plan con ClickUp', 'actualiza el plan de marketing'. No
+  usar para crear productos en ClickUp ni actas de reunión.
 ---
 
 # SKILL: Plan de Proyecto en Zoho Sheet — Reinicia
@@ -621,3 +615,211 @@ El permalink del fichero tiene este formato:
 | PBIs PRIMER NIVEL (custom field ID) | `6758065a-bd4f-4d7d-9a48-926e81fe343f` |
 | TIPO DE PRODUCTO (custom field ID) | `5bd9072e-deae-4352-b35b-bdbaa3cc216d` |
 | ORDEN (custom field ID) | `a2fac0a6-0f12-4c9b-9f2f-c5bbc2aa7a98` |
+
+
+---
+
+# ANEXO A — Volcado ClickUp, Épica híbrida, inserción de filas e Ideas (Addendum v2.6 integrado)
+
+> Este anexo consolida los aprendizajes del piloto **Líder System (Plan de Proyecto v2)** y prevalece sobre el cuerpo anterior donde haya conflicto. Mantiene su propia tabla de versiones.
+
+# Addendum v2.6 — Plan de Proyecto Reinicia
+## Volcado de PBI / Tipo de Producto / Épica desde ClickUp + reanudación del piloto Líder System
+
+> **Versión: v2.6 — 2026-06-28 — Autor: Néstor + Claude**
+> Complementa los addenda v2.1 y v2.2. Donde haya conflicto, **prevalece v2.6**.
+> Aplica a las dos skills: `plan-proyecto-zoho-sheet-reinicia` (supervisada) y `plan-proyecto-reinicia-modo-desatendido`.
+
+---
+
+## 1. Modelo de Épica — HÍBRIDO según tipo de fila
+
+La columna **Épica** del Plan se rellena con criterio distinto según la naturaleza del producto, y la frontera la marca **el documento + el campo `TIPO DE PRODUCTO` de ClickUp**:
+
+| Tipo de fila | Documento | Criterio de Épica | Modelo |
+|---|---|---|---|
+| **Microcampaña de marketing** (Email Marketing, SEM, Redes, Publicidad…) | Plan de Marketing | **Fase del funnel de ClickUp** tal cual (`00. BRAND AWARENESS` … `08. ADVOCACY` + transversales) | **A** |
+| **Producto digital** (CRM, Desarrollo Web, WhatsApp Corporativo, Analítica…) | Plan de Proyecto | **Objetivo de negocio** que Claude propone y el PO ajusta en el propio Plan | **B** |
+
+- En **modelo B**, Claude **propone** la Épica de negocio (no la vuelca de ClickUp) y **NO toca el campo `ÉPICA` de ClickUp** (sus fases quedan como dimensión interna de marketing).
+- La "app/plataforma" (Zoho CRM, WhatsApp, Web) **NO es la Épica**: corresponde al campo **`TIPO DE PRODUCTO`** de ClickUp.
+- Líder System: los 57 son productos digitales → **todo el piloto va por modelo B**.
+
+---
+
+## 2. Campos reales de ClickUp (lista `General [CLIENTE]`)
+
+Verificado en vivo (28/06/2026) sobre la lista General Líder System `211763746`:
+
+| Campo | ID | Tipo | Notas |
+|---|---|---|---|
+| **PBIs PRIMER NIVEL** | `6758065a-bd4f-4d7d-9a48-926e81fe343f` | **text (libre)** | NO predefinido. Algunas tarjetas lo tienen escrito, otras vacío (mixto). |
+| **ÉPICA** | `6e3bf4c0-354b-4a8c-8cb5-dbedeec1cf6e` | **drop_down (predefinido)** | 12 valores (fases funnel + transversales). |
+| **TIPO DE PRODUCTO** | `5bd9072e-deae-4352-b35b-bdbaa3cc216d` | **drop_down (predefinido)** | 35 valores. |
+
+> ⚠️ `clickup_filter_tasks` **NO devuelve campos personalizados** (solo nombre/estado/tags/fecha/asignados). Para leer PBI/Épica/Tipo hay que ir tarjeta a tarjeta con `clickup_get_task` + `include:["custom_fields"]`. El valor de un dropdown viene como **`value` = orderindex** (no el id). PBI (texto) viene como `value` directo.
+
+### ÉPICA — orderindex → nombre → id de opción
+```
+0  00. BRAND AWARENESS              76a03f3b-a706-4e13-9069-7cb48605004f
+1  01. DESCUBRIMIENTO               b30d21f9-6a42-4624-9b04-2edc01597793
+2  02. INVESTIGACIÓN                69b75ed5-fcc4-4f88-b43a-3ee68d9928bc
+3  03. CONSIDERACIÓN                0c3e943e-525b-4ef8-98fd-fcc643bf6bc6
+4  04. CONVERSION                   41512e45-494a-4337-b41b-1138eb543fb2
+5  05. ADOPTION                     70bb9189-873a-4481-b8bf-3cf0e99c399f
+6  06. REPETITION                   db7f50ec-592b-4c05-9d75-7e662a3627d2
+7  07. EXPANSION                    de9a38bb-03fe-4c0b-ba14-7c5f57d95578
+8  08. ADVOCACY                     0ed66cff-e1ab-48ec-9402-d41a0b1c8e11
+9  FORMACIÓN                        a25f454d-b805-4cda-9feb-482c6a912e5e
+10 MEDIR ÉXITO DE LAS CAMPAÑAS      6c95410f-6153-415c-b75b-d845a7376b01
+11 PLANIFICACIÓN                    574b22cf-6754-475f-af40-17ac9f03994b
+```
+
+### TIPO DE PRODUCTO — orderindex → nombre (los más usados con id de opción)
+```
+0  GESTIÓN CRM            4  CRM (814e9896-f224-458f-afef-3aaa1506ce5b)
+1  ANALÍTICA WEB          5  DESARROLLO WEB (c0fd12ed-112f-4150-aa70-0268e8de3ac5)
+8  EMAIL MARKETING (04dc1e6d-e865-45e2-b306-9d9dabe41e3d)
+11 MARKETING AUTOMÁTICO   18 SEO    19 SEM    16 REDES SOCIALES
+34 WHATSAPP CORPORATIVO (e297373f-6456-490b-aa34-8e9205dfd4ab)
+```
+(Lista completa de 35 valores en el payload de cualquier tarjeta de la lista.)
+
+---
+
+## 3. Regla determinista de volcado (ClickUp → Plan)
+
+Por cada producto/fila del Plan:
+
+1. `clickup_get_task` con `include:["custom_fields"]`.
+2. **PBI**:
+   - Si el campo `PBIs PRIMER NIVEL` **tiene valor** → volcar **ese texto** a la columna PBI del Sheet (col 5 en 40# y 41#).
+   - Si está **vacío** → escribir la **etiqueta propia** de Claude (la que ya hay en el Sheet col 5 como punto de partida, **afinada** para los grupos demasiado anchos — ver §3.1) en el Sheet **y** hacer `clickup_update_task` con `custom_fields:[{id:"6758065a-…", value:"<PBI>"}]` (texto libre) para **escribirlo también en ClickUp**.
+3. **TIPO DE PRODUCTO**: traducir orderindex→nombre y escribirlo en la **col 3 del Plan Interno (41#)**.
+4. **ÉPICA**: para productos digitales (modelo B) **NO se vuelca ni se pisa** el campo de ClickUp; la Épica de negocio la propone Claude aparte.
+5. **Nota al PO**: cada vez que se actualiza el Plan, dejar **un comentario-resumen al PO en el producto de Gestión del mes** (`Gestión [CLIENTE]`, lista `211763776` en LS) listando los **PBIs que Claude ha escrito** (los que estaban vacíos). **No** se deja nota tarjeta a tarjeta.
+
+### 3.1 Afinado de los grupos de PBI demasiado anchos (validado con Néstor)
+- **Procesos Zoho CRM** → partir por proceso: *Gestión de Leads y Conversión a Matrícula · Modelo de Datos y Módulos CRM · Automatizaciones y Flujos · Automatización Documental (Zoho Sign)*. (Cadencias ya es su propio PBI en ClickUp.)
+- **Web** → *Web lidersystem.com — Mantenimiento / — Captación (landings) / — Analítica integrada*.
+- **Email Marketing** → *Email Marketing — Nurturing de Leads / — Comunicación a Alumnos*.
+- **Chatbot WhatsApp (Woztell)** → *Chatbot WhatsApp — Atención y Captación / — Notificaciones a Alumnos*.
+- Principio: el PBI debe **ayudar a construir la Épica**, ser **reutilizable a futuro** y específico.
+
+---
+
+## 4. Columna Tipo de Producto en el Plan Interno
+
+- El **Tipo de Producto** se registra en la **col 3 del Plan Interno (41#)**.
+- En el piloto LS, esa columna **sustituyó a la antigua "Sprint"** (el Gantt NO se desplazó: sigue empezando en col 12). Consecuencia: el Interno deja de mostrar Sprint.
+- En la cara cliente (40#) **no** hay columna de Tipo (col 3 sigue siendo Sprint).
+- Para futuros clientes, decidir si se replica esta sustitución o se inserta columna nueva (implicaría correr el Gantt y repintar hitos).
+
+---
+
+## 5. Coste, contexto y arquitectura desatendida
+
+- **Coste por tarjeta**: `clickup_get_task` con campos pesa **~15k tokens** irreductibles (arrastra descripción completa + definiciones de todos los dropdowns; el de `PROYECTO` solo tiene 140 opciones). El dato útil son 3 campos.
+- **El contenedor NO puede llamar a la API de ClickUp** (red restringida: solo anthropic/github/pypi/npm). La única vía a ClickUp es el conector MCP.
+- **Implicación**: el volcado fiel de N productos **no cabe en una sola sesión** (≈6–10 filas antes de tensar la ventana). Se hace **en tandas, idempotente y reanudable** (lo escrito persiste en Sheet + ClickUp; el punto de reanudación se deduce del contenido de la col PBI).
+- **Modelo recomendado para el ETL**: el volcado es mecánico → en la Routine/sesión de volcado usar **Sonnet o Haiku con esfuerzo bajo**; reservar **Opus solo para criterio** (proponer Épicas de negocio, afinar PBIs dudosos). El modelo barato ahorra €, **no** tokens de contexto.
+
+### 5.1 MEJORA FUTURA (post-piloto) — función Zoho Catalyst `clickup_plan_fields`
+Sacar la extracción pesada fuera del LLM:
+- Función en el proyecto Catalyst `Reinicia-Clickup-Audit` (patrón del `inactivity_calculator`) que llama a la API REST de ClickUp **server-side** y, por lista, devuelve solo `{id, name, status, pbi, epica, tipo}`.
+- La skill/Routine consume un JSON de N×~5 campos (**<2k tokens** frente a ~850k para 57 tarjetas).
+- Es la palanca estructural para correr el volcado **desatendido** y barato. Queda **pendiente para después del primer piloto**.
+
+---
+
+## 6. ESTADO DEL PILOTO LÍDER SYSTEM — punto de reanudación
+
+- **Fichero piloto v2**: `pnync16bccbe6727e428ba3ae89ffe6e95e07` · Plantilla canónica v2: `pnync351d56992b6d4026906a6fec5d56e682`.
+- **Worksheets**: `40#` (cara cliente) · `41#` (interno). Col 5 = PBI · Col 3 (41#) = Tipo Producto.
+- **Lista General LS**: `211763746` · **Gestión LS** (para nota al PO): `211763776`.
+
+### Filas YA volcadas (9–14) — persistidas en Sheet + ClickUp
+| Fila | task_id | PBI | Origen | Tipo |
+|---|---|---|---|---|
+| 9  | 869dru4ar | Cadencias Zoho CRM (Cadence Studio) | ClickUp | CRM |
+| 10 | 869drt2c1 | Conector Zoho CRM ↔ App Formación | Claude→push | CRM |
+| 11 | 869dq1c0r | Cadencias Zoho CRM (Cadence Studio) | ClickUp | CRM |
+| 12 | 869dhxkuw | Captación de Leads y Publicidad | Claude→push | CRM |
+| 13 | 869bv7va4 | Automatización Documental (Zoho Sign) | Claude→push (afinado) | CRM |
+| 14 | 869bv7d3k | Gestión de Leads y Conversión a Matrícula | Claude→push (afinado) | CRM |
+
+- **PBIs escritos por Claude (validar el PO en la nota)**: filas **10, 12, 13, 14**.
+- **PUNTO DE REANUDACIÓN: fila 15 `8698c2k3x`.**
+
+### Mapa fila → task_id pendiente
+**IMPL (rows 15–31):** 8698c2k3x · 8699uk7tz · 869depu3k · 869ckja53 · 869br1grc · 869a00xwt · 869deb56h · 869deb398 · 869ckzyfw · 8699znw1n · 8699zng5v · 869cbupxk · 869c37k8f · 869bv7a2e · 869anfkhv · 8698p86yt · 8694qgz6z
+**ACTIVO (rows 38–61):** 869d3p14r · 869cauycd · 869c18an3 · 869bq2gk5 · 869bpra19 · 869baqeyj · 869b9np2f · 869b2gu5c · 869axy0pz · 869axxz5u · 869aw6m40 · 869arg3yz · 869arfgz0 · 869aare9t · 8699679fz · 8699679er · 8699679cw · 86996798b · 86996797f · 869967964 · 86996791d · 8699678yq · 86996786p · 8698p8e4x
+**CERRADO (40# rows 70–79 / 41# rows 68–77):** 869dhmfpk · 869dhetpb · 869dfregv · 869dd66vh · 869d2fpm5 · 869d0tgga · 869d0tbj1 · 869b8rxg6 · 869b8rxtq · 869c58nqe
+
+> La etiqueta PBI de partida para las vacías es la que ya está en el Sheet col 5 (mis 10 grupos iniciales); afinar según §3.1 al volcar.
+
+---
+
+## 7. Recordatorios vigentes (de v2.1/v2.2, reconfirmados)
+- **Sincronización bidireccional** de la *Fecha de validación esperada* (Sheet ↔ subtarea "Validación Cliente" de ClickUp). Las subtareas normalmente vienen **sin fecha**: el Cliente/PO la pone en el Sheet y se empuja a ClickUp, o al revés. **Ocurre en ambos sentidos.**
+- **Colores de hito** (Gantt): entrega Reinicia `#70EED6` · validación Cliente `#EBE31B`. Swatches de leyenda canónica alineados (40# C4/C5).
+- **Lavado base blanco** en Log de Cambios y Config (hasta col Z / fila 100, incluidas filas 2–4 del título).
+- No usar `Create_New_File` para Zoho Sheet; crear por `ZohoSheet_copy`. Decimales con coma (es-ES). Vaciar celda con `" "` (espacio), nunca `""`.
+
+---
+
+## 8. Inserción de filas en las tablas del Plan (REGLA OBLIGATORIA)
+
+Aplica a **Plan Proyecto (40#)** y **Plan Proyecto Interno (41#)**, en **General y Soporte**, para **productos y microcampañas**, en cada una de las tres tablas (IMPLANTACIÓN, ACTIVO, CERRADO).
+
+**Regla:** cuando en una tabla quedan pocas filas libres dentro del cuerpo formateado y aún hay contenido por meter, **primero se insertan las filas necesarias ANTES de la penúltima fila del cuerpo de esa tabla; solo después se pega el contenido.** Nunca al revés, y nunca escribir más allá del cuerpo formateado sin insertar antes.
+
+Razones y detalles:
+- **Por qué antes de la penúltima**: la última fila del cuerpo suele llevar el borde de cierre de la tabla; la penúltima arrastra formato + desplegable (Estatus) + formato condicional (semáforo). Insertar **antes de la penúltima** hace que las filas nuevas hereden ese formato y la tabla conserve su fila de cierre.
+- **Por qué insertar antes de pegar**: si se escribe primero y la región con formato es más corta que el nº de productos, las filas extra salen sin formato, sin desplegable de Estatus, sin semáforo y **fuera del rango de las fórmulas** (SUMIF/condicional silenciosamente a cero).
+- `ZohoSheet_insert_row` inserta **una fila por llamada** (param `row` = índice). Para N filas, **N llamadas** al mismo índice.
+- **Tras insertar, recalcular índices**: las tablas que quedan por debajo se desplazan hacia abajo tantas filas como se hayan insertado (insertar en IMPLANTACIÓN baja ACTIVO y CERRADO; insertar en ACTIVO baja CERRADO). En la cara cliente (40#), revisar que la **rejilla del Gantt y los hitos** sigan alineados tras el desplazamiento.
+- La región con formato de la plantilla es **más corta** (~19 filas) que el nº habitual de productos, por lo que esta regla aplica casi siempre que se puebla un Plan real.
+
+---
+
+## 9. Generación de Ideas — fuentes, límites y trazabilidad
+
+### 9.1 Fuentes de ideas
+Claude propone ideas para la pestaña **Ideas (42#)** a partir de CINCO fuentes:
+1. **Actas de reunión** del cliente.
+2. **Notas en la Gestión del cliente** (comentarios/observaciones en los productos `Gestión [CLIENTE]`).
+3. **Histórico de productos y microcampañas** ya realizados o planificados del proyecto (General y Soporte) — para detectar continuaciones, evoluciones, mejoras o piezas que falten.
+4. **Referencias de Internet** que Claude consulte en cada caso: **novedades de Zoho**, **recursos oficiales de Zoho**, **YouTube** y **webs de terceros** que publiquen sobre Zoho.
+5. **Otros proyectos de Reinicia similares** (actuales y pasados) en ClickUp — clientes del mismo sector o con el mismo tipo de trabajo Zoho/Web/WABA — para reutilizar productos o microcampañas que ya funcionaron y adaptarlos a este cliente. Coherente con el principio general de reutilizar conocimiento previo de ClickUp.
+
+> ⚠️ **Objetivos del Cliente (pestaña 45#) NO es una fuente de ideas.** Contiene los **objetivos** que el PO ha documentado y que **guían y priorizan** la selección de ideas. Las skills **no la generan ni la modifican**; la **leen** como criterio de filtrado: una idea encaja mejor cuanto más sirve a un objetivo declarado del cliente.
+
+### 9.2 Límites (con base en evidencia)
+- **Máximo ~7 ideas nuevas por ronda.** Una "ronda" = cada ejecución de la **Routine semanal de los domingos** que actualiza el Plan del proyecto.
+- **Tope por fuente: 2–3 ideas por origen y ronda** (acta · notas de Gestión · histórico de productos · referencias de internet · proyectos similares de Reinicia), para forzar variedad y que no domine una sola fuente.
+- **Diversidad > cantidad**: las ~7 deben cubrir ángulos distintos; mejor pocas y variadas que muchas redundantes.
+- **Excedentes a reserva**: si se detectan más de 7, las que no entran se registran con **Estatus Plan = "Pendiente Incluir"** (col K) en vez de empujarlas todas a la vista. La pestaña **acumula histórico**; el tope de 7 es de **altas nuevas por ronda**, no de ideas vivas totales.
+- **Fundamento**: sobrecarga de elección (Iyengar & Lepper — el experimento de las mermeladas: más interés con 24, muchas más decisiones con 6) y límite de ítems manejables de un vistazo (~7±2, Miller). Más ideas aumentan la carga de evaluación del PO y empeoran la decisión.
+
+### 9.3 Trazabilidad obligatoria en la columna Notas (col I de Ideas)
+Para cada idea, en **Notas** se indica:
+- **Autoría**: si la idea la ha aportado **Claude** (marcarlo explícitamente).
+- **Fuente/origen**: de cuál de las cuatro fuentes proviene (necesario para aplicar el tope por fuente).
+- **Fuente/origen**: de cuál de las cinco fuentes proviene (necesario para aplicar el tope por fuente). Si procede de un **proyecto similar de Reinicia**, enlazar la tarea de ClickUp del producto de referencia.
+- **Referencias con URL**: enlaces consultados — novedades de Zoho, recursos de Zoho, YouTube, webs de terceros sobre Zoho, o la tarea ClickUp del proyecto similar.
+- Un **"porqué" de una línea**: para que el PO pueda aceptar/descartar rápido. Una idea sin justificación es ruido.
+
+### 9.4 Cadencia
+La actualización del Plan —incluida la generación de ideas— la ejecuta la **Routine de Claude Code, una vez por semana, los domingos**. Cada domingo = una ronda (≤7 ideas nuevas).
+
+---
+
+## Versiones
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v2.3 | 2026-06-28 | Néstor + Claude | Modelo de Épica híbrido (A microcampañas / B digitales) con frontera por TIPO DE PRODUCTO. Campos reales de ClickUp (PBI texto libre, ÉPICA y TIPO dropdowns) con IDs. Regla determinista de volcado + push de PBI vacío a ClickUp + nota-resumen al PO en Gestión. Tipo de Producto en col 3 del Interno. Coste ~15k/tarjeta, filter sin custom fields, tandas reanudables, modelo Sonnet para ETL, Catalyst `clickup_plan_fields` como mejora futura. Estado del piloto LS (filas 9–14 hechas) y punto de reanudación (fila 15 `8698c2k3x`) con mapa fila→task_id. |
+| v2.4 | 2026-06-28 | Néstor + Claude | Añadida §8: regla obligatoria de inserción de filas en las tablas del Plan (40# y 41#, General y Soporte, productos y microcampañas) — insertar las filas necesarias ANTES de la penúltima fila del cuerpo de la tabla y solo después pegar el contenido; una fila por llamada a `ZohoSheet_insert_row`; recalcular índices de las tablas inferiores y revisar Gantt/hitos tras el desplazamiento. |
+| v2.5 | 2026-06-28 | Néstor + Claude | Añadida §9: generación de Ideas. Cuatro fuentes (actas, notas de Gestión, histórico de productos/microcampañas, referencias de internet sobre Zoho); Objetivos del Cliente (45#) NO es fuente sino criterio de priorización (solo lectura). Límite ~7 ideas nuevas por ronda (= ejecución dominical de la Routine), tope 2–3 por fuente, diversidad, excedentes a "Pendiente Incluir". Trazabilidad obligatoria en col I Notas: autoría Claude + fuente + URLs + porqué de una línea. Fundamento: sobrecarga de elección y 7±2. |
+| v2.6 | 2026-06-28 | Néstor + Claude | §9: añadida **quinta fuente** de ideas — otros proyectos de Reinicia similares (actuales y pasados) en ClickUp, para reutilizar productos/microcampañas que ya funcionaron. Tope por fuente y trazabilidad (enlace a la tarea ClickUp de referencia) actualizados en consecuencia. |
+

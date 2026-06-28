@@ -16,6 +16,8 @@ description: >
 
 # SKILL: Detección de Productos Estancados en ClickUp — Reinicia
 
+> **Versión vigente: v0.2 — 06/06/2026** · ver changelog al final (`## Versiones`)
+
 ## Propósito
 
 Detectar a diario las tarjetas de ClickUp (productos y microcampañas) que están en un estado
@@ -402,7 +404,7 @@ Si un canal/post falla, no abortar el pase: registrar la anomalía y continuar.
 
 ---
 
-## VERSIONES
+## Versiones
 
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|

@@ -14,6 +14,8 @@ description: >
 ---
 
 # SKILL: Diagramas Zoho en Miro — Reinicia
+
+> **Versión vigente: v1.0 — 21/06/2026** · ver changelog al final (`## Versiones`)
 ## Flujogramas de Procesos de Negocio y Modelo Entidad-Relación
 
 ## Propósito
@@ -333,3 +335,9 @@ Pendientes antes de presentar al cliente:
 - **Leyenda visual obligatoria:** todo board debe tener una leyenda. Sin leyenda, el diagrama no es autónomo ni entregable al cliente.
 - **Nomenclatura de frames:** `[CLIENTE] V[N] — [Estado]` — por ejemplo: `CARRITECH V1 — BORRADOR`
 - **Idioma:** los diagramas se crean en el idioma del cliente (castellano para clientes españoles / inglés para clientes internacionales como Carritech).
+
+## Versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v1.0 | 21/06/2026 | Néstor + Claude | Estado previo sin versionar, tabulado por primera vez al incorporar el estándar de versionado de Reinicia (21/06/2026). Creación de flujogramas de procesos de negocio y modelos entidad-relación (ERD) en Miro para proyectos Zoho CRM. |
