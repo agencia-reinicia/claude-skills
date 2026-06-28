@@ -15,7 +15,7 @@ description: >
 
 # SKILL: Plan de Proyecto — Modo Desatendido (Reconciliación) — Reinicia
 
-> **Versión vigente: v0.6 (esqueleto) — 2026-06-28**
+> **Versión vigente: v0.7 (esqueleto) — 2026-06-28**
 
 > ⚠️ **VERSIÓN ESQUELETO v0.4.** Respecto a v0.3, corrige la clasificación de campos según la
 > aclaración del PO: desaparece la "lista negra pura"; el modelo es ClickUp→Sheet / Sheet→ClickUp /
@@ -51,12 +51,14 @@ Producto Gestión [CLIENTE] en ClickUp (reporte + nota al PO)
 
 | Proyecto | Fichero v2 | Estado |
 |---|---|---|
-| **Líder System** | (se recrea desde cero — pendiente ID nuevo) | **Activo** en la Routine |
-| **Breezom** | crear supervisado | Se suma cuando exista fichero v2 |
-| **Carritech** | crear supervisado | Se suma cuando exista fichero v2 |
+| **Líder System** | lo crea la 1ª pasada (creación desatendida) | **Activo** en la Routine |
+| **Carritech** | lo crea la 1ª pasada (creación desatendida) | Se añade a las rutinas tras Líder System |
+| **Breezom** | lo crea la 1ª pasada (creación desatendida) | Se añade a las rutinas tras Líder System |
 
-Ejecución: Claude Code Routine. **Modelo: Sonnet 4.6.** Los 3 ficheros se crean desde cero
-(supervisado). Arranque programado: **solo Líder System**. Cliente como parámetro (sin hardcode).
+Ejecución: Claude Code Routine. **Modelo: Sonnet 4.6.** Los 3 ficheros los crea la propia skill en
+su 1ª pasada (creación desatendida); no requieren creación supervisada previa. Arranque escalonado:
+primero **Líder System**; luego se añaden **Carritech** y **Breezom** a las rutinas. Cliente como
+parámetro (sin hardcode).
 Plantilla canónica v2: `pnync351d56992b6d4026906a6fec5d56e682`.
 
 ---
@@ -270,6 +272,7 @@ de Cliente empujadas a ClickUp · Épica/PBI vacíos rellenados · ≤7 ideas en
 | **v0.3** | 2026-06-28 | Néstor + Claude | Mapa de columnas real (40# y 41# difieren); Ideas (§9) y sync de validación dentro del alcance. |
 | **v0.4** | 2026-06-28 | Néstor + Claude | **Corrección de clasificación de campos (PO):** desaparece la lista negra pura. Fecha de entrega esperada (col 8) = due_date de ClickUp (se vuelca, sin divergencia). Fecha de validación (col 9) y Notas [Cliente] (col 11) = Sheet→ClickUp (origen Cliente, nunca pisar, propagar a ClickUp). Notas Reinicia automáticas. Semáforo = desplegable con formato asociado al valor (solo escribir texto). Modelo en 3 flujos: ClickUp→Sheet / Sheet→ClickUp / Generado por Claude. |
 | **v0.5** | 2026-06-28 | Néstor + Claude | Documentado el modo CREACIÓN desatendido como evolución futura. |
+| **v0.7** | 2026-06-28 | Néstor + Claude | Ámbito del piloto: los 3 (Líder System, Carritech, Breezom) los crea la skill en su 1ª pasada (sin creación supervisada previa); arranque escalonado (LS primero, luego Carritech y Breezom). |
 | **v0.6** | 2026-06-28 | Néstor + Claude | **Creación desatendida = modo activo del piloto.** Si falta el fichero v2, la skill lo crea: guardia anti-duplicados (no negociable), copia de plantilla, **idioma inferido** del cliente + nota, **granularidad por defecto = quincenas**, reflejo de ClickUp, criterio (Épica/Descripción/alcance/portada) propuesto y marcado BORRADOR pendiente de validación PO, nota consolidada en Gestión. El almacén de config por cliente pasa a mejora opcional (inferencia+defaults mientras no exista). |
 
 ---
