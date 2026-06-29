@@ -15,7 +15,7 @@ description: >
 
 # SKILL: Plan de Proyecto — Modo Desatendido (Reconciliación) — Reinicia
 
-> **Versión vigente: v0.9 (esqueleto) — 2026-06-28**
+> **Versión vigente: v0.10 (esqueleto) — 2026-06-28**
 
 > ⚠️ **VERSIÓN ESQUELETO v0.4.** Respecto a v0.3, corrige la clasificación de campos según la
 > aclaración del PO: desaparece la "lista negra pura"; el modelo es ClickUp→Sheet / Sheet→ClickUp /
@@ -51,14 +51,13 @@ Producto Gestión [CLIENTE] en ClickUp (reporte + nota al PO)
 
 | Proyecto | Fichero v2 | Estado |
 |---|---|---|
-| **Líder System** | lo crea la 1ª pasada (creación desatendida) | **Activo** en la Routine |
-| **Carritech** | lo crea la 1ª pasada (creación desatendida) | Se añade a las rutinas tras Líder System |
-| **Breezom** | lo crea la 1ª pasada (creación desatendida) | Se añade a las rutinas tras Líder System |
+| **Líder System** | existe (`pnync16bccbe6727e428ba3ae89ffe6e95e07`) | **Activo** — reconciliación por ID |
+| **Carritech** | crear supervisado (1 vez) | Se añade cuando exista y tenga ID registrado |
+| **Breezom** | crear supervisado (1 vez) | Se añade cuando exista y tenga ID registrado |
 
-Ejecución: Claude Code Routine. **Modelo: Sonnet 4.6.** Los 3 ficheros los crea la propia skill en
-su 1ª pasada (creación desatendida); no requieren creación supervisada previa. Arranque escalonado:
-primero **Líder System**; luego se añaden **Carritech** y **Breezom** a las rutinas. Cliente como
-parámetro (sin hardcode).
+Ejecución: Claude Code Routine. **Modelo: Sonnet 4.6.** La desatendida **NO crea**: identifica el
+fichero **por ID** (pasado en el prompt o registrado por cliente) y solo reconcilia. La creación se
+hace una vez, supervisada. Arranque: **solo Líder System** por ID; Carritech y Breezom cuando existan.
 Plantilla canónica v2: `pnync351d56992b6d4026906a6fec5d56e682`.
 
 ---
@@ -111,6 +110,7 @@ fila 1). Filas 3–5 = leyenda de hitos; fila 7 = meses; fila 8 = nº de semana.
   Descripción, **Fecha de entrega (due_date)**, Notas Reinicia/Notas, Estatus, calendario.
 - **🔼 Sheet → ClickUp** (origen en el Sheet, se propaga a ClickUp; nunca se pisa la celda del Sheet):
   - **Fecha de validación esperada** (col 9) → fecha de la subtarea "Validación Cliente" en ClickUp.
+    **Nunca inventar**: si no hay valor del Cliente, dejar la celda vacía (no poner fecha por defecto).
   - **Notas [Cliente]** (col 11, solo 40#) → informar en ClickUp (🚧 mecanismo: comentario en la
     tarea del producto en `General [CLIENTE]`; confirmar en 1ª pasada).
 - **🟪 Generado por Claude** (criterio, + nota PO): **PBI** (col 5) cuando falta en ClickUp. La
@@ -190,8 +190,8 @@ Cliente(s) (piloto: Líder System) · sprint vigente · presupuesto de troceo (�
 Existe el fichero v2 · `worksheet.list` para ids · **leer cabecera (fila 8) de 40# y 41#** y mapear
 columnas por nombre. Si no existe → **omitido** y siguiente.
 
-> **Si falta el fichero v2 → CREAR (modo CREACIÓN desatendido, sección dedicada).** Activo en el
-> piloto. La rama de "omitir" queda obsoleta.
+> **Identificar el fichero por ID** (del prompt o del registro cliente→ID), NUNCA por búsqueda de
+> nombre o carpeta. Si el ID no resuelve a un fichero → **reportar y OMITIR**. **NUNCA crear.**
 
 ### PASO 2 — Reanudación
 Primera fila pendiente por el contenido de la columna PBI. 🚧 criterio exacto a definir.
@@ -213,28 +213,27 @@ validaciones sincronizadas · notas de Cliente informadas · ideas nuevas · omi
 
 ---
 
-## CREACIÓN DESATENDIDA (modo activo del piloto)
+## IDENTIFICACIÓN DEL FICHERO Y CREACIÓN
 
-Si en el PASO 1 falta el fichero v2, la skill **lo crea** sin intervención humana y deja al PO el
-comentario para revisar. Reglas deterministas que sustituyen la elicitación supervisada:
+**La desatendida (v0.10) NO crea ficheros.** Identifica el Plan del cliente **por ID registrado**
+(pasado en el prompt de la Routine o, en el futuro, en un registro cliente→ID). **Nunca lo busca por
+nombre ni por carpeta**, y **nunca crea**.
 
-1. **Guardia anti-duplicados (NO negociable):** antes de crear, comprobar por convención de nombre
-   que NO existe ya un Plan v2 del cliente. Si existe (aunque con nombre algo distinto), NO crear:
-   reconciliar el existente.
-2. **Copiar la plantilla canónica** (`ZohoSheet_copy` de `pnync351…`; nunca `Create_New_File`).
-   Verificar status=1 y sin `%3A`.
-3. **Idioma:** **inferido** del cliente (ClickUp/CRM/Workdrive: ES para clientes españoles, EN para
-   internacionales). Dejarlo anotado en el comentario ("creado en ES porque…") para que el PO lo corrija.
-4. **Granularidad del calendario:** **default = quincenas** (recomendado en la supervisada), salvo
-   config explícita del cliente.
-5. **Reflejar ClickUp** (lista blanca) en las filas, con la regla de inserción §8.
-6. **Criterio propuesto y marcado:** Épica de negocio, formato de Descripción, alcance histórico y
-   portada los **propone Claude**; el fichero se marca **BORRADOR pendiente de validación PO**.
-7. **Nota consolidada al PO en Gestión:** "Plan de [CLIENTE] creado en borrador en [idioma],
-   granularidad [X]; valida estos N puntos de criterio".
+- Si hay **ID** y el fichero existe → reconciliar.
+- Si **no hay ID** o el ID no resuelve a un fichero → **reportar y OMITIR**. No crear.
 
-> **Mejora opcional (no bloqueante):** un almacén de configuración por cliente para idioma/
-> granularidad/formato/alcance atípicos. Mientras no exista, se usa inferencia + defaults.
+**Por qué.** La creación autónoma de v0.5–v0.9 falló: un "no encontrado" por búsqueda difusa de
+nombre se interpretó como "no existe" y **duplicó** el Plan de Líder System; además construyó mal
+(7 tareas en vez del backlog completo, Config y Log vacíos, sin enlaces, fecha de validación
+inventada). Conclusión: no mantener dos implementaciones de creación. La creación se hace **una vez,
+supervisada** (`plan-proyecto-zoho-sheet-reinicia`, que ya la hace bien); la desatendida solo mantiene.
+
+> **Ciclo de vida (v1.0, en diseño):** que la desatendida gestione **altas** (proyecto nuevo sin
+> Plan → crear) y **bajas** (carpeta/lista archivada en ClickUp → **CONGELAR** el Plan, dejar de
+> reconciliar). Requisitos antes de implementarlo: (a) **registro cliente→ID** de Plan (alta por ID,
+> no por nombre); (b) una **lógica de creación ÚNICA compartida** con la supervisada (no
+> reimplementar — la reimplementación es la que construyó mal); (c) confirmar que el MCP de ClickUp
+> expone si una carpeta/lista está **archivada**.
 
 ---
 
@@ -280,6 +279,7 @@ de Cliente empujadas a ClickUp · Épica/PBI vacíos rellenados · ≤7 ideas en
 | **v0.3** | 2026-06-28 | Néstor + Claude | Mapa de columnas real (40# y 41# difieren); Ideas (§9) y sync de validación dentro del alcance. |
 | **v0.4** | 2026-06-28 | Néstor + Claude | **Corrección de clasificación de campos (PO):** desaparece la lista negra pura. Fecha de entrega esperada (col 8) = due_date de ClickUp (se vuelca, sin divergencia). Fecha de validación (col 9) y Notas [Cliente] (col 11) = Sheet→ClickUp (origen Cliente, nunca pisar, propagar a ClickUp). Notas Reinicia automáticas. Semáforo = desplegable con formato asociado al valor (solo escribir texto). Modelo en 3 flujos: ClickUp→Sheet / Sheet→ClickUp / Generado por Claude. |
 | **v0.5** | 2026-06-28 | Néstor + Claude | Documentado el modo CREACIÓN desatendido como evolución futura. |
+| **v0.10** | 2026-06-28 | Néstor + Claude | **Endurecido el guardia; creación fuera de alcance.** La desatendida identifica el fichero por ID registrado (prompt/registro), NUNCA por búsqueda de nombre, y NUNCA crea: sin fichero por ID → reporta y omite. Motivo: la creación autónoma duplicó el Plan de LS y construyó mal (7 de 57 tareas, Config/Log vacíos, sin enlaces, fecha de validación inventada). Col 9 (validación): nunca inventar, vacía si no hay valor del Cliente. Creación de ciclo de vida (altas/bajas) reservada a v1.0. |
 | **v0.9** | 2026-06-28 | Néstor + Claude | Aclaración de formato del Log: el fondo de las filas de datos es `#EBEBEB` y NUNCA blanco (sobre blanco los bordes blancos no se ven como rejilla). Aplicado a mano a las filas 10–12 del fichero de Líder System. El valor `#EBEBEB` ya estaba bien en v0.8; el fallo fue en la aplicación manual. |
 | **v0.8** | 2026-06-28 | Néstor + Claude | **Hallazgos 1ª pasada (Líder System).** Reflejo COMPLETO de lista blanca por fila (no solo divergencias) + backfill inicial de filas viejas. **Mes** confirmado = mes de la fecha de entrega → recomputar Mes y marca de calendario al cambiar la fecha. **due_date null → "A definir"** (no vaciar). **Épica (col 2)** deja de ser objetivo de negocio (modelo B): es la agrupación del fichero (plataforma/fase), derivada consistente; no se inventa. **Log de Cambios: dar formato a las filas nuevas** (fill #EBEBEB, bordes blancos, Manrope). Orden cronológico de filas nuevas → pendiente futuro (de momento, al final). |
 | **v0.7** | 2026-06-28 | Néstor + Claude | Ámbito del piloto: los 3 (Líder System, Carritech, Breezom) los crea la skill en su 1ª pasada (sin creación supervisada previa); arranque escalonado (LS primero, luego Carritech y Breezom). |
@@ -288,6 +288,10 @@ de Cliente empujadas a ClickUp · Épica/PBI vacíos rellenados · ≤7 ideas en
 ---
 
 ## PENDIENTES DE EVOLUCIÓN
+- **v1.0 — Ciclo de vida:** altas (proyecto nuevo → crear vía lógica de creación COMPARTIDA con la
+  supervisada + registro cliente→ID) y bajas (carpeta archivada en ClickUp → CONGELAR el Plan).
+  Confirmar antes que el MCP de ClickUp exponga el estado archivado.
+- **Registro cliente→ID de Plan**: decidir dónde vive (Config del fichero / Sheet central / memoria).
 - **Almacén de configuración por cliente** (idioma/granularidad/formato/alcance atípicos) como mejora
   opcional de la creación desatendida (hoy: inferencia + defaults).
 - Calibrar presupuesto de troceo y criterio de reanudación (1ª pasada).
