@@ -152,7 +152,7 @@ Cabecera de tabla en **fila 8** (no fila 1). Filas 3–5 = leyenda de hitos; fil
 - Hitos Gantt: entrega Reinicia `#70EED6` ("Azul Claro Reinicia") · validación Cliente `#EBE31B`
   ("Amarillo Claro Reinicia"). Leyenda en filas 3–5.
 - Bordes blancos `#FFFFFF` sólidos en todas las pestañas.
-- Log Cambios: cabecera `#3812CF`/`#FFFFFF`; fila 2 `#D9D0FB`/`#555555` itálica. **Filas de datos nuevas: se añaden por INSERCIÓN (`ZohoSheet_insert_row`) para que HEREDEN el formato de la fila anterior de la tabla — NUNCA escribiendo en celdas vacías y reformateando a mano (produce filas que no cuadran).** Lavado base blanco.
+- Log Cambios: cabecera `#3812CF`/`#FFFFFF`; fila 2 `#D9D0FB`/`#555555` itálica. **Filas de datos nuevas: se añaden por INSERCIÓN (`ZohoSheet_insert_row`) para que HEREDEN el formato de la fila anterior de la tabla — fondo, bordes, fuente Manrope, altura Y color de fuente (`#545454`, cuerpo de marca). NUNCA escribir en celdas vacías y reformatear a mano (produce filas descuadradas, p. ej. tipografía en negro).** Lavado base blanco.
 - Fuentes Manrope. Azul de marca `#3812CF` (no `#3812CB`).
 
 ---
