@@ -15,7 +15,7 @@ description: >
 
 # SKILL: Sincronización de Skills a GitHub — Reinicia
 
-> **Versión vigente: v1.0 — 2026-06-29**
+> **Versión vigente: v1.1 — 2026-07-05**
 
 ## Propósito
 
@@ -57,6 +57,10 @@ Pídele a Claude, en ese chat:
 > SKILL.md, y pásamelo para descargar."
 
 Descarga el ZIP resultante.
+
+> 📌 **Convención fija — nombre del fichero.** El ZIP se llama siempre `skills-reinicia.zip` (Claude
+> lo genera con ese nombre de forma consistente). No hace falta pedirlo ni confirmarlo cada vez;
+> si algún día llega con otro nombre, renómbralo antes de descomprimir en el Paso 2.
 
 ### Paso 2 — Preparar la carpeta de exportación
 
@@ -133,3 +137,4 @@ bash scripts/build-zips.sh
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|
 | v1.0 | 2026-06-29 | Néstor + Claude | Versión inicial. Skill-guía del flujo claude.ai→GitHub: snapshot fuera del Project, import-from-claude-ai.sh con guardas, gotchas (.md sueltos, Project congelado, anti-rollback) y verificaciones. Remite a docs/sync-strategy.md como fuente canónica. |
+| v1.1 | 2026-07-05 | Néstor + Claude | Fijada la convención: el ZIP del snapshot se llama siempre `skills-reinicia.zip`. Nota añadida en el Paso 1 para no tener que confirmarlo en cada sincronización. |
