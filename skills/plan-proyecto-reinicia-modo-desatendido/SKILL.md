@@ -17,7 +17,7 @@ description: >
 
 # SKILL: Plan de Proyecto — Modo Desatendido (Gestión de ciclo de vida) — Reinicia
 
-> **Versión vigente: v1.2 — ciclo de vida + multi-tabla + filas por herencia — 2026-06-29**
+> **Versión vigente: v1.7 — orden y agrupación por Épica — 2026-07-04**
 
 > **Estado:** skill de producción en evolución — gestiona el ciclo de vida del Plan (localiza, crea
 > si falta, reconcilia las tres tablas, congela). Lo que queda por calibrar en ejecución real va
@@ -91,7 +91,7 @@ Cabecera de tabla en **fila 8** (no fila 1). Filas 3–5 = leyenda de hitos; fil
 **`40#` Plan Proyecto (cara cliente):**
 | col | Campo | Flujo |
 |---|---|---|
-| 2 | Épica (agrupación: plataforma/fase) | Derivada consistente con el fichero (NO objetivo de negocio; NO del ÉPICA funnel). Filas nuevas: Claude la deriva del tipo/plataforma. |
+| 2 | Épica (modelo HÍBRIDO) | Microcampaña→fase de funnel (campo ÉPICA de ClickUp, ⬜ lista blanca). Producto digital→**objetivo de negocio propuesto por Claude** (🟪 + validación PO). NUNCA la app/plataforma. |
 | 3 | Tipo Producto | ⬜ ClickUp → Sheet |
 | 4 | Mes | Derivado = **mes de la Fecha de entrega** (col 8). Recomputar al cambiar la fecha. |
 | 5 | PBI de Primer Nivel | ⬜ ClickUp → Sheet; si vacío en ClickUp → Claude rellena en Sheet+ClickUp + nota PO |
@@ -127,9 +127,11 @@ Cabecera de tabla en **fila 8** (no fila 1). Filas 3–5 = leyenda de hitos; fil
     **Nunca inventar**: si no hay valor del Cliente, dejar la celda vacía (no poner fecha por defecto).
   - **Notas [Cliente]** (col 11, solo 40#) → informar en ClickUp (🚧 mecanismo: comentario en la
     tarea del producto en `General [CLIENTE]`; confirmar en 1ª pasada).
-- **🟪 Generado por Claude** (criterio, + nota PO): **PBI** (col 5) cuando falta en ClickUp. La
-  **Épica** (col 2) NO es objetivo de negocio: es la agrupación que ya usa el fichero (plataforma/
-  fase); en filas nuevas Claude la deriva consistente con el resto, sin inventar.
+- **🟪 Generado por Claude** (criterio, + nota PO): **PBI** (col 5) cuando falta en ClickUp, y la
+  **Épica** (col 2) de **productos digitales** = **objetivo de negocio** que propone Claude (p. ej.
+  "Retención y fidelización de alumnos"), NUNCA la app/plataforma. Marcar BORRADOR + validar con el PO.
+- **Épica de microcampañas / marketing** = **fase de funnel** del campo ÉPICA de ClickUp
+  (`6e3bf4c0-…`): ⬜ ClickUp → Sheet. Si ese campo tiene valor, se usa tal cual.
 
 > **Reflejo completo (no solo divergencias):** en CADA fila que se lee de ClickUp, refrescar TODOS
 > los campos de lista blanca (Tipo, Entregable, Descripción, Notas Reinicia, Estatus, Fecha de
@@ -145,32 +147,54 @@ Cabecera de tabla en **fila 8** (no fila 1). Filas 3–5 = leyenda de hitos; fil
 
 - Cabecera de tabla: `fill #3812CF` · `font #FFFFFF` · negrita · center/middle · alto 36 · wrap.
 - Banding datos: par `#FFFFFF` / impar `#EBEBEB` · alto 60 · valign top.
-- Zona calendario: `fill #EBEBEB` · negrita · `font #3812CF` · center/middle.
+- Zona calendario (encabezado meses/quincenas): `fill #EBEBEB` · negrita · `font #3812CF` · center/middle.
+- **Rejilla del calendario, celdas de datos (40# cols M–AJ = 13–36; 41# cols L–AI = 12–35): base
+  `#F2F2F2`, NUNCA blanco.** Son 24 quincenas (2 por mes). Los hitos se pintan ENCIMA del gris:
+  entrega `#70EED6`, validación `#EBE31B`. Al (re)dibujar el calendario, poner PRIMERO toda la rejilla
+  de datos en `#F2F2F2` y luego pintar los hitos desde las fechas (col 8 / col 9) — así ninguna celda
+  queda en blanco. Redibujar la rejilla COMPLETA (todas las filas de datos), no solo las que cambian.
 - **Estatus = desplegable con formato asociado al valor** → escribir solo el texto exacto del
   desplegable y el color sale solo (TERMINADO verde · EN PROCESO amarillo · PENDIENTE lila ·
   POSPUESTO gris · PARKING/CANCELADO según desplegable). No reaplicar color nunca.
 - Hitos Gantt: entrega Reinicia `#70EED6` ("Azul Claro Reinicia") · validación Cliente `#EBE31B`
   ("Amarillo Claro Reinicia"). Leyenda en filas 3–5.
+- **Agrupación visual por Épica (40# y 41#, columna 2):** colorear el FONDO de la celda de Épica por
+  grupos consecutivos de la misma épica, **alternando `#70EED6` y `#BFBFBF`** cada vez que cambia el
+  nombre de la épica (grupo 1 `#70EED6`, grupo 2 `#BFBFBF`, grupo 3 `#70EED6`…). Así se ven agrupadas
+  las filas de una misma épica. Recalcular al insertar/reordenar filas.
 - Bordes blancos `#FFFFFF` sólidos en todas las pestañas.
-- Log Cambios: cabecera `#3812CF`/`#FFFFFF`; fila 2 `#D9D0FB`/`#555555` itálica. **Filas de datos nuevas: se añaden por INSERCIÓN (`ZohoSheet_insert_row`) para que HEREDEN el formato de la fila anterior de la tabla — fondo, bordes, fuente Manrope, altura Y color de fuente (`#545454`, cuerpo de marca). NUNCA escribir en celdas vacías y reformatear a mano (produce filas descuadradas, p. ej. tipografía en negro).** Lavado base blanco.
+- Log Cambios: cabecera `#3812CF`/`#FFFFFF`; fila 2 `#D9D0FB`/`#555555` itálica. **EXCEPCIÓN a la
+  regla de inserción**: el Log NO es una tabla precreada con formato, así que sus entradas se
+  **añaden al final** (no "antes de la penúltima") y hay que **aplicar el formato explícitamente** —
+  fill `#EBEBEB`, bordes blancos `#FFFFFF` sólidos, Manrope, color de fuente `#545454`, altura ~48,
+  wrap — igual que las filas 6–14 existentes. Lavado base blanco.
 - Fuentes Manrope. Azul de marca `#3812CF` (no `#3812CB`).
 
 ---
 
 ## REGLAS DE ESCRITURA SEGURA
 
+0. **Estilo canónico SIEMPRE al escribir** (regla de oro): al escribir/insertar cualquier celda,
+   aplicar el estilo que le corresponde por la maqueta canónica (fondo, bordes, fuente Manrope,
+   color de fuente, alineación, altura). **NUNCA dejar el formato "por defecto"** por no poder leer
+   el existente vía API — "por defecto" es lo que dejó el Log en negro/blanco y el Config a medias.
+   Si el estilo canónico de una zona no está documentado, usar el de las filas/celdas equivalentes
+   ya existentes y, si hay duda, aplicar el de marca (Manrope, `#545454`) y avisar en el reporte.
 1. **Nunca `range.content.clear`** (resetea formato). Vaciar con `" "`, nunca `""` (error 2831).
 2. **No pisar fill/font de cabecera** (solo `font_name="Manrope"` seguro sobre ella).
 3. **`cells.content.set` plural, lotes ≤40.** Decimal con coma. Nunca `csvdata.set` para nº con coma.
 4. **Estatus = valor exacto del desplegable** (PENDIENTE · EN PROCESO · TERMINADO · POSPUESTO ·
    PARKING · CANCELADO / EN). El color es automático por el desplegable; no tocar formato.
-5. **Inserción de filas (§8):** insertar las necesarias ANTES de la penúltima fila del cuerpo (hereda
-   formato + desplegable); luego pegar. Una fila por llamada a `ZohoSheet_insert_row`. **Recalcular
-   índices** de tablas inferiores y revisar Gantt/hitos.
+5. **Inserción de filas (§8) — en CUALQUIER tabla de CUALQUIER pestaña:** NUNCA rellenar hasta el
+   final de la tabla. Insertar las filas necesarias **ANTES de la penúltima fila del cuerpo** (heredan
+   formato + desplegable + condicional), y solo después pegar. Una fila por llamada a
+   `ZohoSheet_insert_row`. **Recalcular índices** de las tablas inferiores y revisar Gantt/hitos.
+   **Excepción: Log de Cambios** (no hay tabla precreada) → añadir al final + aplicar formato explícito
+   (ver identidad visual).
 6. **Índices de Estatus/calendario por cabecera leída** (difiere entre 40# y 41#).
 7. **No pisar nunca** col 8 (¡sí se actualiza desde ClickUp!) — matiz: col 8 SÍ se escribe (due_date);
    las que NO se pisan son col 9 y col 11 (origen Cliente, solo lectura→push a ClickUp).
-8. **Log Cambios (y CUALQUIER tabla):** añadir filas por **INSERCIÓN** (`ZohoSheet_insert_row`, una por llamada) para que **hereden el formato de la fila anterior** — igual que §8. NUNCA escribir en celdas vacías y luego formatear a mano: fue lo que dejó las filas 13–14 del Log sin cuadrar. **No `Create_New_File`.**
+8. **Log de Cambios:** añadir la entrada al final y **aplicar el formato de fila explícitamente** (fill `#EBEBEB`, bordes blancos, Manrope, color `#545454`, altura ~48, wrap) para igualar las filas existentes — el Log no tiene cuerpo preformateado del que heredar. **Registrar SIEMPRE** una entrada al cierre de cada pasada con los cambios aplicados. **No `Create_New_File`.**
 
 ---
 
@@ -178,8 +202,9 @@ Cabecera de tabla en **fila 8** (no fila 1). Filas 3–5 = leyenda de hitos; fil
 
 Por fila: leer ClickUp. Campo con valor → sincronizar Sheet (gana ClickUp; nunca pisar ClickUp).
 **PBI** vacío en ClickUp → Claude escribe PBI afinado en Sheet **y** ClickUp + nota PO. **Épica**
-(col 2) vacía → Claude la deriva de la plataforma/tipo, consistente con el fichero (no objetivo de
-negocio; no toca ClickUp). Idempotente.
+(col 2), modelo HÍBRIDO: microcampaña → fase de funnel del campo ÉPICA de ClickUp; producto digital →
+**objetivo de negocio propuesto por Claude** (BORRADOR + validación PO), NUNCA la app/plataforma.
+Idempotente.
 
 ---
 
@@ -192,6 +217,25 @@ negocio; no toca ClickUp). Idempotente.
 - **Excedentes** (>7): Estatus Plan = "Pendiente Incluir" (la pestaña acumula histórico).
 - **Trazabilidad (col Notas de Ideas):** autoría Claude · fuente · URLs · "porqué" de una línea (si es
   proyecto similar, enlazar la tarea ClickUp de referencia).
+
+---
+
+## ORDEN Y AGRUPACIÓN POR ÉPICA
+
+- **Épica = objetivo de negocio** (modelo B) con **prefijo numérico** que fija el orden ("1. …",
+  "2. …"), para que el orden sea **intrínseco al dato** (ordenar por el texto de col 2 = ordenar por
+  épica). No se deriva de la app ni del ÉPICA funnel.
+- **Orden de filas dentro de CADA tabla (Implementación, Soporte Activo, Soporte Cerrado):**
+  **Épica (prefijo) → fecha de petición (`date_created`) → fecha de entrega (col 8).**
+- **`date_created`** (fecha de petición) se obtiene del **enlace a ClickUp incrustado en el
+  Entregable** (col 6, hyperlink `app.clickup.com/t/<task_id>`) → `task_id` determinista, sin
+  matching difuso. (El Plan no guarda el task_id en columna propia; se lee del hyperlink.)
+- **Reorden, recoloreado de Épica y redibujado del calendario van SIEMPRE juntos** (un cambio de
+  orden invalida las marcas del calendario, que son solo fondo). Al reordenar: mover la fila
+  completa, recomputar el color de Épica (fondo alternando `#70EED6`/`#BFBFBF` por grupo contiguo) y
+  redibujar el calendario (base `#F2F2F2` + hitos). Operación delicada → hacerla como paso dedicado.
+- **Reorden desfasado entre pestañas:** 40# y 41# pueden no estar alineadas (p. ej. Soporte Cerrado
+  va una fila desplazado); mapear SIEMPRE por Entregable, no por número de fila.
 
 ---
 
@@ -220,7 +264,12 @@ Primera fila pendiente por el contenido de la columna PBI. 🚧 criterio exacto 
   Reinicia/Notas** (refrescarla aunque solo cambie el estatus); 🔼 Sheet→ClickUp (validación + notas
   Cliente); 🟪 PBI vacío → generar; **recomputar Mes y marca de calendario** al cambiar la fecha.
 - **Fila huérfana** (en el Sheet, sin tarea en su lista fuente) → avisar al PO en el reporte y NO tocarla.
-- (Re)dibujar calendario de cols 8/9 con colores de hito.
+- **Tarea sin fila** (existe en General y está `done`, pero no tiene fila en Implementación) → **añadirla
+  a Implementación** por inserción, en BORRADOR, y avisar al PO para validar.
+- **Ticket de Soporte cerrado SIN fecha de cierre** → no se puede atribuir a un año → **dejar fuera de
+  Soporte Cerrado y avisar** (no adivinar el año).
+- **Al cierre: registrar SIEMPRE la entrada en el Log de Cambios** (paso obligatorio, no opcional).
+- (Re)dibujar calendario: base `#F2F2F2` en toda la rejilla de datos + hitos de cols 8/9 encima (entrega `#70EED6`, validación `#EBE31B`).
 - **Insertar filas (§8)** si falta espacio, ANTES de pegar. Persistir en lotes ≤40.
 
 ### PASO 4 — Ideas (solo Routine dominical)
@@ -303,6 +352,10 @@ de Cliente empujadas a ClickUp · Épica/PBI vacíos rellenados · ≤7 ideas en
 
 - **Pestañas v2:** 36# Portada · 40# Plan Proyecto · 41# Plan Proyecto Interno · 42# Ideas ·
   45# Objetivos Cliente · 43# Log Cambios · 44# Config.
+- **Config a DOS columnas:** cada referencia va en dos celdas — **Nombre** legible (para el usuario) ·
+  **ID/Resource** (que lee la máquina). Aplica a: Lista ClickUp General, Lista ClickUp Soporte, Lista
+  ClickUp Gestión, Carpeta ClickUp, Space ClickUp, Carpeta Workdrive (Plan) y Resource ID (fichero).
+  La skill **lee el ID de la columna ID**, nunca lo parsea de un texto "Nombre (ID)".
 - **IDs ClickUp Líder System:** General `211763746` · **Soporte `211763780`** (fuente de las tablas
   de Soporte) · Gestión `211763776`. Custom fields: PBI `6758065a-bd4f-4d7d-9a48-926e81fe343f` · TIPO
   `5bd9072e-deae-4352-b35b-bdbaa3cc216d` · ÉPICA funnel (NO para Épica de negocio)
@@ -318,6 +371,10 @@ de Cliente empujadas a ClickUp · Épica/PBI vacíos rellenados · ≤7 ideas en
 2. Sin API directa de ClickUp desde bash → solo MCP (en Routines).
 3. Zoho Sheet: `set_content_to_multiple_cells` ~50 máx (30–40); celda <~200 chars; decimal coma; vaciar con `" "`.
 4. Comentarios ClickUp: texto plano.
+4b. **El API de Zoho Sheet NO permite LEER el formato de una celda** (solo escribirlo). Por tanto,
+    nunca intentar "igualar" un formato existente leyéndolo: aplicar SIEMPRE el estilo canónico
+    que corresponde (regla de oro §0). Si hace falta uniformar, reescribir el estilo de todo el
+    rango de una vez.
 5. Roll-back: Historial de versiones de Zoho Sheet + Log de Cambios.
 
 ---
@@ -338,11 +395,19 @@ de Cliente empujadas a ClickUp · Épica/PBI vacíos rellenados · ≤7 ideas en
 | **v0.10** | 2026-06-28 | Néstor + Claude | **Endurecido el guardia; creación fuera de alcance.** La desatendida identifica el fichero por ID registrado (prompt/registro), NUNCA por búsqueda de nombre, y NUNCA crea: sin fichero por ID → reporta y omite. Motivo: la creación autónoma duplicó el Plan de LS y construyó mal (7 de 57 tareas, Config/Log vacíos, sin enlaces, fecha de validación inventada). Col 9 (validación): nunca inventar, vacía si no hay valor del Cliente. Creación de ciclo de vida (altas/bajas) reservada a v1.0. |
 | **v1.0** | 2026-06-28 | Néstor + Claude | **Gestión de ciclo de vida.** Localiza el Plan por el producto "Plan de Proyecto/Marketing [año]" de ClickUp (enlace en comentario) con respaldo en la carpeta Workdrive del proyecto; **regla del doble fallo** (solo crea si fallan ambos). Creación con la lógica ÚNICA de la supervisada (backlog completo, Config, Log, enlaces), en la **carpeta del proyecto, NUNCA en Seguimiento** (crea la carpeta si falta); deja el enlace en un comentario de ClickUp. **Cambio de año:** crea el fichero del nuevo año sembrado con productos vivos (+ cerrados si la implementación inicial sigue abierta), nota al PO. **Limpieza vs ClickUp: gana ClickUp** (re-añade lo vivo + nota al PO de borrar en ClickUp). **Baja:** carpeta archivada → CONGELADO. |
 | **v1.1** | 2026-06-29 | Néstor + Claude | **Reconciliación multi-tabla** (fallo de alcance detectado en la pasada del 29/06: solo se reconciliaba General y quedaban sin tocar las filas de Soporte, 39–79). Cada tabla del Plan tiene su fuente: Implementación←General; Soporte Activo←Soporte (no cerradas); Soporte Cerrado←Soporte (cerradas en el año del Plan; el resto, histórico del año de cierre). Reflejo completo incluye refrescar Notas Reinicia aunque solo cambie el estatus. Fila del Sheet sin tarea en su lista fuente → avisar al PO y no tocar. Añadido el ID de Soporte LS 211763780. |
+| **v1.7** | 2026-07-04 | Néstor + Claude | **Orden y agrupación por Épica.** Épica = objetivo de negocio con prefijo numérico (orden intrínseco). Filas ordenadas por Épica → `date_created` (fecha de petición, leída del hyperlink de ClickUp del Entregable) → fecha de entrega, dentro de cada tabla. Reorden + recoloreado de Épica + redibujado de calendario van juntos (paso dedicado); mapear por Entregable entre pestañas desfasadas. |
+| **v1.6** | 2026-07-04 | Néstor + Claude | **Regla de oro de formato: estilo canónico SIEMPRE al escribir.** Al escribir o insertar cualquier celda, aplicar el estilo que le corresponde (fondo, bordes, Manrope, color `#545454`, alineación, altura); nunca dejar el formato "por defecto" por no poder leer el existente — es lo que dejó el Log en negro/blanco y el Config a medias. |
+| **v1.5** | 2026-07-04 | Néstor + Claude | **Épica híbrida (se deshace el "alinear a la app" de v0.8) + Config a dos columnas.** Épica: microcampaña → fase de funnel (campo ÉPICA de ClickUp, lista blanca); producto digital → objetivo de negocio propuesto por Claude (BORRADOR + validación PO), NUNCA la app/plataforma. Config: cada referencia en dos columnas (Nombre legible · ID/Resource que lee la máquina) para 7 campos; la skill lee el ID de su columna, sin parsear. |
+| **v1.4** | 2026-07-04 | Néstor + Claude | **Base gris de la rejilla del calendario.** Las celdas de datos del calendario (40# cols M–AJ; 41# cols L–AI) llevan fondo `#F2F2F2` por defecto (no blanco); los hitos (`#70EED6` entrega / `#EBE31B` validación) se pintan encima. Al (re)dibujar, poner primero toda la rejilla de datos en `#F2F2F2` y luego los hitos; redibujar la rejilla completa. |
+| **v1.3** | 2026-07-04 | Néstor + Claude | **Inserción antes de la penúltima (todas las tablas) + agrupación de Épica + reglas de la 1ª validación multi-tabla.** (a) En CUALQUIER tabla de cualquier pestaña, nunca rellenar hasta el final: insertar antes de la penúltima fila y pegar (el Log es la excepción: añadir al final + aplicar formato explícito, porque no hay cuerpo preformateado). (b) Agrupación visual por Épica en col 2 de 40#/41#: fondo alternando `#70EED6`/`#BFBFBF` cada vez que cambia la épica. (c) Tarea `done` en General sin fila → añadir a Implementación en BORRADOR + avisar. (d) Ticket de Soporte cerrado sin fecha → dejar fuera + avisar. (e) Registrar SIEMPRE en el Log al cierre (la 1ª pasada multi-tabla se lo saltó). Corregidos a mano en LS: realineación de Descripción en 40# (filas 70–79) y las dos entradas del Log que faltaban. |
 | **v1.2** | 2026-06-29 | Néstor + Claude | **Filas nuevas por herencia de formato.** Toda fila nueva (Log y cualquier tabla) se añade por INSERCIÓN (`ZohoSheet_insert_row`), heredando el formato de la fila anterior — NUNCA escribiendo en celdas vacías + reformateando a mano (que dejó las filas 13–14 del Log de PRUEBA-2 sin cuadrar). Generaliza §8 al Log. |
 
 ---
 
 ## PENDIENTES DE EVOLUCIÓN
+- **Limpiar filas placeholder vacías** sobrantes bajo las tablas (p. ej. Soporte Cerrado) tras sembrar/insertar.
+- Añadir el **bloque de versión estándar** (cabecera `> **Versión vigente…**` + tabla `## Versiones`) a la
+  skill hermana `plan-proyecto-zoho-sheet-reinicia`, para que el script de sync pueda protegerla por versión.
 - Confirmar el **filtro de "cerrada en el año"** del Soporte (campo de fecha de cierre / date_closed que expone el MCP) en la 1ª pasada multi-tabla.
 - **Cablear la creación unificada** (que la desatendida ejecute el procedimiento de creación de la
   supervisada, no una versión propia) ANTES de habilitar creación autónoma en producción. Es la
