@@ -15,7 +15,7 @@ description: >
 
 # SKILL: Sincronización de Skills a GitHub — Reinicia
 
-> **Versión vigente: v1.1 — 2026-07-05**
+> **Versión vigente: v1.4 — 2026-07-05**
 
 ## Propósito
 
@@ -54,26 +54,59 @@ Project para generar el ZIP.
 Pídele a Claude, en ese chat:
 
 > "Empaqueta todas las skills de /mnt/skills/user en un ZIP, cada una en su subcarpeta con su
-> SKILL.md, y pásamelo para descargar."
+> SKILL.md, directamente en la raíz del ZIP —sin meterlas dentro de ninguna carpeta contenedora
+> adicional—, y pásamelo para descargar."
 
 Descarga el ZIP resultante.
+
+> ⚠️ **Gotcha — el propio Claude debe autoverificar la estructura antes de entregarlo.** El fallo de
+> origen (jul-2026, ver Paso 2 más abajo) fue que Claude generó el ZIP copiando primero a una carpeta
+> local `skills-reinicia/` y comprimiendo esa carpeta entera, lo que dejó un nivel contenedor de más
+> dentro del ZIP (`skills-reinicia/<skill>/SKILL.md` en vez de `<skill>/SKILL.md` en la raíz). Antes de
+> presentar el ZIP para descarga, Claude debe correr `unzip -l` (o equivalente) sobre el fichero
+> generado y comprobar que las primeras entradas son directamente carpetas de skill (`actas-reinicia/`,
+> `marca-reinicia/`...), NO un único directorio que las envuelva a todas. Si al comprimir se usó una
+> carpeta de trabajo intermedia (p. ej. `/home/claude/skills-reinicia/`), hay que comprimir su
+> **contenido** (`zip -r salida.zip *` estando dentro de ella), no la carpeta en sí (`zip -r salida.zip
+> skills-reinicia`) — esta última es precisamente la que introduce el nivel de más.
 
 > 📌 **Convención fija — nombre del fichero.** El ZIP se llama siempre `skills-reinicia.zip` (Claude
 > lo genera con ese nombre de forma consistente). No hace falta pedirlo ni confirmarlo cada vez;
 > si algún día llega con otro nombre, renómbralo antes de descomprimir en el Paso 2.
+> Importante: el **nombre del fichero** (`skills-reinicia.zip`) es independiente de la **estructura
+> interna** — el nombre no debe reutilizarse como carpeta contenedora dentro del ZIP (ver gotcha arriba).
 
 ### Paso 2 — Preparar la carpeta de exportación
 
 ```bash
 rm -rf ~/Downloads/claude-skills-export
-# descomprimir el ZIP nuevo en ~/Downloads/claude-skills-export
-# (cada skill debe quedar como subcarpeta con su SKILL.md dentro)
+mkdir -p ~/Downloads/claude-skills-export
+ZIP=$(ls -t ~/Downloads/skills-reinicia*.zip | head -1)
+unzip -q "$ZIP" -d ~/Downloads/claude-skills-export
 ```
+
+> 📌 **Por qué el `ls -t ... | head -1` y no `skills-reinicia.zip` a pelo.** El navegador puede
+> renombrar el fichero si ya existe uno igual en Descargas (`skills-reinicia (1).zip`,
+> `skills-reinicia (2).zip`...). Este comando coge siempre el más reciente que empiece por
+> `skills-reinicia`, así el nombre exacto no importa.
 
 > ⚠️ **Gotcha — nada de `.md` sueltos.** La carpeta de exportación debe tener cada skill como
 > subcarpeta con su `SKILL.md`. Un `.md` suelto en la raíz de la exportación se copiaría a `skills/`
 > como basura. Descomprimir el ZIP tal cual deja la estructura correcta; no mezcles ahí ficheros
 > `.md` descargados a mano.
+
+> ⚠️ **Gotcha — nada de carpeta contenedora de más.** Tras descomprimir, `~/Downloads/claude-skills-export`
+> debe contener las carpetas de skills **directamente** (`actas-reinicia/`, `marca-reinicia/`...), NO un
+> único directorio envolvente (p. ej. `skills-reinicia/`) que a su vez contenga esas carpetas. Compruébalo
+> con `ls ~/Downloads/claude-skills-export` antes del Paso 3: si ves una sola carpeta ahí en vez de ~30,
+> el ZIP se generó mal (carpeta contenedora de más) — pide que se regenere sin ese nivel antes de
+> importar. Si no lo detectas a tiempo, el import crea `skills/<contenedora>/<skill>/SKILL.md` en vez de
+> `skills/<skill>/SKILL.md`, y `install-symlinks.sh` la enlaza como si fuera una skill real.
+>
+> Incidente que originó esta guarda (jul-2026): un ZIP con carpeta contenedora `skills-reinicia/` generó
+> 30 rutas anidadas de más (`skills/skills-reinicia/*/SKILL.md`) y un symlink huérfano `skills-reinicia`
+> en `~/.claude/skills`. `check-drift.sh` no lo detectó porque solo compara nombres de entrada en
+> `skills/` vs `~/.claude/skills`, no la estructura interna de cada una.
 
 ### Paso 3 — Importar al repo
 
@@ -138,3 +171,6 @@ bash scripts/build-zips.sh
 |---|---|---|---|
 | v1.0 | 2026-06-29 | Néstor + Claude | Versión inicial. Skill-guía del flujo claude.ai→GitHub: snapshot fuera del Project, import-from-claude-ai.sh con guardas, gotchas (.md sueltos, Project congelado, anti-rollback) y verificaciones. Remite a docs/sync-strategy.md como fuente canónica. |
 | v1.1 | 2026-07-05 | Néstor + Claude | Fijada la convención: el ZIP del snapshot se llama siempre `skills-reinicia.zip`. Nota añadida en el Paso 1 para no tener que confirmarlo en cada sincronización. |
+| v1.2 | 2026-07-05 | Néstor + Claude | Paso 2 corregido: el bloque solo tenía un comentario, no un comando real de descompresión. Sustituido por `unzip` real, localizando el ZIP con `ls -t ~/Downloads/skills-reinicia*.zip \| head -1` para tolerar renombrados por descarga duplicada (`(1)`, `(2)`...). |
+| v1.3 | 2026-07-05 | Néstor + Claude | Nueva guarda en el Paso 2: comprobar que la exportación no tenga una carpeta contenedora de más (p. ej. `skills-reinicia/` envolviendo las skills) antes de importar. Incidente: un ZIP mal generado creó `skills/skills-reinicia/*/SKILL.md` en el repo y un symlink huérfano `skills-reinicia`; `check-drift.sh` no lo detectó porque no valida la estructura interna. |
+| v1.4 | 2026-07-05 | Néstor + Claude | Cortado el fallo de raíz en el Paso 1: instrucción a Claude reformulada para exigir explícitamente "sin carpeta contenedora adicional", más gotcha obligando a Claude a autoverificar la estructura del ZIP (`unzip -l`) antes de entregarlo, y aclaración de que comprimir el *contenido* de la carpeta de trabajo (`zip -r salida.zip *`) no es lo mismo que comprimir la carpeta en sí (`zip -r salida.zip skills-reinicia`) — esta última fue la causa real del incidente de la v1.3. |
