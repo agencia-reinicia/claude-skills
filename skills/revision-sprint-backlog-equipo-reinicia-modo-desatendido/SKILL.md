@@ -1,16 +1,11 @@
 ---
 name: revision-sprint-backlog-equipo-reinicia-modo-desatendido
-description: >
-  Versión desatendida (cloud) de revision-sprint-backlog-equipo-reinicia para ejecución en Claude Code Routines a las 06:00 los días laborables (lun–vie, Europe/Madrid). Procesa los Sprint Backlogs del sprint vigente sin intervención humana aplicando reglas deterministas donde la supervisada pediría confirmación al PO. Al terminar, postea un reporte en Zoho Cliq (canal Metodología, ID T45816000000085077).
-
-  Actívala SOLO cuando se ejecute la Routine programada o cuando un humano pida explícitamente "ejecuta la revisión desatendida". Para procesamiento supervisado interactivo, usa la skill hermana revision-sprint-backlog-equipo-reinicia.
-
-  v1.7 (07/06/2026): antes de marcar un rename, normaliza la fórmula K canónica y el carácter invisible y detecta renames de forma simétrica (prefijo o sufijo, no solo sufijo). El reporte a Cliq usa el nombre EXACTO del fichero (sin apellidos inventados) y describe los flags solo verbatim. Sincronizada con la supervisada v3.10.
+description: "Versión desatendida (cloud) de revision-sprint-backlog-equipo-reinicia para ejecución en Claude Code Routines a las 06:00 los días laborables (lun–vie, Europe/Madrid). Procesa los Sprint Backlogs del sprint vigente sin intervención humana aplicando reglas deterministas donde la supervisada pediría confirmación al PO. Al terminar, postea un reporte en Zoho Cliq (canal Metodología, ID T45816000000085077). Actívala SOLO cuando se ejecute la Routine programada o cuando un humano pida explícitamente \"ejecuta la revisión desatendida\". Para procesamiento supervisado interactivo, usa la skill hermana revision-sprint-backlog-equipo-reinicia. v1.7 (07/06/2026): antes de marcar un rename, normaliza la fórmula K canónica y el carácter invisible y detecta renames de forma simétrica (prefijo o sufijo, no solo sufijo). El reporte a Cliq usa el nombre EXACTO del fichero (sin apellidos inventados) y describe los flags solo verbatim. Sincronizada con la supervisada v3.10."
 ---
 
 # SKILL: Revisión de Sprint Backlog — MODO DESATENDIDO (cloud Routine)
 
-> **Versión vigente: v1.7 — 07/06/2026** · ver changelog al final (`## Versiones`)
+> **Versión vigente: v1.8 — 05/07/2026** · ver changelog al final (`## Versiones`)
 
 ## Propósito
 
@@ -1354,7 +1349,7 @@ Tras las 4 inserciones, `fila_metod_header` queda desplazada en +4, y también `
 | n | `Fecha inicio Sprint` | `=FECHA(2026;5;7)` | 07/05/2026 |
 | n+1 | `Fecha fin Sprint` | `=FECHA(2026;5;27)` | 27/05/2026 |
 | n+2 | `Días laborables totales Sprint` | `=DIAS.LAB(D_n;D_n+1)` | 15 |
-| n+3 | `Días laborables transcurridos` | `=DIAS.LAB(D_n;MIN(HOY();D_n+1))` | (dinámico según HOY()) |
+| n+3 | `Días laborables transcurridos` | `=MIN(DIAS.LAB(D_n;HOY());D_n+2)` | (dinámico según HOY()) |
 
 ⚠️ Las fechas de inicio/fin del sprint se actualizarán en cada sprint nuevo. Mantener `FECHA(YYYY;MM;DD)` con los valores reales del sprint actual.
 
@@ -2329,6 +2324,7 @@ Cada mensaje de reporte incluye al final una línea con `Fuente: skill ... v1.5 
 | **v1.6 (desatendido)** | 2026-06-06 | Néstor + Claude | **Apertura del automatismo al Equipo (deroga la allowlist de piloto).** Override 1.2: de allowlist `[Fabián, Paolo]` a **lista de exclusión** — procesa todos los AUTOIA del patrón 1.1 (Equipo Operativo completo + POs Pablo Losada y Óscar Díez) **excepto** `EXCLUIDOS=["Síntaris"]` (se omite con match case/acento-insensible y se reporta en Cliq, por la casuística de la columna AK "Situación" aún no soportada → se sigue procesando supervisado). Altas nuevas auto-incluidas; sin allowlist de inclusión. Sección «Alcance» actualizada. `synced_from_supervised_version: v3.9` (la supervisada no cambia: no tiene allowlist). |
 | **v1.6.1 (desatendido)** | 2026-06-07 | Néstor + Claude | **Limpieza de consistencia (sin cambio de lógica).** Eliminados los pins a un sprint/carpeta concretos que contradecían la detección dinámica: «Sprint objetivo» y checklist pasan a «sprint vigente» (Override 1.0); ejemplo fechado y ejemplo de nombre de fichero neutralizados; el prompt documentado pasa de «allowlist de piloto si está activa» a «lista de exclusión (Override 1.2)». Validado el alcance abierto en Run now del 07/06/2026 (9 detectados · Síntaris omitido · 8 procesados). `synced_from_supervised_version: v3.9`. |
 | **v1.7 (desatendido)** | 2026-06-07 | Néstor + Claude | **Robustez de match y honestidad del reporte (tras el Run now de respaldo del 07/06).** (1) Antes de marcar `TIEMPOS_RENAME_PENDIENTE`: normalizar la fórmula K a la canónica estructurada `=SUMIF(Table1[[#All];[Column20]];Tabla2[@Concepto];Table1[[#All];[Horas Traqueadas]])` (⛔ nunca rangos A1 truncados tipo `$Data.$T$2:$T$33`, que dan K=0 falso cuando la entry cae fuera del rango — caso Óscar Díez f15, entries en filas ~60/67) y normalizar carácter invisible (NFC/ASCII) si Tiempos y Data son visualmente idénticos pero SUMAR.SI=0. (2) Detección de rename SIMÉTRICA: substring **o** superstring tras normalizar espacios — cubre prefijo/cualificador (`Implementación Modelo de Datos` ⊃ `Modelo de Datos`), no solo sufijo; corrige el caso José f21 que el detector v1.6 dejó en `PRODUCTO_NO_RESUELTO` + huérfana duplicada. En desatendido se sigue solo flaggeando (nunca auto-fusión). (3) Reporte Cliq honesto: nombre de persona = token EXACTO del fichero `Excel-Clickup-Sprint-NN-AA-<Nombre>` (prohibido inventar apellidos) y descripción de flags solo verbatim. `synced_from_supervised_version: v3.10`. |
+| v1.8 | 2026-07-05 | Néstor + Claude | Unificación cosmética de la fórmula "Días laborables transcurridos" a la forma canónica =MIN(DIAS.LAB(D_n;HOY());D_n+2). Equivalente funcional a la anterior =DIAS.LAB(D_n;MIN(HOY();D_n+1)); sin cambio de comportamiento. Alinea el texto de la skill con el string canónico de referencia. |
 
 ### Historial heredado de la skill supervisada origen
 

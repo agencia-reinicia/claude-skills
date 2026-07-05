@@ -1,16 +1,11 @@
 ---
 name: revision-sprint-backlog-equipo-reinicia
-description: >
-  Skill para revisar y actualizar periódicamente los Sprint Backlogs operativos del Equipo de Reinicia. Cruza horas reales de ClickUp con el plan comprometido: repuebla la hoja Data con time entries, aplica renames en Tiempos con validación previa del PO, inserta huérfanas (fuera de plan, soporte, BUGs, forms) en el bloque principal, mantiene el bloque Metodología y Gestión (Tabla21) y registra cambios en Log de Cambios.
-
-  Actívala cuando el PO líder pida "actualiza el AUTOIA de [persona/equipo]", "actualiza los sprint backlogs", "revisa el sprint backlog operativo" o cuando se ejecute la tarea programada semanal (Routine de Claude Code, modo desatendido hermano).
-
-  v3.10 (07/06/2026): antes de proponer un rename al PO, normaliza la fórmula K canónica y el carácter invisible y detecta renames de forma simétrica (prefijo o sufijo, no solo sufijo). Sincronizada con la desatendida v1.7.
+description: "Skill para revisar y actualizar periódicamente los Sprint Backlogs operativos del Equipo de Reinicia. Cruza horas reales de ClickUp con el plan comprometido: repuebla la hoja Data con time entries, aplica renames en Tiempos con validación previa del PO, inserta huérfanas (fuera de plan, soporte, BUGs, forms) en el bloque principal, mantiene el bloque Metodología y Gestión (Tabla21) y registra cambios en Log de Cambios. Actívala cuando el PO líder pida \"actualiza el AUTOIA de [persona/equipo]\", \"actualiza los sprint backlogs\", \"revisa el sprint backlog operativo\" o cuando se ejecute la tarea programada semanal (Routine de Claude Code, modo desatendido hermano). v3.10 (07/06/2026): antes de proponer un rename al PO, normaliza la fórmula K canónica y el carácter invisible y detecta renames de forma simétrica (prefijo o sufijo, no solo sufijo). Sincronizada con la desatendida v1.7."
 ---
 
 # SKILL: Revisión de Sprint Backlog del Equipo Operativo — Reinicia
 
-> **Versión vigente: v3.10 — 07/06/2026** · ver changelog al final (`## Versiones`)
+> **Versión vigente: v3.11 — 05/07/2026** · ver changelog al final (`## Versiones`)
 
 ## Propósito
 
@@ -1202,7 +1197,7 @@ Tras las 4 inserciones, `fila_metod_header` queda desplazada en +4, y también `
 | n | `Fecha inicio Sprint` | `=FECHA(2026;5;7)` | 07/05/2026 |
 | n+1 | `Fecha fin Sprint` | `=FECHA(2026;5;27)` | 27/05/2026 |
 | n+2 | `Días laborables totales Sprint` | `=DIAS.LAB(D_n;D_n+1)` | 15 |
-| n+3 | `Días laborables transcurridos` | `=DIAS.LAB(D_n;MIN(HOY();D_n+1))` | (dinámico según HOY()) |
+| n+3 | `Días laborables transcurridos` | `=MIN(DIAS.LAB(D_n;HOY());D_n+2)` | (dinámico según HOY()) |
 
 ⚠️ Las fechas de inicio/fin del sprint se actualizarán en cada sprint nuevo. Mantener `FECHA(YYYY;MM;DD)` con los valores reales del sprint actual.
 
@@ -2120,6 +2115,7 @@ Si recibes un error tipo `"Sorry! Only 50 cells can be updated at once"` o `414 
 | **v3.8** | 2026-05-31 | Néstor + Claude | **Corrección tras el primer Run now del piloto (Fabián y Paolo, Sprint 7-26).** El dry-run desatendido escribió el doble sello con (a)/(a-bis) en parcial, "conservando estatus/enlaces del pase previo" (inexistente en el primer pase del sprint) — la misma clase de fallo del 29/05 que la compuerta debe impedir. Cambios: (1) **Ejecución obligatoria en cada pase** de Mejoras 6 (Col D) y 11 (HYPERLINK) fila a fila desde `resolucion[]`; prohibido "conservar del pase previo"; los conteos miden ESTE pase. (2) **Compuerta DoD sin "sello parcial"**: o (a)–(d) al 100% y se sella, o el pase queda sin cerrar; documentar un parcial NO autoriza a sellar; como Mejora 6/11 son deterministas, lo correcto es ejecutarlas. (3) **Cliq por `unique_name`** `reiniciametodologa` (el channel ID `T45816000000085077` queda de referencia). Propagada a `...-modo-desatendido` v1.4. |
 | **v3.9** | 2026-06-06 | Néstor + Claude | **Lote de endurecimiento tras validar el piloto desatendido** (Fabián+Paolo, Sprint 7-26, semana completa de cierres limpios; baches de conector gestionados). Cambios compartidos con la desatendida: (1) **Mejora 6 vía `filter_tasks` por tag de sprint en lote** en vez de N× `clickup_get_task` — menos llamadas y mucha menos exposición a los 502 transitorios (validado en el piloto: absorbió los 502 sin abortar el pase); `get_task` queda solo para tareas que no aparezcan en el filtro. (2) **Sello previo invalidado si la DoD falla**: si la compuerta no pasa pero hay sello previo en `E1`/`M1`, se sustituye por `NO CERRADA — [fecha] — DoD incompleta` (no se deja el timestamp viejo) + `DOD_CIERRE` en Log; en supervisado se avisa al PO. Evita el fichero "cerrado" falso heredado. (3) **Documentados en la sección de relación con el desatendido** los comportamientos propios de la hermana (resiliencia de conector backoff/2º run, alcance acotado de Mejora 6 diario/semanal, `routine_id` en PASO 9), que NO aplican a esta supervisada a demanda. Propagada a `...-modo-desatendido` v1.5. |
 | **v3.10** | 2026-06-07 | Néstor + Claude | **Robustez de match (tras el Run now de respaldo del 07/06 en el hermano desatendido).** (1) Antes de decidir un rename: normalizar la fórmula K a la canónica estructurada `=SUMIF(Table1[[#All];[Column20]];Tabla2[@Concepto];Table1[[#All];[Horas Traqueadas]])` (⛔ nunca rangos A1 truncados tipo `$Data.$T$2:$T$33`, que dan K=0 falso cuando la entry cae fuera del rango — caso Óscar Díez f15, entries en filas ~60/67) y normalizar carácter invisible (NFC/ASCII) si Tiempos y Data se ven idénticos pero SUMAR.SI=0. (2) Detección de rename SIMÉTRICA: substring **o** superstring tras normalizar espacios — cubre prefijo/cualificador (`Implementación Modelo de Datos` ⊃ `Modelo de Datos`), no solo sufijo; corrige el caso José f21 que quedó sin resolver + huérfana duplicada. En supervisado el candidato se propone al PO (no se auto-aplica). Propagada a `...-modo-desatendido` v1.7. |
+| v3.11 | 2026-07-05 | Néstor + Claude | Unificación cosmética de la fórmula "Días laborables transcurridos" a la forma canónica =MIN(DIAS.LAB(D_n;HOY());D_n+2). Equivalente funcional a la anterior =DIAS.LAB(D_n;MIN(HOY();D_n+1)); sin cambio de comportamiento. Alinea el texto de la skill con el string canónico de referencia. |
 
 ---
 
