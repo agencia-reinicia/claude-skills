@@ -5,7 +5,7 @@ description: "Usa esta skill cuando el usuario suba una transcripción de una ll
 
 # Skill: Análisis de Llamadas con Cliente — Reinicia
 
-> **Versión vigente: v1.6 — 20/06/2026** · ver changelog al final (`## Versiones`)
+> **Versión vigente: v1.7 — 07/07/2026** · ver changelog al final (`## Versiones`)
 
 ## Descripción general
 
@@ -231,7 +231,7 @@ Leer primero la skill de docx:
 /mnt/skills/public/docx/SKILL.md
 ```
 
-Usar Node.js con `docx` para generar el fichero con el mismo stack que la skill de actas.
+Usar Node.js con `docx` para generar el fichero con el mismo stack que la skill de actas — **incluido el embebido de fuentes Manrope**. Seguir la subsección canónica **"Embebido de fuentes Manrope (OBLIGATORIO)"** de `marca-reinicia`: leer los estáticos `Manrope-Regular.ttf` / `Manrope-Bold.ttf` del ZIP de Workdrive, declarar el array `fonts:` con **dos nombres distintos** (`Manrope Regular` / `Manrope Bold`) en el constructor `Document`, y **tras generar ejecutar `patch_fonts.py`** (fontKey en mayúsculas + `<w:embedTrueTypeFonts/>`). Verificar con `pdffonts` que ambas Manrope salen `emb=yes`.
 
 ### Nombre del fichero
 
@@ -435,17 +435,30 @@ Usar los mismos valores que la skill de actas:
 | Color texto cuerpo | `#545454` |
 | Color headings H1 | `#0D0D0D` |
 | Color headings H2 | `#0D0D0D` |
-| Fuente | `Manrope Regular` / `Manrope Bold` (familias canónicas; respaldo: `Manrope` si no resuelven) |
+| Fuente | `Manrope Regular` / `Manrope Bold` (familias canónicas, **embebidas**; respaldo `Manrope` solo si no se puede embeber) |
 | H1 | 36pt |
 | H2 | 18pt |
 | Cuerpo | 12pt |
 | Logotipo | `/home/claude/logo_reinicia.png` |
+| Fuentes embebidas | `manrope/static/Manrope-Regular.ttf` + `Manrope-Bold.ttf` — del ZIP de Workdrive (resource_id `a2xhx44f0cbde39da4b6ba1186a213b92ebfd`); usar los estáticos, no la variable. Ver `marca-reinicia`. |
 
 Ejecutar con:
 ```bash
+# 0) PRERREQUISITO — logo y fuentes Manrope en /home/claude (ver "Embebido de fuentes Manrope" en marca-reinicia):
+#    logo_reinicia.png  +  manrope/static/Manrope-Regular.ttf  y  Manrope-Bold.ttf (estáticos del ZIP de Workdrive)
 cd /home/claude && node build_analisis.js
 # build_analisis.js escribe /home/claude/<FILENAME>.docx — validar ESE fichero, no "output.docx"
+
+# 1) Parche de fuentes embebidas (OBLIGATORIO): fontKey en mayúsculas + <w:embedTrueTypeFonts/>
+python3 patch_fonts.py "/home/claude/<FILENAME>.docx"
+
+# 2) Validación estructural
 python3 /mnt/skills/public/docx/scripts/office/validate.py "/home/claude/<FILENAME>.docx"
+
+# 3) Sanity de fuentes embebidas — deben aparecer Manrope-Regular y Manrope-Bold con emb=yes:
+soffice --headless --convert-to pdf "/home/claude/<FILENAME>.docx" --outdir /home/claude >/dev/null 2>&1 \
+  && pdffonts "/home/claude/<FILENAME>.pdf" | grep -i manrope \
+  || echo "⚠️ REVISAR: Manrope no aparece embebida en el render"
 ```
 
 ---
@@ -588,3 +601,4 @@ Nunca guardar sin confirmación explícita del usuario. Proponer siempre la ruta
 | v1.4 | 20/06/2026 | Néstor + Claude | Replicado el destino Amigo Reinicia (opción de menú, Opción C de búsqueda con ruta/ID verificados "Amigos Reinicios" `62rwt1fabec685e80405c8a1e79be2046fe48`, enrutado del comentario a `Gestión [Mes] Marketing [REINICIA]` lista `3350803`). Añadida la regla de idioma de salida (idioma del cliente; preguntar si no hay certeza). |
 | v1.5 | 20/06/2026 | Néstor + Claude | Confidencialidad del perfil reptil/emocional: banner rojo `#D14351` (color de marca) con texto blanco "CONFIDENCIAL · USO INTERNO REINICIA · NO COMPARTIR CON EL CLIENTE" arriba del cuerpo, pie de página en todas las hojas, sufijo `-INTERNO` en el nombre, aviso de uso interno en el resumen de chat y nota de datos personales en Notas de diseño. Corregida la ubicación de guardado a `01. Seguimiento › Actas de Reuniones` (los análisis se guardan junto a las actas; árbol interno sin acceso del cliente). |
 | v1.6 | 20/06/2026 | Néstor + Claude | Alineada la fuente a las familias canónicas `Manrope Regular` / `Manrope Bold` en los fragmentos del `.docx` y la tabla de identidad (banner y pie pasan a `Manrope Bold`), con regla de respaldo a `Manrope` si esas familias no resuelven en el entorno de render. Actas no cambia (ya las usaba). Sin cambio de motor: la generación real hereda del stack de actas. |
+| v1.7 | 07/07/2026 | Néstor + Claude | **Embebido de fuentes Manrope** en el `.docx` (siguiendo la sección canónica de `marca-reinicia`): sourcing de los estáticos `Manrope-Regular.ttf`/`Manrope-Bold.ttf` del ZIP de Workdrive, array `fonts:` de dos nombres distintos en el `Document`, `patch_fonts.py` obligatorio tras generar y verificación con `pdffonts`. Bloque de ejecución del Paso 4 ampliado (prerrequisito de fuentes + parche + pdffonts) y filas de fuente/fuentes embebidas en la tabla de identidad. Cierra la brecha con actas v1.5 (el "respaldo si no resuelven" queda como último recurso). |

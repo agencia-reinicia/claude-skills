@@ -7,7 +7,7 @@ description: >
 
 # SKILL: Sprint Planning — MODO DESATENDIDO (Resumen de estatus) — Reinicia
 
-> **Versión vigente: v0.3 — 21/06/2026** · ver changelog al final (`## Versiones`)
+> **Versión vigente: v0.4 — 07/07/2026** · ver changelog al final (`## Versiones`)
 
 > ⚠️ **Modo desatendido.** Esta skill se ejecuta sin humano delante. Donde la skill
 > supervisada pediría confirmación al PO, aquí se aplica una **regla determinista** (sección 5).
@@ -140,7 +140,24 @@ valor real se toma siempre de la cabecera (soporta sprints de 4-5 semanas de ver
 ### Marca Reinicia (PDF)
 - Logo real: Workdrive resource `okcqm65a2ea3684c2473583559fb91f0c3a59` → extraer
   `word/media/image3.png` (741×138 px).
-- Fuente Manrope (VF de Google Fonts, instanciar Regular/Bold/Light con fontTools).
+- Fuente Manrope **embebida vía estáticos del ZIP de Workdrive** (resource_id
+  `a2xhx44f0cbde39da4b6ba1186a213b92ebfd`): descargar con `ZohoWorkdrive_downloadWorkDriveFile`,
+  decodificar base64, descomprimir en `/home/claude/manrope/` y registrar en reportlab los estáticos
+  por peso — `static/Manrope-Regular.ttf`, `static/Manrope-Bold.ttf`, `static/Manrope-Light.ttf`.
+  **NO instanciar la variable con fontTools** (paso innecesario y frágil en desatendido): los estáticos
+  ya vienen por peso y reportlab los embebe (subset) en el PDF. Registro:
+
+  ```python
+  from reportlab.pdfbase import pdfmetrics
+  from reportlab.pdfbase.ttfonts import TTFont
+  pdfmetrics.registerFont(TTFont("Manrope",       "/home/claude/manrope/static/Manrope-Regular.ttf"))
+  pdfmetrics.registerFont(TTFont("Manrope-Bold",  "/home/claude/manrope/static/Manrope-Bold.ttf"))
+  pdfmetrics.registerFont(TTFont("Manrope-Light", "/home/claude/manrope/static/Manrope-Light.ttf"))
+  pdfmetrics.registerFontFamily("Manrope", normal="Manrope", bold="Manrope-Bold")  # si se usan <b> en Paragraph
+  ```
+
+  Mismo ZIP de origen que actas/marca, pero el motor aquí es **reportlab**, no docx-js: no mezclar con
+  la receta de embebido de `marca-reinicia` (esa es para `.docx` con `patch_fonts.py`).
 - Colores: azul `#3812CF`, lila `#D9D0FB`, gris fila `#EBEBEB`, gris texto `#545454`, coral
   `#D14351`, verde delta `#1f8a5b`. Bordes blancos gruesos, alternancia blanco/gris, sin zebra adicional.
 
@@ -339,6 +356,7 @@ Informe de estatus Sprint NN-AA (PDF) en Workdrive:
 | **v0.1** | 2026-06-07 | Néstor + Claude | Esqueleto inicial. Método task-ID + altas por barrido, regla de semana jue→mié, orden kanban, tendencia sin sin-estatus, vista por persona, guardado en Workdrive + comentario + aviso Cliq. |
 | **v0.2** | 2026-06-07 | Néstor + Claude | TASK_REUNION_POS fijado (869bt8w6w). Cron viernes 06:07 (~04:07 Madrid en verano) con aviso DST. Columnas de estatus auto-detectadas desde la cabecera → soporta sprints de 3/4/5 semanas sin tocar la skill, con guarda anti-fallo-silencioso. |
 | **v0.3** | 2026-06-07 | Néstor + Claude | Añadida la cabecera ⚙️ "Configuración del Automatismo en Claude Code (Routine)" (repo, ruta, prompt sugerido, herramientas requeridas, pilotaje, routine_id), al estilo de la skill de revisión desatendida. Runtime (secciones 0–9) sin cambios respecto a v0.2. |
+| **v0.4** | 2026-07-07 | Néstor + Claude | **Fuente Manrope del PDF vía estáticos del ZIP de Workdrive** (resource_id `a2xhx44f0cbde39da4b6ba1186a213b92ebfd`) en lugar de instanciar la variable de Google Fonts con fontTools: se registran en reportlab los estáticos por peso (`Manrope-Regular/Bold/Light.ttf`), que reportlab embebe (subset) en el PDF. Elimina la dependencia de Google Fonts en runtime y el paso de instanciado (frágil en desatendido). Mismo ZIP de origen que actas/marca; motor reportlab (no docx-js), sin `patch_fonts.py`. La nota de glifos ASCII para `+ = −` no cambia. |
 
 ## Versiones
 

@@ -16,13 +16,18 @@ description: >
 
 # SKILL: Plan de Proyecto en Zoho Sheet — Reinicia
 
+> **Versión vigente: v2.9 — proxy `date_closed` + cotejo Asesor PO — 2026-07-11**
+
+> ⚠️ **Prevalece el ANEXO B (v2.7 o vigente).** Antes de aplicar los pasos 3.x del cuerpo, **leer el ANEXO B completo**. La creación se hace **SIEMPRE** copiando la plantilla canónica `pnync351d56992b6d4026906a6fec5d56e682` con `ZohoSheet_copy`, **nunca** con `createNativeDocument`, `Create_New_File` ni `create_workbook`. La estructura canónica del fichero v2 (pestañas + tablas + mapa de columnas + portada + Config + Log + Resumen Histórico) está en **«4.0 ESTRUCTURA CANÓNICA DEL PLAN v2»** (más abajo, en el cuerpo) y en el ANEXO B. Los antiguos pasos 3.2–3.7 del cuerpo están **SUPERADOS** y quedan reescritos según el ANEXO B.
+
 ## Propósito
 Crear y mantener el Plan de Proyecto de un cliente como documento vivo en Zoho Sheet,
 alineado con el backlog de `General [CLIENTE]` en ClickUp. Sirve tanto al PO (seguimiento
 interno) como al cliente (visibilidad sobre entregas comprometidas y su estado real).
 
 **Recursos de referencia en Workdrive:**
-- Plantilla base: `47q3o1a477a21d2f848d28c957304f083b0b6` (Recursos Comunes Reinicia)
+- **Plantilla canónica v2 (Recursos Comunes Reinicia):** `pnync351d56992b6d4026906a6fec5d56e682` — 40#/41# + 3 tablas (IMPLANTACIÓN / SOPORTE ACTIVO / SOPORTE CERRADO) + Config + Ideas (42#) + Objetivos (45#) + Log de Cambios + Resumen Histórico. **Crear SIEMPRE copiándola con `ZohoSheet_copy`.**
+- ⛔ ~~Plantilla antigua `47q3o1a477a21d2f848d28c957304f083b0b6`~~ **OBSOLETA** (1 sola pestaña, con residuos de marketing). **NO usar en ninguna circunstancia.**
 - Ejemplo Web en inglés (Birdease): `hpgmh7de8cab0fd9e4fb58b51298dee7cb465`
 - Ejemplo Zoho (Mazarea): `halr9080af8d0477045b3a9c56babd3aff12c`
 
@@ -49,6 +54,7 @@ Preguntas secuenciales, una a una:
 "¿Sabes el ID de la carpeta `Plan de Proyecto` del cliente en Workdrive? Si no, lo busco yo."
 → Buscar con `ZohoWorkdrive_searchTeamFoldersFiles` (team_id: `2km7j4dc468f82ead4a8489e55b64bfd3ecfe`)
   usando `search[name]` con el nombre del cliente.
+→ ⚠️ **El Plan va SIEMPRE en la carpeta del proyecto** (p. ej. `Plan de Proyecto` / `Plan de marketing` del cliente), **NUNCA en `01. Seguimiento`.** Si la carpeta no existe, avisar al PO o crearla en la raíz del proyecto.
 → Dentro de la carpeta raíz del cliente, localizar la subcarpeta `Plan de Proyecto`.
   Si no existe, avisar al PO — debe crearla manualmente o confirmar en qué carpeta guardarlo.
 
@@ -58,7 +64,11 @@ Preguntas secuenciales, una a una:
 
 ### Pregunta 4: Idioma
 "¿El plan de proyecto va en **español** o en **inglés**?"
-→ Condiciona todos los textos: cabeceras, estatus, etiquetas del calendario.
+→ Condiciona todos los textos: cabeceras, estatus, etiquetas del calendario **y los meses que se repiten en la fila-título de cada sección** (filas 7/32/57/81 — ver §4.0).
+
+### Pregunta 4b: Idioma de los Entregables (convención a elicitar)
+"En un plan en **inglés**, confirmo que **traduzco también los nombres de los Entregables** al inglés (la trazabilidad la mantiene el hipervínculo a ClickUp), ¿o prefieres dejarlos tal cual en ClickUp?"
+→ **Por defecto en planes EN, SÍ se traduce todo**: cabeceras, estatus, etiquetas del calendario, etiquetas de la portada, meses de cada sección **y los nombres de Entregables**. La **trazabilidad no se pierde**: el nombre traducido va sobre un **HYPERLINK al `task_id`** de ClickUp (col F de 41#). Solo si el PO lo pide → dejar los nombres tal cual en ClickUp. Guardar la elección.
 
 ### Pregunta 5: Granularidad del calendario
 "¿Cómo quieres organizar el calendario de entregas?"
@@ -74,9 +84,9 @@ Preguntas secuenciales, una a una:
 → Guardar la elección. En modo ACTUALIZACIÓN: mantener la misma elección salvo que el PO indique lo contrario.
 
 ### Pregunta 7: Formato de la columna Descripción
-"Para la columna Descripción del plan, ¿qué formato prefieres?"
-- **Historia de usuario** ("Como [rol], QUIERO..., PARA...") — recomendado si el cliente tiene conocimientos de Scrum o metodologías ágiles
-- **Resumen ejecutivo** — descripción breve en lenguaje natural del objetivo del producto, sin jerga técnica ni de Scrum — recomendado para clientes con menor madurez digital
+> **Por defecto, cada celda de Descripción lleva los DOS formatos combinados** (convención Reinicia): **Historia de usuario** ("Como [rol], quiero…, para…") + **salto de párrafo** + **Resumen ejecutivo** (lenguaje natural, sin jerga). En planes EN, ambos en inglés.
+"Uso la convención por defecto (Historia de usuario **+** Resumen ejecutivo en cada celda), ¿o prefieres solo uno de los dos para este cliente?"
+- Solo si el PO lo pide → **Historia de usuario** sola (cliente con madurez ágil) o **Resumen ejecutivo** solo (cliente con menor madurez digital).
 
 → Guardar la preferencia. Se aplicará de forma consistente a todos los productos.
 → En modo ACTUALIZACIÓN: preguntar si se mantiene el formato anterior o se cambia.
@@ -115,6 +125,10 @@ Antes de leer ClickUp, Claude recuerda al PO el contexto de esta skill:
   productos-digitales-waba-clickup-reinicia).
 → Si el PO confirma: continuar al Paso 3.
 
+> ✅ **Checklist obligatoria antes de escribir en Workdrive (modo CREACIÓN).** Antes de tocar el fichero, Claude confirma que ha leído **ANEXO A + ANEXO B + §6/§7/§8/§9 + «4.0 ESTRUCTURA CANÓNICA DEL PLAN v2»**. **Si no los ha leído, para y los lee** antes de continuar. La creación se hace copiando la plantilla `pnync351…` con `ZohoSheet_copy` (nunca `createNativeDocument`/`Create_New_File`/`create_workbook`).
+
+> 🔁 **Convención de volcado por defecto (proyectos grandes).** El volcado se hace en **dos fases**: primero la **estructura** (copiar plantilla, portada, Config, Log, cabeceras, filas vacías insertadas donde haga falta) y después el **contenido** (PBI · Descripción · Notas · fechas · estatus · calendario), tarjeta a tarjeta y en tandas reanudables. Es el modo por defecto salvo que el PO indique lo contrario.
+
 ---
 
 ## PASO 3 — LECTURA DE DATOS EN CLICKUP
@@ -144,18 +158,20 @@ verificar con `clickup_get_custom_fields(list_id=...)` antes de extraer.
 
 ### Procesamiento de la columna Descripción
 
-Según la preferencia del PO (Pregunta 6 de elicitación):
+Por defecto (convención Reinicia), **producir los DOS bloques en la misma celda**, separados por salto de párrafo:
 
-**Opción A — Historia de usuario:**
+**Bloque 1 — Historia de usuario:**
 Extraer de la descripción de la tarea el bloque que empieza por "Como" / "As a".
 Si no existe explícitamente, construirla a partir del campo `description` de ClickUp.
 Formato: "Como [rol], quiero [qué], para [para qué]." Máx. 2 líneas.
 
-**Opción B — Resumen ejecutivo:**
+**Bloque 2 — Resumen ejecutivo (debajo, tras salto de párrafo):**
 Extraer el objetivo principal del producto desde el campo `description` de ClickUp
 (sección de descripción, no comentarios). Redactar en lenguaje natural, sin términos
 de Scrum. Máx. 2 líneas. Si la descripción es muy técnica, simplificar para que
 sea comprensible por un interlocutor no técnico del lado del cliente.
+
+> Solo si el PO pidió en la Pregunta 7 **un único formato**, escribir ese bloque solo. En planes EN, ambos bloques en inglés.
 
 ### Procesamiento de la columna Notas
 
@@ -197,10 +213,14 @@ sí alertar: `⚠️ Criterios de aceptación no definidos — riesgo para la va
 
 | ClickUp status | ES | EN |
 |---|---|---|
-| to do / open / backlog | PENDIENTE | PENDING |
-| in progress / en curso | EN PROCESO | IN PROGRESS |
-| complete / done / closed | TERMINADO | COMPLETED |
+| to do / open / **sprint backlog** / product backlog | PENDIENTE | PENDING |
+| in progress / en curso / **validación reinicia / validación cliente** | EN PROCESO | IN PROGRESS |
+| complete / done / closed (**done sin cierre = terminado**) | TERMINADO | COMPLETED |
 | on hold / blocked / pospuesto | POSPUESTO | ON HOLD |
+| **parking / parking e incidencias** | **PARKING** | **PARKING** |
+| **cancelado / descartado** | **CANCELADO** | **CANCELLED** |
+
+> Las fases de **validación** (reinicia/cliente) cuentan como **EN PROCESO / IN PROGRESS**. **`parking e incidencias` → PARKING** (no POSPUESTO). Estos valores se escriben tal cual en el desplegable de Estatus (la interfaz colorea sola).
 
 ### Composición del tipo de proyecto (para nomenclatura del fichero)
 Inspeccionar el campo TIPO DE PRODUCTO de todas las tareas y componer el tipo combinado:
@@ -212,9 +232,97 @@ Inspeccionar el campo TIPO DE PRODUCTO de todas las tareas y componer el tipo co
 
 Si hay más de un tipo, combinarlos por orden de volumen: ej. `Zoho-Web`, `Zoho-WABA-MKT`.
 
+### Formación Interna — FUERA del Plan (excluir)
+Los productos de **«Formación interna»** (formación del propio equipo de Reinicia, no del cliente) **NO figuran en el Plan** — ni en 40# ni en 41#. Para ellos:
+- **NO** se escribe Descripción ni se hace write-back de PBI a ClickUp.
+- Se **excluye/borra** su fila del Plan.
+- ⚠️ El **borrado de fila es operación de ESTRUCTURA**: hacerlo al **FINAL de la fase de contenido** (para no romper referencias de fila mientras se vuelca), y **después comprobar/repintar el calendario y el Gantt** por el desplazamiento.
+
+### Soporte Cerrado — tratamiento ligero (por lotes)
+Para las tarjetas de **Soporte Cerrado** (tabla SOPORTE CERRADO), no se lee tarjeta a tarjeta:
+- **Descripción de UNA sola línea** derivada del **Deliverable + Épica + PBI** (o **vacía** si la tarjeta es una duda/consulta sin entregable real).
+- Procesar en **lotes grandes** con **visto bueno rápido del PO**, sin abrir cada tarjeta.
+- El **write-back de PBI** (cuando falta en ClickUp) se hace **igual que en el resto** de tablas.
+
 ---
 
-## PASO 4 — MODO CREACIÓN: CONSTRUIR EL DOCUMENTO
+## PASO 4 — MODO CREACIÓN: CONSTRUIR EL DOCUMENTO (por copia de la plantilla v2)
+
+### 4.0 ESTRUCTURA CANÓNICA DEL PLAN v2
+
+> Esta es la estructura **real** del fichero que se obtiene al copiar la plantilla `pnync351…`. Prevalece sobre cualquier descripción anterior del cuerpo. La creación NO construye pestañas a mano: **copia la plantilla** y **puebla** lo que viene vacío (Config y Log de Cambios) + el contenido.
+
+**Pestañas canónicas (worksheet_id reales):**
+`36#` **Portada** · `40#` **Plan Proyecto** (cara cliente) · `41#` **Plan Proyecto Interno** · `42#` **Ideas** · `45#` **Objetivos Cliente** (solo lectura, priorización de Ideas) · `43#` **Log de Cambios** (solo añadir) · `44#` **Config**.
+
+**Cuatro secciones dentro de 40# y 41#** (una tabla cada una; **cada una se reconcilia contra una lista distinta de ClickUp** — NO todo sale de General):
+
+| Sección / Tabla | Fuente ClickUp | Filtro | Fila-título (meses) |
+|---|---|---|---|
+| **PLAN IMPLANTACIÓN** | `General [CLIENTE]` | productos digitales / SPIKEs | **fila 7** |
+| **PLAN SOPORTE ACTIVO** | `Soporte [CLIENTE]` | tareas **no cerradas** | **fila 32** |
+| **PLAN SOPORTE CERRADO** | `Soporte [CLIENTE]` | tareas **cerradas en el año del Plan** | **fila 57** |
+| **RESUMEN HISTÓRICO** (rollup de años anteriores) | agregado interno | 2 filas: **Implementation / Support** | **fila 81** |
+
+- Cabecera de cada tabla (nombres de columna / nº de semana) en la fila **inmediatamente posterior** a su fila-título (la 1ª sección: leyenda de hitos en filas 3–5, meses en fila 7, cabecera en fila 8, datos desde fila 9).
+- **Los meses se repiten en la fila-título de CADA sección (7 / 32 / 57 / 81).** En planes **EN**, traducirlos **por sección** (no basta con traducir la primera).
+
+**⚠️ MAPA DE COLUMNAS — LAS DOS PESTAÑAS DIFIEREN (leer la cabecera por pestaña, NUNCA hardcodear).** La columna **`Fecha de petición` (H = col 8)** es **nueva** y desplaza +1 todo lo que venía a partir de ella:
+
+**`40#` Plan Proyecto (cara cliente):**
+| col | letra | Campo |
+|---|---|---|
+| 2 | B | Épica (modelo híbrido: microcampaña→fase de funnel; producto digital→objetivo de negocio con prefijo numérico) |
+| 3 | C | Tipo de Producto |
+| 4 | D | Mes (= mes de la Fecha de entrega, col I; recomputar al cambiar la fecha) |
+| 5 | E | PBI de Primer Nivel |
+| 6 | F | Entregable (con hyperlink a la tarjeta de ClickUp) |
+| 7 | G | Descripción |
+| 8 | **H** | **Fecha de petición** (`date_created`) — **columna NUEVA** |
+| 9 | I | Fecha de entrega esperada (`due_date`) |
+| 10 | J | Fecha de validación esperada (↕ **Sheet ↔ ClickUp, bidireccional**; rellenar el lado vacío desde el otro, **nunca pisar** el valor puesto por el Cliente) |
+| 11 | K | Notas Reinicia |
+| 12 | L | Notas [Cliente] (🔼 Sheet → ClickUp; nunca pisar) |
+| 13 | **M** | **Estatus** (desplegable; color automático) |
+| 14–37 | **N–AK** | Calendario — 24 quincenas · **col = 13 + quincena** |
+
+**`41#` Plan Proyecto Interno** (igual hasta col I; luego CAMBIA):
+| col | letra | Campo |
+|---|---|---|
+| 2–9 | B–I | igual que 40# (incluye **H = Fecha de petición**) |
+| 10 | J | Fecha de validación esperada (↕ **Sheet ↔ ClickUp, bidireccional**; rellenar el lado vacío desde el otro, **nunca pisar** el valor puesto por el Cliente) |
+| 11 | **K** | Notas (una sola) |
+| 12 | **L** | **Estatus** (desplegable; color automático) |
+| 13–36 | **M–AJ** | Calendario — 24 quincenas · **col = 12 + quincena** |
+
+> **quincena = (mes − 1)·2 + (1 si día ≤ 15; 2 si día > 15).** Resolver Estatus y calendario **por el nombre leído en la cabecera de cada pestaña**, no por letra fija — **cruzando la cabecera contra una fila de datos ya poblada para confirmar la columna** (así se evita el error K/L del piloto LS, donde se escribió Estatus en K en vez de L). `41#` no tiene «Notas [Cliente]».
+
+**Portada (`36#`) — celdas reales:**
+- `C3` = **título** ("Calendario de entregas [CLIENTE]" / "[CLIENTE] Project Calendar").
+- `D5` = `=HYPERLINK("<web real del cliente>";"<Nombre Cliente>")` — **semicolon (es-ES), `https`**. Corregir el residuo de plantilla en `E5:G5` (tipo **`ackstorm`**) → limpiarlo/rehacerlo.
+- `C6`–`C10` = **Idioma · País · Equipo · PO Cliente · PO Técnico**.
+- En planes **EN**, traducir también las **etiquetas** de la portada.
+
+**Config (`44#`) — 3 columnas (viene VACÍA → construirla):**
+- Cabeceras: **Parámetro | Valor | ID/Resource**. El **ID/Resource va en la col D** (ancho ~**400**).
+- La skill **lee el ID de su columna (col D)**, nunca lo parsea de un texto "Nombre (ID)".
+- Campos: Lista ClickUp General · Soporte · Gestión · Carpeta ClickUp · Space ClickUp · Carpeta Workdrive (Plan) · Resource ID (fichero).
+- Estilo canónico: cabecera `fill #3812CF`/fuente blanca negrita; datos `fill #EBEBEB`/`#545454`; **bordes blancos `#FFFFFF`**; Manrope. Lavado base blanco fuera de la tabla.
+
+**Log de Cambios (`43#`) — 3 columnas (viene VACÍO → construirlo):**
+- Cabeceras: **Fecha | Autor | Cambio** + **bordes blancos perimetrales**.
+- Estilo: cabecera `#3812CF`/blanca; filas de datos `fill #EBEBEB`/`#545454`, bordes blancos, Manrope, altura ~48, wrap. Solo se **añade** al final (nunca modificar entradas previas).
+
+**Estatus = campo DESPLEGABLE con color por valor.**
+> ⚠️ **Vía API NO se pueden manipular desplegables ni fijar su color.** La API **solo escribe el VALOR** del estado y la **interfaz le asigna el color automáticamente**. **PARKING, CANCELADO y el resto de estados se colorean solos** al escribir su valor exacto en el desplegable. **Nunca** definir colores de estado ni pintar el color del Estatus a mano. El desplegable **ya viene en la plantilla**: no hay que crearlo.
+
+**Sello de última actualización (solo `41#`, Plan Proyecto Interno):**
+- Celda **`C3`**, formato **DD/MM/YYYY**. **Reescribir al crear el Plan y en CADA actualización.**
+
+**Años anteriores (alcance «histórico completo»):**
+- Los productos de **años previos** van **individuales, con su fecha real**, y el **calendario del año en blanco** (no se marca el Gantt del año en curso con fechas de otro año).
+- El **RESUMEN HISTÓRICO (fila 81)** es el que **agrega** esos años previos en 2 filas (Implementation / Support).
+- **Cerrados sin `due_date`** → **usar `date_closed` como fecha de entrega (proxy, decisión B):** col 9 = `date_closed` en `DD/MM/YYYY` **y marcar el calendario** en esa quincena con el color de entrega `#70EED6`. En un item cerrado, la fecha de cierre es un proxy justo de cuándo se resolvió. (`date_closed` sigue atribuyendo además el año de la tabla.) Solo si **tampoco** hay `date_closed` (raro) → Entrega `"-"` y calendario en blanco.
 
 ### 4.1 Nomenclatura del fichero
 ```
@@ -228,167 +336,44 @@ Ejemplos:
 El sufijo `-INTERNOIA` identifica que es el documento de trabajo interno. Siempre presente.
 El renombrado debe hacerse manualmente desde Workdrive — ver paso 3.7.
 
-### 3.2 Crear el fichero en Workdrive
-Usar `ZohoWorkdrive_createNativeDocument`:
-```json
-{
-  "service_type": "zohosheet",
-  "parent_id": "[ID carpeta Plan de Proyecto del cliente]",
-  "name": "[nombre confirmado]"
-}
-```
+> ⛔ **SUPERADO — los antiguos pasos 3.2–3.7 quedan reescritos aquí según el ANEXO B.** Ya NO se crea el fichero con `createNativeDocument` ni una estructura simple Portada/Plan/Log de 1 pestaña. Se **copia la plantilla canónica v2** (que ya trae las 4 secciones, el desplegable de Estatus, el logo y las 3 filas superiores) y solo se **puebla** lo que viene vacío (Config, Log) + el contenido. La estructura de referencia es **§4.0**.
 
-Guardar el resource_id del fichero creado para todas las operaciones siguientes.
+### 4.2 Crear el fichero copiando la plantilla v2
 
-⚠️ **Inmediatamente después de crear el fichero**, verificar su estado con `ZohoWorkdrive_searchTeamFoldersFiles` buscando por nombre. Si el campo `status` devuelve `4` (papelera), restaurarlo con `ZohoSheet_restore` antes de continuar. Esto puede ocurrir cuando el fichero se crea desde una sesión MCP cuyo propietario no coincide con el workspace principal.
+**Copiar SIEMPRE la plantilla canónica** `pnync351d56992b6d4026906a6fec5d56e682` con `ZohoSheet_copy` hacia la carpeta `Plan de Proyecto` del cliente. **Nunca** `createNativeDocument` / `Create_New_File` / `create_workbook` (crean ficheros corruptos / de 1 pestaña).
 
-### 3.3 Rellenar la pestaña Portada
+Guardar el `resource_id` del fichero resultante para todas las operaciones siguientes.
 
-Nombre de pestaña: `Portada` (ES) / `Cover` (EN)
+⚠️ **Inmediatamente después de copiar**, verificar el estado del fichero con `ZohoWorkdrive_searchTeamFoldersFiles` (por nombre). Si `status` = `4` (papelera), restaurarlo con `ZohoSheet_restore`. Confirmar además que el `resource_id` **no contiene `%3A`/`%2F`** (URL-encoding roto).
 
-| Celda | Contenido |
-|---|---|
-| B7 | "Calendario de entregas [CLIENTE]" (ES) / "[CLIENTE] Project Calendar" (EN) |
-| D9 | Nombre del cliente |
-| E9 | URL del cliente |
-| D10 | Idioma/s del proyecto |
-| D11 | País/es donde opera |
+### 4.3 Rellenar la Portada (`36#`)
+Rellenar según **§4.0**: `C3` título · `D5` = `=HYPERLINK("<web real>";"<Nombre Cliente>")` (semicolon es-ES, `https`) · **limpiar el residuo `ackstorm` en `E5:G5`** · `C6`–`C10` = Idioma / País / Equipo / PO Cliente / PO Técnico. En planes **EN**, traducir también las **etiquetas**. Usar `ZohoSheet_set_content_to_multiple_cells` (lotes ≤40).
 
-Usar `ZohoSheet_set_content_to_multiple_cells` para rellenar todo en una llamada.
+### 4.4 Poblar las 4 tablas (40# y 41#)
+- La plantilla ya trae las cabeceras, el banding, la base gris del calendario y el desplegable de Estatus. **No** reconstruir la estructura: **insertar filas** donde falte espacio (§8) y **pegar el contenido** según el **mapa de columnas de §4.0** (¡difieren 40# y 41#!).
+- **Estatus:** escribir **solo el valor exacto** del desplegable; **el color sale solo** (no pintar nada — ver §4.0 y punto de desplegable).
+- **Calendario:** base `#F2F2F2` en toda la rejilla de datos + hitos encima (entrega `#70EED6`, validación `#EBE31B`); marcar por `quincena = (mes−1)·2 + (1 si día ≤ 15; 2 si >15)`.
+- **Orden / agrupación de Épica / redibujado de calendario van SIEMPRE juntos** (ver ANEXO B B.5/B.7).
+- **Regla de oro (ANEXO B B.1):** al escribir/insertar cualquier celda, aplicar SIEMPRE su estilo canónico; el API **no lee** formato.
 
-### 3.4 Crear y rellenar la pestaña Plan de Proyecto
+### 4.5 Construir la Config (`44#`) — viene VACÍA
+3 columnas **Parámetro | Valor | ID/Resource** (ID en **col D**, ancho ~400). La skill lee el ID de la col D. Estilo canónico (ver §4.0). Rellenar los 7 campos (Listas General/Soporte/Gestión · Carpeta ClickUp · Space ClickUp · Carpeta Workdrive Plan · Resource ID del fichero).
 
-Nombre de pestaña: `Plan de Proyecto` (ES) / `Project Plan` (EN)
+### 4.6 Construir el Log de Cambios (`43#`) — viene VACÍO
+3 columnas **Fecha | Autor | Cambio** + **bordes blancos perimetrales**. **Estilo canónico completo de las filas de datos (7 atributos):** fill `#EBEBEB` · `font_color #545454` · **bordes blancos** · **Manrope** · `row_height ~48` · `wrap_text` · `vertical_alignment middle`. Aplicar SIEMPRE los 7 al escribir (la API no lee formato → si se omite alguno, la fila queda descuadrada). Solo se **añade** al final.
 
-**Estructura de columnas (fila 1 = cabecera):**
+### 4.7 Sello de última actualización (`41#`)
+Escribir la fecha de hoy en **`C3`** (DD/MM/YYYY). **Reescribirla al crear y en cada actualización.**
 
-| Col | ES | EN |
-|---|---|---|
-| A | Épica | Epic |
-| B | PBI | PBI |
-| C | Tipo de producto | Product Type |
-| D | Entregable | Deliverable |
-| E | URL ClickUp | ClickUp URL |
-| F | Descripción | Description |
-| G | Fecha estimada de entrega | Expected Delivery Date |
-| H | Notas | Notes |
-| I | Estatus | Status |
-| J en adelante | Grid calendario por semana/quincena/mes | |
-
-**Cabeceras del calendario (fila 1, desde col J):**
-Formato compacto `Mes S#` — ej. `Ene S1`, `Ene S2`, `Feb S5`... hasta cubrir el año completo.
-No usar filas separadas para meses y semanas — todo en una sola fila.
-
-**Filas de datos (desde fila 2):**
-Una fila por producto de ClickUp. La estructura de Épicas, PBIs y orden
-**no se propone ni modifica** — se toma fielmente de ClickUp.
-Ordenar por campo ORDEN (si asignado) o por ÉPICA + TIPO DE PRODUCTO si ORDEN es null.
-
-Marcar con `●` la celda del calendario correspondiente al `due_date` del producto.
-- Si `due_date` tiene valor → convertir de epoch ms a formato `DD/MM/AAAA` y escribir en col G.
-- Si `due_date` es null → escribir "A definir" en col G, calendario en blanco.
-
-Usar `ZohoSheet_set_content_to_multiple_cells` en bloques de máx. 40 celdas.
-
-**Formato col G (fecha):** `horizontal_alignment: center`, `vertical_alignment: middle` en todo el rango G2:G[N].
-
-### 3.5 Aplicar formato a la pestaña Plan de Proyecto
-
-Aplicar en este orden con `ZohoSheet_format_ranges`:
-
-**Paso 1 — Cabecera (fila 1):**
-```json
-{
-  "range": "A1:[ÚLTIMA COL]1",
-  "bold": true, "fill_color": "#3812CF", "font_color": "#FFFFFF",
-  "font_size": 11, "horizontal_alignment": "center",
-  "vertical_alignment": "middle", "row_height": 36, "wrap_text": true
-}
-```
-
-**Paso 2 — Anchos de columnas de datos:**
-```
-A: 120px  B: 150px  C: 110px  D: 280px  E: 180px
-F: 300px  G: 130px  H: 260px  I: 100px  J en adelante: 36px
-```
-
-**Paso 3 — Filas alternas (cols A–I):**
-Filas pares → `fill_color: #FFFFFF`, filas impares → `fill_color: #EBEBEB`
-`row_height: 60`, `vertical_alignment: top` en todas las filas de datos.
-
-**Paso 4 — Zona calendario (cols J en adelante, filas 2–N):**
-```json
-{
-  "range": "J2:[ÚLTIMA COL][ÚLTIMA FILA]",
-  "fill_color": "#EBEBEB",
-  "bold": true, "font_color": "#3812CF",
-  "horizontal_alignment": "center", "vertical_alignment": "middle"
-}
-```
-
-**Paso 5 — Wrap text en columnas de contenido:**
-```
-D2:D[N], F2:F[N], H2:H[N] → wrap_text: true
-```
-
-**Paso 6 — Colores de estatus (col I, fila a fila según valor):**
-| Estatus | fill_color | font_color |
-|---|---|---|
-| TERMINADO / COMPLETED | `#a5f39d` | `#1a6b15` |
-| EN PROCESO / IN PROGRESS | `#FFDD57` | `#7a5c00` |
-| PENDIENTE / PENDING | `#D9D0FB` | `#3812CF` |
-| POSPUESTO / ON HOLD | `#CCCCCC` | `#555555` |
-
-Aplicar `bold: true`, `horizontal_alignment: center`, `vertical_alignment: middle` en col I.
-
-**Paso 7 — Bordes blancos en todo el documento:**
-```json
-{ "range": "A1:[ÚLTIMA COL]200", "border": { "border_color": "#FFFFFF", "border_style": "solid", "border_type": "all_border" } }
-```
-Aplicar en las tres pestañas (Plan de Proyecto, Portada, Log de Cambios).
-
-### 3.6 Crear la pestaña Log de Cambios
-
-Nombre: `Log de Cambios` (ES) / `Change Log` (EN)
-
-Cabeceras en fila 1:
-
-| Col | ES | EN |
-|---|---|---|
-| A | Fecha | Date |
-| B | Producto | Deliverable |
-| C | Tipo de cambio | Change Type |
-| D | Detalle | Detail |
-| E | Responsable | Owner |
-
-Fila 2: nota de referencia en itálica con los tipos de cambio estándar:
-`Retraso en entrega | Adelanto en entrega | Cambio de alcance | Producto añadido | Producto eliminado | Reactivación | Otro`
-
-**Formato del Log de Cambios:**
-- Fila 1: `fill_color: #3812CF`, `font_color: #FFFFFF`, `bold: true`, `row_height: 36`
-- Fila 2: `fill_color: #D9D0FB`, `font_color: #555555`, `italic: true`, `row_height: 30`, `wrap_text: true`
-- Anchos: A=100px, B=250px, C=160px, D=300px, E=130px
-- Bordes blancos en todo el rango
-
-### 3.7 Ajustes manuales post-creación (no automatizables vía MCP)
-
-Informar al PO de estos cuatro pasos que debe hacer al abrir el fichero por primera vez:
-
-1. **3 filas libres superiores:** seleccionar fila 1 → clic derecho → Insertar 3 filas encima
-2. **Logotipo Reinicia:** Insertar → Imagen → buscar en Recursos Comunes > Identidad Marca Reinicia. Ajustar a 120×22px proporcional.
-3. **Lista de selección en columna Estatus:** seleccionar rango `I2:I200` (rango amplio para cubrir futuras filas) → Insertar → Lista de selección → añadir los valores:
-   - ES: `PENDIENTE`, `EN PROCESO`, `TERMINADO`, `POSPUESTO`, `PARKING`, `CANCELADO`
-   - EN: `PENDING`, `IN PROGRESS`, `COMPLETED`, `ON HOLD`, `PARKING`, `CANCELLED`
-
-   ⚠️ Usar siempre el rango `I2:I200` — no limitarlo al número actual de productos. Así las filas que añada la skill en futuras actualizaciones ya tendrán la lista aplicada y no habrá que repetir este paso.
-   ⚠️ Los valores deben escribirse exactamente igual que los que usa la skill al actualizar el plan — de lo contrario Zoho Sheet los marcará como inválidos visualmente. La API escribe texto directamente y no bloquea la escritura, pero sí señala la discrepancia.
-4. **Renombrado con INTERNOIA:** el MCP no puede renombrar ficheros Zoho Sheet. Hacerlo manualmente desde Workdrive (clic derecho → Renombrar). El nombre siempre termina en `-INTERNOIA`: ej. `2026-Plan-Proyecto-Zoho-GONHER-INTERNOIA`.
+### 4.8 Ajuste manual único (no automatizable vía MCP)
+- **Renombrado del fichero:** el MCP no puede renombrar ficheros Zoho Sheet. Hacerlo manualmente desde Workdrive (clic derecho → Renombrar) con la nomenclatura de §4.1.
+- El resto de ajustes que antes eran manuales (**3 filas superiores, logotipo, desplegable de Estatus**) **ya vienen en la plantilla v2** — no hay que rehacerlos.
 
 ---
 
 ## PASO 5 — MODO ACTUALIZACIÓN: DETECTAR Y APLICAR CAMBIOS
 
-### 4.1 Leer el estado actual del Plan de Proyecto
+### 5.1 Leer el estado actual del Plan de Proyecto
 
 ```
 ZohoSheet_get_content_of_worksheet(resource_id=..., worksheet_name="General",
@@ -397,7 +382,7 @@ ZohoSheet_get_content_of_worksheet(resource_id=..., worksheet_name="General",
 
 Construir un mapa interno: `nombre_entregable → {fila, estatus_actual, fecha_actual}`
 
-### 4.2 Comparar con ClickUp
+### 5.2 Comparar con ClickUp
 
 Para cada producto de ClickUp, comparar contra el mapa del sheet y detectar:
 
@@ -408,7 +393,7 @@ Para cada producto de ClickUp, comparar contra el mapa del sheet y detectar:
 | Due_date cambió | Actualizar fecha + recalcular marca en calendario |
 | Producto en sheet no existe en ClickUp | Alertar al PO (¿eliminado del backlog?) |
 
-### 4.3 Presentar las diferencias al PO
+### 5.3 Presentar las diferencias al PO
 
 Antes de tocar nada, Claude presenta un resumen:
 
@@ -432,25 +417,25 @@ Fecha de revisión: [fecha actual]
 ¿Aplico todos estos cambios? ¿O quieres revisar/excluir alguno?
 ```
 
-### 4.4 Aplicar cambios confirmados
+### 5.4 Aplicar cambios confirmados
 
 Una vez el PO confirma:
 1. Actualizar celdas de estatus y fecha con `ZohoSheet_set_content_to_multiple_cells`
 2. Añadir nuevas filas con `ZohoSheet_addrecords` o `ZohoSheet_set_content_to_multiple_cells`
 3. Recalcular marcas del calendario para las filas modificadas
 
-### 4.5 Proponer entradas para el Log de Cambios
+### 5.5 Proponer entradas para el Log de Cambios
 
 Para cada cambio relevante (retrasos, adelantos, productos añadidos/eliminados),
-proponer la fila correspondiente en el Log:
+proponer la fila correspondiente en el Log. **El Log v2 tiene 3 columnas: `Fecha | Autor | Cambio`** (§4.0) — el detalle del cambio va condensado en la columna **Cambio**:
 
 ```
-📝 ENTRADAS SUGERIDAS PARA EL LOG DE CAMBIOS:
+📝 ENTRADAS SUGERIDAS PARA EL LOG DE CAMBIOS (Fecha | Autor | Cambio):
 
-| Fecha | Producto | Tipo de cambio | Detalle | Responsable |
-|---|---|---|---|---|
-| [hoy] | [producto] | Retraso en entrega | [fecha ant.] → [fecha nueva] | [PO] |
-| [hoy] | [producto] | Producto añadido | Incorporado al alcance en Sprint [N] | [PO] |
+| Fecha | Autor | Cambio |
+|---|---|---|
+| [hoy] | [PO] | Retraso en entrega — [producto]: [fecha ant.] → [fecha nueva] |
+| [hoy] | [PO] | Producto añadido — [producto], incorporado al alcance en Sprint [N] |
 
 ¿Las añado al Log, o quieres modificar algo primero?
 ```
@@ -489,11 +474,13 @@ Contenido:
 
 ## NOTAS IMPORTANTES
 
-- **Limitaciones técnicas Zoho Sheet API:**
-  - `set_content_to_multiple_cells`: máximo 50 celdas por llamada — usar bloques de 30-40 por seguridad.
-  - Tamaño de petición HTTP también limitado: mantener descripciones y notas bajo ~200 caracteres por celda.
-  - La hoja por defecto de un fichero nuevo se llama `Hoja1` (ES) — renombrarla antes de escribir contenido.
-  - Tras crear el fichero, verificar su `status` inmediatamente: si devuelve `4` está en papelera (ocurre cuando el MCP crea el fichero con una cuenta diferente al propietario del workspace). Usar `ZohoSheet_restore` para recuperarlo antes de continuar.
+- **Limitaciones técnicas Zoho Sheet API (validadas en vivo):**
+  - `cells.content.set` / `set_content_to_multiple_cells`: **≤ 40 celdas por llamada** (63 celdas devolvió **error 400**). Trocear en lotes de ≤40.
+  - Fórmulas **`HYPERLINK`**: escribir en **lotes pequeños** (un lote grande de fórmulas devuelve **error 400**).
+  - **`insert_row` inserta 1 fila por llamada** → para N filas, N llamadas. **Verificar el recuento con una lectura** tras insertar (una vez salieron **17 filas en vez de 18**).
+  - Tamaño de petición HTTP limitado: mantener descripciones y notas bajo ~200 caracteres por celda.
+  - Vaciar celda con `" "` (espacio), **nunca `""`**. Decimales con coma (es-ES).
+  - Tras **copiar** la plantilla, verificar su `status` inmediatamente: si devuelve `4` está en papelera (ocurre cuando el MCP crea/copia el fichero con una cuenta distinta al propietario del workspace). Usar `ZohoSheet_restore` para recuperarlo antes de continuar.
 - **Productos eliminados o movidos en ClickUp:** si un producto aparece en el plan pero ya no existe en `General [CLIENTE]` (porque fue borrado o movido a otra lista), la skill **nunca borra la fila automáticamente**. En su lugar propone al PO marcarlo como `CANCELADO` y añade una entrada al Log indicando que el producto ya no está en el backlog activo — con la nota de que puede ser una cancelación real o un movimiento de lista. El PO confirma antes de aplicar cualquier cambio.
 - **Mecanismo de roll-back:** la skill no implementa deshacer programático. Hay dos mecanismos nativos disponibles: (1) **Historial de versiones de Zoho Sheet** (Archivo → Historial de versiones) para restaurar el fichero completo a cualquier punto anterior — es el roll-back más robusto; (2) **Log de Cambios** como referencia para reversiones quirúrgicas de un cambio concreto — la skill puede leer el Log y revertir manualmente ese valor específico si el PO lo solicita.
 - **Prerequisito obligatorio:** el backlog de ClickUp debe estar construido y validado
@@ -509,8 +496,7 @@ Contenido:
   agrupar por ÉPICA y dentro de cada épica por TIPO DE PRODUCTO.
 - **Productos sin due_date:** incluirlos igualmente en el plan con "A definir" en la
   columna de fecha. No omitir ningún producto del backlog.
-- **Columna Descripción:** el formato (historia de usuario vs. resumen ejecutivo) se elige
-  en la elicitación según la madurez digital del cliente y se aplica de forma consistente
+- **Columna Descripción:** por defecto **ambos formatos combinados** (Historia de usuario + Resumen ejecutivo en la misma celda); el PO puede pedir uno solo. Se aplica de forma consistente
   a todos los productos. En modo ACTUALIZACIÓN, verificar si el PO quiere mantener el
   formato o cambiarlo.
 - **Columna Notas:** no es un campo libre — es un estatus operativo breve construido a
@@ -605,7 +591,8 @@ El permalink del fichero tiene este formato:
 | Recurso | ID |
 |---|---|
 | Team Workdrive Reinicia | `2km7j4dc468f82ead4a8489e55b64bfd3ecfe` |
-| Plantilla Plan de Proyecto (Recursos Comunes) | `47q3o1a477a21d2f848d28c957304f083b0b6` |
+| **Plantilla canónica v2 (Recursos Comunes)** | **`pnync351d56992b6d4026906a6fec5d56e682`** |
+| ⛔ Plantilla antigua (OBSOLETA — 1 pestaña, residuos MKT; NO usar) | ~~`47q3o1a477a21d2f848d28c957304f083b0b6`~~ |
 | Ejemplo Birdease (Web, EN) | `hpgmh7de8cab0fd9e4fb58b51298dee7cb465` |
 | Ejemplo Mazarea (Zoho, ES) | `halr9080af8d0477045b3a9c56babd3aff12c` |
 | General Carritech (ClickUp) | `901207893908` |
@@ -710,10 +697,12 @@ Por cada producto/fila del Plan:
 
 ## 4. Columna Tipo de Producto en el Plan Interno
 
-- El **Tipo de Producto** se registra en la **col 3 del Plan Interno (41#)**.
-- En el piloto LS, esa columna **sustituyó a la antigua "Sprint"** (el Gantt NO se desplazó: sigue empezando en col 12). Consecuencia: el Interno deja de mostrar Sprint.
-- En la cara cliente (40#) **no** hay columna de Tipo (col 3 sigue siendo Sprint).
-- Para futuros clientes, decidir si se replica esta sustitución o se inserta columna nueva (implicaría correr el Gantt y repintar hitos).
+> ⚠️ **El mapa de columnas vigente es §4.0 / B.4** (plantilla v2, con la columna nueva `Fecha de petición` H → calendario 41# desde **col 13 = M**). Lo de abajo describe el **piloto LS anterior a la plantilla v2** (cuando el calendario del Interno empezaba en col 12) y se conserva solo como contexto histórico.
+
+- El **Tipo de Producto** se registra en la **col C (3) del Plan Interno (41#)** — coincide con §4.0.
+- **Normalización obligatoria: `GESTIÓN CRM` → `CRM`.** Toda entrada de TIPO DE PRODUCTO que venga como "GESTIÓN CRM" se simplifica a **"CRM"** en el Plan (corrección validada en el piloto LS).
+- *(Contexto LS pre-v2)* Esa columna sustituyó a la antigua "Sprint" del Interno; en la plantilla v2 el mapa canónico ya incorpora Tipo de Producto en col C.
+- Para futuros clientes, el mapa canónico de §4.0 es el que manda (no re-decidir por cliente).
 
 ---
 
@@ -724,11 +713,13 @@ Por cada producto/fila del Plan:
 - **Implicación**: el volcado fiel de N productos **no cabe en una sola sesión** (≈6–10 filas antes de tensar la ventana). Se hace **en tandas, idempotente y reanudable** (lo escrito persiste en Sheet + ClickUp; el punto de reanudación se deduce del contenido de la col PBI).
 - **Modelo recomendado para el ETL**: el volcado es mecánico → en la Routine/sesión de volcado usar **Sonnet o Haiku con esfuerzo bajo**; reservar **Opus solo para criterio** (proponer Épicas de negocio, afinar PBIs dudosos). El modelo barato ahorra €, **no** tokens de contexto.
 
-### 5.1 MEJORA FUTURA (post-piloto) — función Zoho Catalyst `clickup_plan_fields`
+### 5.1 PALANCA DE COSTE — función Zoho Catalyst `clickup_plan_fields`
+> ⚠️ **AÚN NO DESPLEGADA (a 2026-07-11).** Es la palanca objetivo; **hasta que exista, la fuente operativa por defecto sigue siendo `clickup_get_task` troceado** (tarjeta a tarjeta). No dar por hecho que la función responde.
+
 Sacar la extracción pesada fuera del LLM:
-- Función en el proyecto Catalyst `Reinicia-Clickup-Audit` (patrón del `inactivity_calculator`) que llama a la API REST de ClickUp **server-side** y, por lista, devuelve solo `{id, name, status, pbi, epica, tipo}`.
-- La skill/Routine consume un JSON de N×~5 campos (**<2k tokens** frente a ~850k para 57 tarjetas).
-- Es la palanca estructural para correr el volcado **desatendido** y barato. Queda **pendiente para después del primer piloto**.
+- Función a crear en el proyecto Catalyst `Reinicia-Clickup-Audit` (patrón del `inactivity_calculator`) que llame a la API REST de ClickUp **server-side** y, por lista, devuelva solo `{id, name, status, pbi, epica, tipo, date_created, due_date, date_closed}`.
+- La skill/Routine consumiría un JSON de N×~5–8 campos (**<2k tokens** frente a ~850k para 57 tarjetas).
+- Es la palanca estructural para que **el volcado desatendido sea barato y quepa en una pasada**: **cuando esté desplegada**, la modo-desatendido la usará como fuente por defecto en lugar de arrastrar los ~15k tokens/tarjeta de `clickup_get_task`. En la **supervisada** se usa `clickup_get_task` tarjeta a tarjeta (hoy, y siempre que haga falta criterio fino).
 
 ---
 
@@ -770,7 +761,7 @@ Sacar la extracción pesada fuera del LLM:
 
 ## 8. Inserción de filas en las tablas del Plan (REGLA OBLIGATORIA)
 
-Aplica a **Plan Proyecto (40#)** y **Plan Proyecto Interno (41#)**, en **General y Soporte**, para **productos y microcampañas**, en cada una de las tres tablas (IMPLANTACIÓN, ACTIVO, CERRADO).
+Aplica a **Plan Proyecto (40#)** y **Plan Proyecto Interno (41#)**, en **General y Soporte**, para **productos y microcampañas**, en cada una de las **cuatro** secciones (IMPLANTACIÓN, SOPORTE ACTIVO, SOPORTE CERRADO, RESUMEN HISTÓRICO). En un proyecto con **soporte real, SOPORTE CERRADO puede necesitar ~18 inserciones** — insertarlas todas antes de pegar y **verificar el recuento con una lectura** (`insert_row` a veces deja una fila de menos: 17 en vez de 18).
 
 **Regla:** cuando en una tabla quedan pocas filas libres dentro del cuerpo formateado y aún hay contenido por meter, **primero se insertan las filas necesarias ANTES de la penúltima fila del cuerpo de esa tabla; solo después se pega el contenido.** Nunca al revés, y nunca escribir más allá del cuerpo formateado sin insertar antes.
 
@@ -778,7 +769,8 @@ Razones y detalles:
 - **Por qué antes de la penúltima**: la última fila del cuerpo suele llevar el borde de cierre de la tabla; la penúltima arrastra formato + desplegable (Estatus) + formato condicional (semáforo). Insertar **antes de la penúltima** hace que las filas nuevas hereden ese formato y la tabla conserve su fila de cierre.
 - **Por qué insertar antes de pegar**: si se escribe primero y la región con formato es más corta que el nº de productos, las filas extra salen sin formato, sin desplegable de Estatus, sin semáforo y **fuera del rango de las fórmulas** (SUMIF/condicional silenciosamente a cero).
 - `ZohoSheet_insert_row` inserta **una fila por llamada** (param `row` = índice). Para N filas, **N llamadas** al mismo índice.
-- **Tras insertar, recalcular índices**: las tablas que quedan por debajo se desplazan hacia abajo tantas filas como se hayan insertado (insertar en IMPLANTACIÓN baja ACTIVO y CERRADO; insertar en ACTIVO baja CERRADO). En la cara cliente (40#), revisar que la **rejilla del Gantt y los hitos** sigan alineados tras el desplazamiento.
+- **Tras insertar, recalcular posiciones de TODAS las tablas inferiores**: se desplazan hacia abajo tantas filas como se hayan insertado (insertar en IMPLANTACIÓN baja SOPORTE ACTIVO, SOPORTE CERRADO y RESUMEN HISTÓRICO; insertar en ACTIVO baja CERRADO y RESUMEN…). Recalcular también las **filas-título de meses** (7/32/57/81) y, en la cara cliente (40#), revisar que la **rejilla del Gantt y los hitos** sigan alineados tras el desplazamiento; **repintar calendario/Gantt** si hizo falta.
+- **El borrado de filas** (p. ej. Formación Interna, §PASO 3) es también estructura → hacerlo **al final de la fase de contenido** y **repintar** después.
 - La región con formato de la plantilla es **más corta** (~19 filas) que el nº habitual de productos, por lo que esta regla aplica casi siempre que se puebla un Plan real.
 
 ---
@@ -815,11 +807,64 @@ La actualización del Plan —incluida la generación de ideas— la ejecuta la 
 
 ---
 
+# ANEXO B — Addendum v2.7 — Aprendizajes del piloto Líder System (creación robusta)
+
+> Alinea la supervisada con la desatendida v1.7. Estas reglas **prevalecen** sobre lo anterior donde entren en conflicto. El "Estado del piloto LS" de §6/§7 (filas 9–14, mapa fila→task_id pendiente) queda **SUPERADO**: el piloto está muy avanzado; ignorar ese estado congelado.
+
+## B.1 Regla de oro de formato (el API no lee formato)
+El API de Zoho Sheet **solo escribe formato, no lo lee**. Por tanto: al escribir/insertar CUALQUIER celda, aplicar SIEMPRE el estilo canónico que le corresponde (fondo, bordes, fuente Manrope, color de fuente, alineación, altura). **Nunca** dejar el formato "por defecto" ni intentar "igualar" leyendo. Si hace falta uniformar, reescribir el estilo de todo el rango de una vez.
+
+## B.2 Portada — enlace a la web REAL del cliente
+La celda D5 (Cliente/Proyecto) debe llevar como hyperlink la **web real del cliente** (la de la Pregunta 8), NUNCA la de la plantilla (residuo tipo `ackstorm`). Tras copiar la plantilla, corregir con `=HYPERLINK("<web cliente>";"<Nombre Cliente>")` (semicolon, es-ES). Usar `https`.
+
+## B.3 Config — TRES columnas + estilo canónico
+La pestaña Config lista cada referencia en **TRES columnas**: **Parámetro** (nombre del parámetro) · **Valor** (nombre legible) · **ID/Resource** (que lee la máquina, en la **col D**). Aplica a 7 campos: Lista ClickUp General, Soporte, Gestión; Carpeta ClickUp; Space ClickUp; Carpeta Workdrive (Plan); Resource ID (fichero). La skill **lee el ID de su columna (col D)**, nunca lo parsea de un texto "Nombre (ID)". **La Config viene VACÍA en la plantilla → construirla.**
+Estilo: cabecera `fill #3812CF` / fuente blanca negrita; filas de datos `fill #EBEBEB` / fuente `#545454`; **bordes blancos `#FFFFFF`**; Manrope. No pintar celdas fuera de la tabla. Ancho de la columna ID (col D) ~**400**.
+
+## B.4 Calendario — base gris
+> ⚠️ **Corrección de mapa (v2.8):** con la **nueva columna `Fecha de petición` (H = col 8)**, la rejilla del calendario se desplaza **+1**. Ya **no** es "40# M–AJ / 41# L–AI".
+
+La rejilla de datos del calendario (**40# cols N–AK = 14–37; 41# cols M–AJ = 13–36**; **24 quincenas**) lleva **fondo `#F2F2F2` por defecto, NUNCA blanco**, en las cuatro secciones (Implementación, Soporte Activo, Soporte Cerrado, Resumen Histórico) y en AMBAS pestañas. Marcar por `quincena = (mes−1)·2 + (1 si día ≤ 15; 2 si >15)`; **col = 13 + quincena** (40#) / **12 + quincena** (41#). Los hitos se pintan ENCIMA: entrega `#70EED6`, validación `#EBE31B`. Al (re)dibujar: base gris primero, hitos después; redibujar la rejilla COMPLETA. **Estatus = col M (40#) / col L (41#)** — resolver por cabecera leída.
+
+## B.5 Épica — prefijo numérico y orden
+- La Épica (objetivo de negocio, modelo B) lleva **prefijo numérico** ("1. …", "2. …") para que el orden sea **intrínseco al dato**.
+- **Orden de filas dentro de cada tabla:** Épica (prefijo) → **`date_created`** (fecha de petición) → **fecha de entrega**.
+- **Agrupación visual (col 2):** fondo alternando **`#70EED6` / `#BFBFBF`** cada vez que cambia la épica (grupos contiguos).
+- Reorden + recoloreado de Épica + redibujado del calendario van **SIEMPRE juntos**.
+
+## B.6 `task_id` en el Entregable
+Cada Entregable (col 6) lleva incrustado el enlace a ClickUp (`=HYPERLINK("https://app.clickup.com/t/<task_id>";"<texto>")`). Es la fuente determinista de `date_created` (para el orden) y de identidad de fila (en vez de matching difuso por nombre). En la pestaña cara cliente puede ir en texto plano; en la Interna, con enlace.
+
+## B.7 Reorden — es trabajo de SCRIPT, no manual
+- Zoho Sheet **no tiene ordenar/mover fila nativo**: el reorden se hace leyendo → ordenando → reescribiendo la fila completa.
+- Las marcas del calendario son solo fondo (no se mueven con el contenido) → tras reordenar hay que **repintar el calendario**.
+- Las fórmulas `HYPERLINK` se escriben en **lotes pequeños**: un lote grande de fórmulas devuelve **error 400**.
+- Por todo ello, el reorden lo ejecuta un **script de Claude Code** (o la Routine), no a mano. Mapear por Entregable entre pestañas que puedan estar **desfasadas** (p. ej. Soporte Cerrado a veces va una fila desplazado entre 40# y 41#).
+
+## B.8 Novedades v2.8 (creación por plantilla v2 — piloto Carritech)
+Estas reglas prevalecen y complementan §4.0 del cuerpo:
+- **Plantilla canónica = `pnync351…`** (la `47q3o1a…` está OBSOLETA). Crear por `ZohoSheet_copy`, nunca `createNativeDocument`/`Create_New_File`/`create_workbook`.
+- **Portada:** `C3` título · `D5`=HYPERLINK(web real) · limpiar residuo `ackstorm` en `E5:G5` · `C6`–`C10` = Idioma/País/Equipo/PO Cliente/PO Técnico (etiquetas traducidas en planes EN).
+- **Config = 3 columnas** (Parámetro | Valor | ID/Resource; ID en col D, ancho ~400). **Log = 3 columnas** (Fecha | Autor | Cambio + bordes blancos perimetrales). Ambas vienen VACÍAS → construirlas.
+- **Mapa de columnas:** columna nueva **`Fecha de petición` (H)**; Estatus 40#=M, 41#=L; calendario 40#=N–AK, 41#=M–AJ (24 quincenas). Ver §4.0 y B.4.
+- **4ª sección RESUMEN HISTÓRICO** (fila 81, 2 filas Implementation/Support): agrega años previos; los productos de años anteriores van individuales con su fecha real y el calendario del año en blanco.
+- **Meses repetidos por sección** (filas 7/32/57/81) → traducir por sección en planes EN.
+- **Estatus = desplegable**: la API solo escribe el VALOR; el color (incl. PARKING/CANCELADO) lo pone la interfaz. **Nunca** pintar el color del Estatus a mano.
+- **Sello de última actualización** en 41# `C3` (DD/MM/YYYY), reescrito al crear y en cada actualización.
+- **Cerrados sin `due_date`** → **`date_closed` como proxy de entrega (B):** col 9 = `date_closed` (DD/MM/YYYY) + marca de calendario en su quincena; `date_closed` sigue atribuyendo el año. Solo Entrega `"-"` si tampoco hay `date_closed`.
+- **Formación Interna** fuera del Plan (excluir/borrar fila al final de la fase de contenido). **Soporte Cerrado** con Descripción de 1 línea (Deliverable+Épica+PBI) por lotes.
+- **Límites API:** `cells.content.set` ≤40 celdas (63→400); `HYPERLINK` en lotes pequeños; `insert_row` 1 fila/llamada → verificar recuento con lectura.
+
+---
+
 ## Versiones
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|
+| **v2.9** | 2026-07-11 | Néstor + Claude | **Proxy `date_closed` (decisión B) + bump para push inequívoco.** (1) **Cerrados sin `due_date`** ahora usan **`date_closed` como fecha de entrega** (col 9 = fecha de cierre en DD/MM/YYYY) **y marcan el calendario** en esa quincena con el color de entrega — antes se dejaba Entrega `"-"`/calendario en blanco (supera esa regla de v2.8). Solo `"-"` si tampoco hay `date_closed`. (2) Subida de versión (v2.8→v2.9) para que el push al repo sea inequívoco y el script de sync no pueda saltarse esta versión por coincidir el número con una hipotética v2.8 paralela (rama 06/07). Consolida todo el cotejo de v2.8. (3) **Cotejo de las 5 DECISIONES PO** (rescatadas del proyecto): nº1 (mapa=plantilla), nº2 (columnas operativa vs. Cliente separadas), nº3 (reflejo completo), nº4 (semáforo=formato condicional/solo texto) y nº5a (Ideas) ya cubiertas; **corregido el hueco nº5b**: la **Fecha de validación esperada** sincroniza en **AMBOS sentidos** (Sheet ↔ ClickUp), no solo Sheet→ClickUp — alineadas las flechas del mapa 40#/41#. |
+| **v2.8** | 2026-07-11 | Néstor + Claude | **Creación por plantilla v2 (piloto Carritech) + prevalencia del ANEXO B.** (1) Plantilla canónica pasa a `pnync351…` (la `47q3o1a…` marcada OBSOLETA en todas sus apariciones). (2) Cabecera de prevalencia del ANEXO B bajo el título + checklist obligatoria en Paso 2 (ANEXO A+B+§6/§7/§8/§9) + convención de volcado en dos fases. (3) Nueva §4.0 ESTRUCTURA CANÓNICA en el cuerpo: pestañas (36/40/41/42/45/43/44), 4 tablas (IMPLANTACIÓN/SOPORTE ACTIVO/SOPORTE CERRADO/**RESUMEN HISTÓRICO**), mapa de columnas corregido con la columna nueva **Fecha de petición (H)** (Estatus 40#=M / 41#=L; calendario 40#=N–AK / 41#=M–AJ; quincena=(mes−1)·2+(1 si día≤15;2 si>15)), portada real (C3/D5 HYPERLINK/limpiar `ackstorm` E5:G5/C6–C10), **Config 3 columnas** (Parámetro|Valor|ID/Resource, ID col D), **Log 3 columnas** (Fecha|Autor|Cambio), sello de fecha en 41# C3, meses repetidos por sección (7/32/57/81) con traducción EN, años previos individuales + calendario en blanco. (4) Pasos 3.2–3.7 reescritos como §4.2–4.8 (crear por `ZohoSheet_copy`, nunca `createNativeDocument`); **eliminado** el paso de "colores de estatus" (§3.5 Paso 6): Estatus es desplegable, la API solo escribe el valor y el color es automático. (5) Formación Interna fuera del Plan; Soporte Cerrado ligero por lotes; cerrados sin due_date → Entrega "-". (6) Límites API validados (≤40 celdas, HYPERLINK en lotes, insert_row 1 fila/llamada con verificación); §8 ampliada a 4 secciones (~18 inserciones en soporte real). (7) B.3 (Config 3 col), B.4 (mapa corregido) y B.8 (novedades) en el ANEXO B; §5.1 `clickup_plan_fields` reencuadrada como palanca de coste del volcado desatendido — **aún sin desplegar; hasta entonces el default operativo es `clickup_get_task` troceado**. (8) **Cotejo con el proyecto Asesor PO (49 ítems):** Descripción = **ambos formatos combinados** por defecto (Historia + Resumen); en planes EN **SÍ se traducen los nombres de Entregables** (trazabilidad vía HYPERLINK); tabla de estatus ampliada con **PARKING/CANCELADO** y validación→EN PROCESO; normalización **`GESTIÓN CRM`→`CRM`**; Plan **nunca en `01. Seguimiento`**; Log con los **7 atributos** de estilo; validación de cabecera cruzando contra fila de datos (error K/L). |
 | v2.3 | 2026-06-28 | Néstor + Claude | Modelo de Épica híbrido (A microcampañas / B digitales) con frontera por TIPO DE PRODUCTO. Campos reales de ClickUp (PBI texto libre, ÉPICA y TIPO dropdowns) con IDs. Regla determinista de volcado + push de PBI vacío a ClickUp + nota-resumen al PO en Gestión. Tipo de Producto en col 3 del Interno. Coste ~15k/tarjeta, filter sin custom fields, tandas reanudables, modelo Sonnet para ETL, Catalyst `clickup_plan_fields` como mejora futura. Estado del piloto LS (filas 9–14 hechas) y punto de reanudación (fila 15 `8698c2k3x`) con mapa fila→task_id. |
 | v2.4 | 2026-06-28 | Néstor + Claude | Añadida §8: regla obligatoria de inserción de filas en las tablas del Plan (40# y 41#, General y Soporte, productos y microcampañas) — insertar las filas necesarias ANTES de la penúltima fila del cuerpo de la tabla y solo después pegar el contenido; una fila por llamada a `ZohoSheet_insert_row`; recalcular índices de las tablas inferiores y revisar Gantt/hitos tras el desplazamiento. |
 | v2.5 | 2026-06-28 | Néstor + Claude | Añadida §9: generación de Ideas. Cuatro fuentes (actas, notas de Gestión, histórico de productos/microcampañas, referencias de internet sobre Zoho); Objetivos del Cliente (45#) NO es fuente sino criterio de priorización (solo lectura). Límite ~7 ideas nuevas por ronda (= ejecución dominical de la Routine), tope 2–3 por fuente, diversidad, excedentes a "Pendiente Incluir". Trazabilidad obligatoria en col I Notas: autoría Claude + fuente + URLs + porqué de una línea. Fundamento: sobrecarga de elección y 7±2. |
+| v2.7 | 2026-07-05 | Néstor + Claude | **ANEXO B — aprendizajes del piloto LS (creación robusta), alinea con desatendida v1.7.** Bloque de versión añadido. Regla de oro de formato (el API no lee formato). Portada con web real del cliente (no la plantilla). Config a dos columnas (Nombre \| ID) + estilo canónico (cabecera azul/blanca, datos gris `#EBEBEB`, bordes blancos). Calendario base gris `#F2F2F2` en las tres tablas y ambas pestañas, hitos encima. Épica con prefijo numérico; orden Épica → `date_created` → fecha de entrega; agrupación de color `#70EED6`/`#BFBFBF`. `task_id` en el Entregable (hyperlink) como fuente de `date_created` e identidad de fila. Reorden = script (no manual): sin sort nativo, `HYPERLINK` en lotes pequeños (400 si grande), mapear por Entregable entre pestañas desfasadas. Estado del piloto LS de §6/§7 marcado como SUPERADO. |
 | v2.6 | 2026-06-28 | Néstor + Claude | §9: añadida **quinta fuente** de ideas — otros proyectos de Reinicia similares (actuales y pasados) en ClickUp, para reutilizar productos/microcampañas que ya funcionaron. Tope por fuente y trazabilidad (enlace a la tarea ClickUp de referencia) actualizados en consecuencia. |
 

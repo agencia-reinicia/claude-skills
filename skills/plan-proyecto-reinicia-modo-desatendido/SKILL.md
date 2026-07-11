@@ -17,7 +17,7 @@ description: >
 
 # SKILL: Plan de Proyecto — Modo Desatendido (Gestión de ciclo de vida) — Reinicia
 
-> **Versión vigente: v1.7 — orden y agrupación por Épica — 2026-07-04**
+> **Versión vigente: v1.9 — proxy `date_closed` + cotejo Asesor PO — 2026-07-11**
 
 > **Estado:** skill de producción en evolución — gestiona el ciclo de vida del Plan (localiza, crea
 > si falta, reconcilia las tres tablas, congela). Lo que queda por calibrar en ejecución real va
@@ -69,51 +69,62 @@ Plantilla canónica v2: `pnync351d56992b6d4026906a6fec5d56e682`.
 ### Pestañas (worksheet_id reales)
 `36#` Portada · `40#` **Plan Proyecto** (cara cliente) · `41#` **Plan Proyecto Interno** ·
 `42#` **Ideas** · `45#` Objetivos Cliente (lectura, priorización) · `43#` Log Cambios (solo añadir) ·
-`44#` Config. La desatendida escribe en 40#, 41# y 42#.
+`44#` Config. En reconciliación la desatendida escribe en 40#, 41#, 42# y 43# (Log); en creación también 36# (Portada) y 44# (Config).
+
+> **Portada (`36#`):** `C3` = título · `D5` = `=HYPERLINK("<web real>";"<Nombre Cliente>")` (semicolon es-ES, `https`) · **limpiar residuo `ackstorm` en `E5:G5`** · `C6`–`C10` = Idioma / País / Equipo / PO Cliente / PO Técnico (etiquetas traducidas en planes EN).
+> **Sello de última actualización (solo `41#`):** celda **`C3`**, formato **DD/MM/YYYY**. **Reescribirlo en CADA pasada de reconciliación** (y al crear).
+> **Estatus = desplegable:** la API **solo escribe el VALOR**; el color (incl. PARKING/CANCELADO) lo asigna la interfaz. **Nunca** pintar el color del Estatus ni intentar manipular el desplegable vía API. El desplegable ya viene en la plantilla.
 
 ### Tablas dentro de 40#/41# y su FUENTE en ClickUp (cada tabla, su lista)
 Tres por pestaña, y **cada una se reconcilia contra una lista distinta** — NO todo sale de General:
 
-| Tabla del Plan | Fuente ClickUp | Filtro |
-|---|---|---|
-| **PLAN IMPLEMENTACIÓN** | `General [CLIENTE]` (LS `211763746`) | productos digitales / SPIKEs |
-| **PLAN SOPORTE ACTIVO** | `Soporte [CLIENTE]` (LS `211763780`) | tareas **no cerradas** |
-| **PLAN SOPORTE CERRADO** | `Soporte [CLIENTE]` (LS `211763780`) | tareas **cerradas en el año del Plan** (p. ej. 2026); las cerradas en años anteriores quedan en el Plan de su año (histórico), NO se traen |
+| Tabla del Plan | Fuente ClickUp | Filtro | Fila-título (meses) |
+|---|---|---|---|
+| **PLAN IMPLEMENTACIÓN** | `General [CLIENTE]` (LS `211763746`) | productos digitales / SPIKEs | **fila 7** |
+| **PLAN SOPORTE ACTIVO** | `Soporte [CLIENTE]` (LS `211763780`) | tareas **no cerradas** | **fila 32** |
+| **PLAN SOPORTE CERRADO** | `Soporte [CLIENTE]` (LS `211763780`) | tareas **cerradas en el año del Plan** (p. ej. 2026); las cerradas en años anteriores quedan en el Plan de su año (histórico), NO se traen | **fila 57** |
+| **RESUMEN HISTÓRICO** (rollup de años anteriores) | agregado interno | **2 filas: Implementation / Support** | **fila 81** |
 
 Cabecera de tabla en **fila 8** (no fila 1). Filas 3–5 = leyenda de hitos; fila 7 = meses; fila 8 = nº de semana.
+> **Los meses se repiten en la fila-título de CADA sección (7 / 32 / 57 / 81).** En planes **EN**, traducirlos **por sección** (no basta con la primera).
+> **Años anteriores** (alcance histórico completo): los productos de años previos van **individuales, con su fecha real**, y el **calendario del año en blanco**; el **RESUMEN HISTÓRICO (fila 81)** es el que los **agrega** en 2 filas (Implementation / Support).
 
 > ⚠️ **Regla anti-fallo de alcance** (la pasada del 29/06 dejó sin reconciliar las filas 39–79 por
 > mirar solo General): reconciliar SIEMPRE las tres tablas, cada una contra su lista. Una fila del
 > Sheet **sin tarea** en su lista fuente → **avisar al PO y NO tocarla** (probable renombrado/movido).
 
-### ⚠️ MAPA DE COLUMNAS — LAS DOS PESTAÑAS DIFIEREN (leer cabecera por pestaña, NUNCA hardcodear)
+### ⚠️ MAPA DE COLUMNAS v2 — LAS DOS PESTAÑAS DIFIEREN (leer cabecera por pestaña, NUNCA hardcodear)
+
+> ⚠️ **v1.8:** la plantilla v2 añade la columna **`Fecha de petición` (H = col 8)** (`date_created`), que **desplaza +1** todo lo que venía a partir de ella. El mapa anterior ("Estatus col 12/11; calendario 13/12") **ya NO aplica**.
 
 **`40#` Plan Proyecto (cara cliente):**
-| col | Campo | Flujo |
-|---|---|---|
-| 2 | Épica (modelo HÍBRIDO) | Microcampaña→fase de funnel (campo ÉPICA de ClickUp, ⬜ lista blanca). Producto digital→**objetivo de negocio propuesto por Claude** (🟪 + validación PO). NUNCA la app/plataforma. |
-| 3 | Tipo Producto | ⬜ ClickUp → Sheet |
-| 4 | Mes | Derivado = **mes de la Fecha de entrega** (col 8). Recomputar al cambiar la fecha. |
-| 5 | PBI de Primer Nivel | ⬜ ClickUp → Sheet; si vacío en ClickUp → Claude rellena en Sheet+ClickUp + nota PO |
-| 6 | Entregable | ⬜ ClickUp → Sheet (nombre de tarea) |
-| 7 | Descripción | ⬜ ClickUp → Sheet (formato historia/resumen) |
-| 8 | **Fecha de entrega esperada** | ⬜ **ClickUp → Sheet (due_date)** |
-| 9 | **Fecha de validación esperada** | 🔼 **Sheet → ClickUp** (Cliente edita en Sheet → subtarea Validación Cliente) |
-| 10 | Notas Reinicia | ⬜ ClickUp → Sheet (operativa automática: ratios + riesgos) |
-| 11 | **Notas [NombreCliente]** | 🔼 **Sheet → ClickUp** (Cliente escribe; nunca pisar; leer e informar en ClickUp) |
-| 12 | Estatus | ⬜ ClickUp → Sheet (desplegable; color automático) |
-| 13+ | Calendario (semanas) | Generado de las fechas del Sheet (col 8 due_date + col 9 validación) |
+| col | letra | Campo | Flujo |
+|---|---|---|---|
+| 2 | B | Épica (modelo HÍBRIDO) | Microcampaña→fase de funnel (campo ÉPICA de ClickUp, ⬜ lista blanca). Producto digital→**objetivo de negocio propuesto por Claude** con prefijo numérico (🟪 + validación PO). NUNCA la app/plataforma. |
+| 3 | C | Tipo Producto | ⬜ ClickUp → Sheet |
+| 4 | D | Mes | Derivado = **mes de la Fecha de entrega** (col 9). Recomputar al cambiar la fecha. |
+| 5 | E | PBI de Primer Nivel | ⬜ ClickUp → Sheet; si vacío en ClickUp → Claude rellena en Sheet+ClickUp + nota PO |
+| 6 | F | Entregable | ⬜ ClickUp → Sheet (nombre de tarea, con hyperlink a la tarjeta) |
+| 7 | G | Descripción | ⬜ ClickUp → Sheet (por defecto **Historia de usuario + Resumen ejecutivo** combinados en la misma celda; en EN, ambos en inglés) |
+| 8 | **H** | **Fecha de petición** (`date_created`) | **COLUMNA NUEVA** — se lee del hyperlink del Entregable; fija el orden dentro de la tabla |
+| 9 | I | **Fecha de entrega esperada** | ⬜ **ClickUp → Sheet (due_date)** |
+| 10 | J | **Fecha de validación esperada** | ↕ **Sheet ↔ ClickUp (bidireccional)** — subtarea "Validación Cliente"; rellenar el lado vacío desde el otro, **nunca pisar** un valor ya puesto |
+| 11 | K | Notas Reinicia | ⬜ ClickUp → Sheet (operativa automática: ratios + riesgos) |
+| 12 | L | **Notas [NombreCliente]** | 🔼 **Sheet → ClickUp** (Cliente escribe; nunca pisar; leer e informar en ClickUp) |
+| 13 | **M** | Estatus | ⬜ ClickUp → Sheet (desplegable; color automático) |
+| 14–37 | **N–AK** | Calendario (24 quincenas) | Generado de las fechas del Sheet (col 9 due_date + col 10 validación) · **col = 13 + quincena** |
 
-**`41#` Plan Proyecto Interno** (igual hasta col 9; luego CAMBIA):
-| col | Campo | Flujo |
-|---|---|---|
-| 2–9 | igual que 40# | igual |
-| 10 | Notas (una sola) | ⬜ ClickUp → Sheet (operativa) |
-| 11 | Estatus | ⬜ ClickUp → Sheet (desplegable; color automático) |
-| 12+ | Calendario | Generado |
+**`41#` Plan Proyecto Interno** (igual hasta col 10; luego CAMBIA — no tiene "Notas [Cliente]"):
+| col | letra | Campo | Flujo |
+|---|---|---|---|
+| 2–10 | B–J | igual que 40# (incluye **H = Fecha de petición**) | igual |
+| 11 | **K** | Notas (una sola) | ⬜ ClickUp → Sheet (operativa) |
+| 12 | **L** | Estatus | ⬜ ClickUp → Sheet (desplegable; color automático) |
+| 13–36 | **M–AJ** | Calendario (24 quincenas) | Generado · **col = 12 + quincena** |
 
-> ⚠️ Estatus = col 12 (40#) / col 11 (41#); calendario desde col 13 (40#) / col 12 (41#). Resolver
-> por nombre leyendo la cabecera de cada pestaña. `41#` no tiene "Notas [Cliente]".
+> ⚠️ **Estatus = col M (13) en 40# / col L (12) en 41#; calendario desde N (14) en 40# / M (13) en 41#.**
+> **quincena = (mes − 1)·2 + (1 si día ≤ 15; 2 si día > 15).** Resolver por **nombre leyendo la cabecera**
+> de cada pestaña, nunca por letra fija. `41#` no tiene "Notas [Cliente]".
 
 ---
 
@@ -123,9 +134,8 @@ Cabecera de tabla en **fila 8** (no fila 1). Filas 3–5 = leyenda de hitos; fil
   Descripción, **Fecha de entrega (due_date)**, Notas Reinicia/Notas, Estatus, calendario. **La
   lista fuente depende de la tabla** (Implementación←General; Soporte Activo/Cerrado←Soporte).
 - **🔼 Sheet → ClickUp** (origen en el Sheet, se propaga a ClickUp; nunca se pisa la celda del Sheet):
-  - **Fecha de validación esperada** (col 9) → fecha de la subtarea "Validación Cliente" en ClickUp.
-    **Nunca inventar**: si no hay valor del Cliente, dejar la celda vacía (no poner fecha por defecto).
-  - **Notas [Cliente]** (col 11, solo 40#) → informar en ClickUp (🚧 mecanismo: comentario en la
+  - **↕ Fecha de validación esperada** (**col 10** J) ↔ fecha de la subtarea **"Validación Cliente"** de ClickUp: **sincronización bidireccional (decisión PO nº5)**. Si un lado tiene valor y el otro está vacío, **rellenar el vacío desde el que lo tiene** (Sheet→ClickUp o ClickUp→Sheet). **Nunca inventar** y **nunca pisar** un valor ya puesto por el Cliente (si ambos difieren, no tocar y avisar en el reporte).
+  - **Notas [Cliente]** (**col 12** L, solo 40#) → informar en ClickUp (🚧 mecanismo: comentario en la
     tarea del producto en `General [CLIENTE]`; confirmar en 1ª pasada).
 - **🟪 Generado por Claude** (criterio, + nota PO): **PBI** (col 5) cuando falta en ClickUp, y la
   **Épica** (col 2) de **productos digitales** = **objetivo de negocio** que propone Claude (p. ej.
@@ -137,8 +147,9 @@ Cabecera de tabla en **fila 8** (no fila 1). Filas 3–5 = leyenda de hitos; fil
 > los campos de lista blanca (Tipo, Entregable, Descripción, Notas Reinicia, Estatus, Fecha de
 > entrega), no solo las celdas que cambiaron. **Backfill inicial troceado** para filas antiguas con
 > lista blanca incompleta (p. ej. Tipo de Producto vacío).
-> **due_date null** → escribir **"A definir"** en col 8 (no vaciar) y calendario en blanco.
-> **Al cambiar la fecha de entrega**, recomputar col 4 "Mes" (= mes de col 8) y la marca de calendario.
+> **due_date null** (producto abierto) → escribir **"A definir"** en **col 9** (no vaciar) y calendario en blanco.
+> **Cerrado sin `due_date`** → **`date_closed` como fecha de entrega (proxy, decisión B):** col 9 = `date_closed` (`DD/MM/YYYY`) + marca de calendario en su quincena (color entrega `#70EED6`). `date_closed` sigue atribuyendo el año. Solo Entrega `"-"` y calendario en blanco si **tampoco** hay `date_closed`.
+> **Al cambiar la fecha de entrega**, recomputar **col 4 "Mes"** (= mes de **col 9**) y la marca de calendario.
 > Sin divergencia con la supervisada en la fecha de entrega: ambas la actualizan desde el due_date.
 
 ---
@@ -148,11 +159,12 @@ Cabecera de tabla en **fila 8** (no fila 1). Filas 3–5 = leyenda de hitos; fil
 - Cabecera de tabla: `fill #3812CF` · `font #FFFFFF` · negrita · center/middle · alto 36 · wrap.
 - Banding datos: par `#FFFFFF` / impar `#EBEBEB` · alto 60 · valign top.
 - Zona calendario (encabezado meses/quincenas): `fill #EBEBEB` · negrita · `font #3812CF` · center/middle.
-- **Rejilla del calendario, celdas de datos (40# cols M–AJ = 13–36; 41# cols L–AI = 12–35): base
+- **Rejilla del calendario, celdas de datos (40# cols N–AK = 14–37; 41# cols M–AJ = 13–36): base
   `#F2F2F2`, NUNCA blanco.** Son 24 quincenas (2 por mes). Los hitos se pintan ENCIMA del gris:
   entrega `#70EED6`, validación `#EBE31B`. Al (re)dibujar el calendario, poner PRIMERO toda la rejilla
-  de datos en `#F2F2F2` y luego pintar los hitos desde las fechas (col 8 / col 9) — así ninguna celda
-  queda en blanco. Redibujar la rejilla COMPLETA (todas las filas de datos), no solo las que cambian.
+  de datos en `#F2F2F2` y luego pintar los hitos desde las fechas (**col 9 due_date / col 10 validación**;
+  quincena = (mes−1)·2 + (1 si día≤15; 2 si>15)) — así ninguna celda queda en blanco. Redibujar la
+  rejilla COMPLETA (todas las filas de datos), no solo las que cambian.
 - **Estatus = desplegable con formato asociado al valor** → escribir solo el texto exacto del
   desplegable y el color sale solo (TERMINADO verde · EN PROCESO amarillo · PENDIENTE lila ·
   POSPUESTO gris · PARKING/CANCELADO según desplegable). No reaplicar color nunca.
@@ -192,8 +204,8 @@ Cabecera de tabla en **fila 8** (no fila 1). Filas 3–5 = leyenda de hitos; fil
    **Excepción: Log de Cambios** (no hay tabla precreada) → añadir al final + aplicar formato explícito
    (ver identidad visual).
 6. **Índices de Estatus/calendario por cabecera leída** (difiere entre 40# y 41#).
-7. **No pisar nunca** col 8 (¡sí se actualiza desde ClickUp!) — matiz: col 8 SÍ se escribe (due_date);
-   las que NO se pisan son col 9 y col 11 (origen Cliente, solo lectura→push a ClickUp).
+7. **Columnas de origen Cliente = solo lectura→push (nunca pisar):** son **col 10** (Fecha de validación)
+   y **col 12** (Notas [Cliente], solo 40#). En cambio **col 9 SÍ se escribe** (due_date desde ClickUp).
 8. **Log de Cambios:** añadir la entrada al final y **aplicar el formato de fila explícitamente** (fill `#EBEBEB`, bordes blancos, Manrope, color `#545454`, altura ~48, wrap) para igualar las filas existentes — el Log no tiene cuerpo preformateado del que heredar. **Registrar SIEMPRE** una entrada al cierre de cada pasada con los cambios aplicados. **No `Create_New_File`.**
 
 ---
@@ -226,10 +238,10 @@ Idempotente.
   "2. …"), para que el orden sea **intrínseco al dato** (ordenar por el texto de col 2 = ordenar por
   épica). No se deriva de la app ni del ÉPICA funnel.
 - **Orden de filas dentro de CADA tabla (Implementación, Soporte Activo, Soporte Cerrado):**
-  **Épica (prefijo) → fecha de petición (`date_created`) → fecha de entrega (col 8).**
-- **`date_created`** (fecha de petición) se obtiene del **enlace a ClickUp incrustado en el
-  Entregable** (col 6, hyperlink `app.clickup.com/t/<task_id>`) → `task_id` determinista, sin
-  matching difuso. (El Plan no guarda el task_id en columna propia; se lee del hyperlink.)
+  **Épica (prefijo) → fecha de petición (`date_created`, col 8 H) → fecha de entrega (col 9 I).**
+- **`date_created`** (fecha de petición) se escribe en la **columna propia `H` (col 8)** y también se
+  puede cruzar con el **`task_id` del hyperlink del Entregable** (col 6, `app.clickup.com/t/<task_id>`)
+  → identidad determinista de fila, sin matching difuso.
 - **Reorden, recoloreado de Épica y redibujado del calendario van SIEMPRE juntos** (un cambio de
   orden invalida las marcas del calendario, que son solo fondo). Al reordenar: mover la fila
   completa, recomputar el color de Épica (fondo alternando `#70EED6`/`#BFBFBF` por grupo contiguo) y
@@ -261,16 +273,18 @@ Primera fila pendiente por el contenido de la columna PBI. 🚧 criterio exacto 
   limitar la reconciliación a General.
 - Leer tarjeta ClickUp (campos, subtareas, comentarios, checklist, due_date, subtarea Validación Cliente).
 - **Reflejo completo** de la lista blanca en CADA fila (no solo divergencias), **incluida Notas
-  Reinicia/Notas** (refrescarla aunque solo cambie el estatus); 🔼 Sheet→ClickUp (validación + notas
-  Cliente); 🟪 PBI vacío → generar; **recomputar Mes y marca de calendario** al cambiar la fecha.
+  Reinicia/Notas** (refrescarla aunque solo cambie el estatus); **↕ validación** (bidireccional) + 🔼 **Notas Cliente** (Sheet→ClickUp, nunca pisar); 🟪 PBI vacío → generar; **recomputar Mes y marca de calendario** al cambiar la fecha.
 - **Fila huérfana** (en el Sheet, sin tarea en su lista fuente) → avisar al PO en el reporte y NO tocarla.
 - **Tarea sin fila** (existe en General y está `done`, pero no tiene fila en Implementación) → **añadirla
   a Implementación** por inserción, en BORRADOR, y avisar al PO para validar.
 - **Ticket de Soporte cerrado SIN fecha de cierre** → no se puede atribuir a un año → **dejar fuera de
-  Soporte Cerrado y avisar** (no adivinar el año).
-- **Al cierre: registrar SIEMPRE la entrada en el Log de Cambios** (paso obligatorio, no opcional).
-- (Re)dibujar calendario: base `#F2F2F2` en toda la rejilla de datos + hitos de cols 8/9 encima (entrega `#70EED6`, validación `#EBE31B`).
-- **Insertar filas (§8)** si falta espacio, ANTES de pegar. Persistir en lotes ≤40.
+  Soporte Cerrado y avisar** (no adivinar el año). **Cerrado con fecha pero sin `due_date`** → **`date_closed` como proxy de entrega (B)**: col 9 = `date_closed` (DD/MM/YYYY) + marca de calendario; `"-"` solo si tampoco hay `date_closed`.
+- **Formación Interna FUERA del Plan:** los productos de «Formación interna» **no figuran** (ni 40# ni 41#): no se escribe Descripción ni se hace write-back de PBI; **borrar su fila**. El borrado es ESTRUCTURA → hacerlo **al final de la fase de contenido** y **repintar** calendario/Gantt después.
+- **Soporte Cerrado — tratamiento ligero por lotes:** Descripción de **1 línea** derivada de **Deliverable + Épica + PBI** (o vacía si es duda/consulta sin entregable real), **sin leer tarjeta a tarjeta**; procesar en lotes grandes; write-back de PBI igual que el resto. (Cuando `clickup_plan_fields` esté desplegada, esto sale de una sola consulta; hoy, por lotes con `clickup_get_task`.)
+- **Al cierre: registrar SIEMPRE la entrada en el Log de Cambios** (3 columnas Fecha | Autor | Cambio; paso obligatorio, no opcional).
+- **Reescribir el sello de última actualización** en `41#` `C3` (DD/MM/YYYY) en cada pasada.
+- (Re)dibujar calendario: base `#F2F2F2` en toda la rejilla de datos + hitos de **cols 9/10** encima (entrega `#70EED6`, validación `#EBE31B`).
+- **Insertar filas (§8)** si falta espacio, ANTES de pegar (en un proyecto con soporte real, **SOPORTE CERRADO puede necesitar ~18 inserciones**). **Verificar el recuento con una lectura** (`insert_row` a veces deja una de menos: 17 en vez de 18). Persistir en lotes ≤40.
 
 ### PASO 4 — Ideas (solo Routine dominical)
 ≤7 ideas nuevas en 42# con trazabilidad y priorización por Objetivos (45#).
@@ -306,8 +320,11 @@ sin Plan del año ─(alta / cambio de año)→ crear BORRADOR (sembrado) + enla
 - **Construir con el procedimiento de la supervisada** (`plan-proyecto-zoho-sheet-reinicia`, CREACIÓN):
   backlog **COMPLETO**, Config, Log con tabla y estilos, enlaces en Entregables, portada. **NO**
   reimplementar una versión abreviada (fue lo que falló: 7 de 57, Config/Log vacíos, sin enlaces).
-- Sustituir las preguntas al PO por **inferencia + defaults**: idioma inferido del cliente,
-  granularidad = quincenas, alcance = backlog completo. Marcar **BORRADOR pendiente de validación PO**.
+- Sustituir las preguntas al PO por **inferencia + defaults deterministas** (no hay PO al que preguntar). Marcar **BORRADOR pendiente de validación PO**:
+  - **Idioma:** si el fichero ya existe, **leerlo de la Config (`44#`) / Portada (`36#`)**; si se crea de cero, **inferirlo del cliente** (país/idioma de trabajo) + nota al PO.
+  - **Traducción de Entregables:** por defecto en planes EN se traduce **todo**, incluidos los **nombres de Entregables** (la trazabilidad la mantiene el **HYPERLINK al `task_id`** de ClickUp, no el texto). Solo se dejan sin traducir si la Config/Portada indica que el PO lo pidió.
+  - **Años anteriores (histórico completo):** productos de años previos **individuales, con su fecha real**, y **calendario del año en blanco**; el **RESUMEN HISTÓRICO (fila 81)** los **agrega**.
+  - **Granularidad = quincenas · alcance = backlog completo.**
 - **Ubicación: SIEMPRE la carpeta "Plan de Proyecto/Marketing o similar" del proyecto en Workdrive.
   NUNCA "01. Seguimiento".** Si esa carpeta no existe, **crearla** en la raíz del proyecto antes de
   poner el fichero.
@@ -343,7 +360,7 @@ confirmar la lectura en vivo vía MCP en la primera baja real (la lectura quedó
 (campos + subtarea Validación Cliente + due_date) · actas/Gestión/histórico/proyectos similares (Ideas) ·
 `Gestión [CLIENTE]` (reporte).
 
-**Output:** 40#/41# reconciliadas sin romper formato · due_date volcado a col 8 · validación y notas
+**Output:** 40#/41# reconciliadas sin romper formato · due_date volcado a col 9 · validación y notas
 de Cliente empujadas a ClickUp · Épica/PBI vacíos rellenados · ≤7 ideas en 42# · comentario en Gestión.
 
 ---
@@ -352,10 +369,11 @@ de Cliente empujadas a ClickUp · Épica/PBI vacíos rellenados · ≤7 ideas en
 
 - **Pestañas v2:** 36# Portada · 40# Plan Proyecto · 41# Plan Proyecto Interno · 42# Ideas ·
   45# Objetivos Cliente · 43# Log Cambios · 44# Config.
-- **Config a DOS columnas:** cada referencia va en dos celdas — **Nombre** legible (para el usuario) ·
-  **ID/Resource** (que lee la máquina). Aplica a: Lista ClickUp General, Lista ClickUp Soporte, Lista
-  ClickUp Gestión, Carpeta ClickUp, Space ClickUp, Carpeta Workdrive (Plan) y Resource ID (fichero).
-  La skill **lee el ID de la columna ID**, nunca lo parsea de un texto "Nombre (ID)".
+- **Config a TRES columnas (v1.8):** **Parámetro** (nombre del parámetro) · **Valor** (nombre legible) ·
+  **ID/Resource** (que lee la máquina, en la **col D**, ancho ~400). Aplica a: Lista ClickUp General,
+  Lista ClickUp Soporte, Lista ClickUp Gestión, Carpeta ClickUp, Space ClickUp, Carpeta Workdrive (Plan)
+  y Resource ID (fichero). La skill **lee el ID de la col D**, nunca lo parsea de un texto "Nombre (ID)".
+  Viene **VACÍA** en la plantilla → construirla en creación.
 - **IDs ClickUp Líder System:** General `211763746` · **Soporte `211763780`** (fuente de las tablas
   de Soporte) · Gestión `211763776`. Custom fields: PBI `6758065a-bd4f-4d7d-9a48-926e81fe343f` · TIPO
   `5bd9072e-deae-4352-b35b-bdbaa3cc216d` · ÉPICA funnel (NO para Épica de negocio)
@@ -367,9 +385,9 @@ de Cliente empujadas a ClickUp · Épica/PBI vacíos rellenados · ≤7 ideas en
 
 ## LIMITACIONES TÉCNICAS
 
-1. `clickup_get_task` con campos ~15k tokens → skill troceada.
+1. `clickup_get_task` con campos ~15k tokens. **Palanca objetivo:** la función Catalyst `clickup_plan_fields` (por lista, `{id, name, status, pbi, epica, tipo, date_created, due_date, date_closed}` en **<2k tokens**) para que el volcado **quepa en una sola pasada**. ⚠️ **AÚN NO DESPLEGADA (2026-07-11):** hasta que exista, el **default operativo es `clickup_get_task` troceado** (esta skill sigue troceada e idempotente por eso). Antes de asumir la vía barata, **comprobar que la función responde**; si no, caer a `clickup_get_task`. Este es el que exigen subtareas/comentarios/criterios en cualquier caso.
 2. Sin API directa de ClickUp desde bash → solo MCP (en Routines).
-3. Zoho Sheet: `set_content_to_multiple_cells` ~50 máx (30–40); celda <~200 chars; decimal coma; vaciar con `" "`.
+3. Zoho Sheet (validado en vivo): `cells.content.set` **≤ 40 celdas/llamada** (63 → **error 400**); **`HYPERLINK` en lotes pequeños** (lote grande → 400); **`insert_row` 1 fila/llamada** → verificar recuento con lectura; celda <~200 chars; decimal coma; vaciar con `" "` (nunca `""`).
 4. Comentarios ClickUp: texto plano.
 4b. **El API de Zoho Sheet NO permite LEER el formato de una celda** (solo escribirlo). Por tanto,
     nunca intentar "igualar" un formato existente leyéndolo: aplicar SIEMPRE el estilo canónico
@@ -383,6 +401,8 @@ de Cliente empujadas a ClickUp · Épica/PBI vacíos rellenados · ≤7 ideas en
 
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|
+| **v1.9** | 2026-07-11 | Néstor + Claude | **Proxy `date_closed` (decisión B) + bump alineado con la supervisada v2.9.** (1) **Cerrados sin `due_date`** usan **`date_closed` como fecha de entrega** (col 9 = fecha de cierre DD/MM/YYYY) **y marcan el calendario** en su quincena (color entrega); antes se dejaba `"-"`/blanco. Solo `"-"` si tampoco hay `date_closed`. `date_closed` sigue atribuyendo el año de la tabla. (2) Subida de versión (v1.8→v1.9) para mantener el par sincronizado con la supervisada. (3) **Cotejo de las 5 DECISIONES PO:** nº1–4 y nº5a ya cubiertas en la desatendida; **corregido el hueco nº5b** — la **Fecha de validación esperada** ahora sincroniza en **AMBOS sentidos** (Sheet ↔ ClickUp: rellenar el lado vacío desde el otro, nunca pisar el valor del Cliente; si difieren, avisar), antes solo Sheet→ClickUp. Actualizados mapa, MODELO DE SINCRONIZACIÓN y línea-resumen. |
+| **v1.8** | 2026-07-11 | Néstor + Claude | **Mapa de columnas v2 (piloto Carritech) + reglas deterministas + palanca de coste.** (1) Columna nueva **`Fecha de petición` (H = col 8)** (`date_created`) que desplaza +1 todo lo posterior: Estatus 40#=M(13)/41#=L(12); Fecha entrega=col 9; validación=col 10; Notas Reinicia=col 11; Notas Cliente=col 12; calendario 40#=N–AK(14–37)/41#=M–AJ(13–36), 24 quincenas, `quincena=(mes−1)·2+(1 si día≤15;2 si>15)`. Actualizados MAPA DE COLUMNAS, identidad visual, MODELO DE SINCRONIZACIÓN y reglas de escritura. (2) **4ª sección RESUMEN HISTÓRICO** (fila 81, 2 filas Implementation/Support) que agrega años previos; productos de años anteriores individuales con fecha real + calendario en blanco; meses repetidos por sección (7/32/57/81) traducidos en EN. (3) **Portada real** (C3/D5 HYPERLINK/limpiar `ackstorm` E5:G5/C6–C10), **Config 3 columnas** (Parámetro|Valor|ID/Resource, ID col D), **Log 3 columnas** (Fecha|Autor|Cambio), **sello de última actualización** en 41# C3 (DD/MM/YYYY) reescrito en cada pasada. (4) Estatus = desplegable: la API solo escribe el valor, color automático; nunca pintar el Estatus. (5) **Reglas deterministas (sin PO)**: idioma leído de Config/Portada (o inferido), Entregables NO traducidos por defecto, años previos agregados en Resumen Histórico. (6) Formación Interna fuera del Plan; Soporte Cerrado ligero por lotes; cerrados sin due_date → Entrega "-". (7) Límites API validados (≤40 celdas [63→400], HYPERLINK en lotes, insert_row 1 fila/llamada con verificación); **`clickup_plan_fields`** (Catalyst) como palanca objetivo para que el volcado quepa en una pasada — **aún sin desplegar; hasta entonces el default operativo es `clickup_get_task` troceado**. (8) **Cotejo con el proyecto Asesor PO:** Descripción = **ambos formatos combinados** por defecto (Historia + Resumen); en planes EN **SÍ se traducen los nombres de Entregables** (trazabilidad vía HYPERLINK al task_id). |
 | **v0.1** | 2026-06-28 | Néstor + Claude | Esqueleto: mantenimiento; reconciliación por campo; PBI vacío; idempotente; reporte a Gestión; piloto Sonnet 4.6 LS. |
 | **v0.2** | 2026-06-28 | Néstor + Claude | Estructura + identidad visual + reglas de escritura segura; 5 decisiones PO formalizadas. |
 | **v0.3** | 2026-06-28 | Néstor + Claude | Mapa de columnas real (40# y 41# difieren); Ideas (§9) y sync de validación dentro del alcance. |
@@ -406,17 +426,17 @@ de Cliente empujadas a ClickUp · Épica/PBI vacíos rellenados · ≤7 ideas en
 
 ## PENDIENTES DE EVOLUCIÓN
 - **Limpiar filas placeholder vacías** sobrantes bajo las tablas (p. ej. Soporte Cerrado) tras sembrar/insertar.
-- Añadir el **bloque de versión estándar** (cabecera `> **Versión vigente…**` + tabla `## Versiones`) a la
-  skill hermana `plan-proyecto-zoho-sheet-reinicia`, para que el script de sync pueda protegerla por versión.
-- Confirmar el **filtro de "cerrada en el año"** del Soporte (campo de fecha de cierre / date_closed que expone el MCP) en la 1ª pasada multi-tabla.
+- ✅ *(Resuelto v2.8 supervisada)* La skill hermana `plan-proyecto-zoho-sheet-reinicia` ya lleva el **bloque de versión estándar** (cabecera + tabla `## Versiones`); el script de sync puede protegerla por versión.
+- ✅ *(Resuelto v1.8)* El **filtro de "cerrada en el año"** del Soporte usa **`date_closed`** (hoy leído de `clickup_get_task`; lo expondrá `clickup_plan_fields` cuando se despliegue); cerrado sin fecha → fuera + aviso. Confirmar el campo exacto en la 1ª pasada multi-tabla real.
 - **Cablear la creación unificada** (que la desatendida ejecute el procedimiento de creación de la
   supervisada, no una versión propia) ANTES de habilitar creación autónoma en producción. Es la
   dependencia crítica de §B/§C.
+- **Desplegar `clickup_plan_fields`** en Catalyst (`Reinicia-Clickup-Audit`) — dependencia de coste para el volcado en una pasada (§palanca de coste / LIMITACIONES #1).
 - **Confirmar la lectura del flag `archived`** de carpeta/lista vía MCP de ClickUp (gatea §E/bajas).
 - **Afinar la inferencia** del nombre del producto Plan (similitud tipo+año) y del idioma del cliente
   en la 1ª ejecución real.
-- **Almacén de configuración por cliente** (idioma/granularidad/formato/alcance atípicos) como mejora
-  opcional de la creación desatendida (hoy: inferencia + defaults).
+- **Almacén de configuración por cliente** (granularidad/formato/alcance atípicos) como mejora
+  opcional (hoy: idioma leído de Config/Portada + defaults deterministas — ver §B).
 - Calibrar presupuesto de troceo y criterio de reanudación (1ª pasada).
 - Confirmar mecanismo exacto de "informar Notas [Cliente] en ClickUp" (comentario en la tarea).
 - **Orden cronológico** de filas nuevas dentro de cada tabla (futuro; de momento al final, a revisar cuando los POs trabajen los Planes).

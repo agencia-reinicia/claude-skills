@@ -5,7 +5,7 @@ description: "Usa esta skill cuando el usuario pida crear un acta de reunión pa
 
 # Skill: Crear Acta de Reunión — Reinicia
 
-> **Versión vigente: v1.4 — 20/06/2026** · ver changelog al final (`## Versiones`)
+> **Versión vigente: v1.5 — 07/07/2026** · ver changelog al final (`## Versiones`)
 
 ## Descripción general
 
@@ -40,6 +40,15 @@ Antes de ejecutar, Claude debe tener o solicitar:
 
    Una vez elegida la opción, buscar dinámicamente la carpeta en Workdrive (ver **Búsqueda dinámica de carpeta** más abajo).
 
+   > **Variante INTERNA / confidencial (solo destino 🤝 Amigo Reinicia).** Cuando la reunión sea transversal con un Amigo Reinicia **y** toque información que no debe salir de Reinicia (tarifas de terceros, datos de otros clientes, estrategia comercial interna), NO generar un único acta. Flujo:
+   > 1. Al procesar la transcripción, **detectar y listar** los ítems sensibles y presentárselos al PO. Preguntarle si quiere la variante doble.
+   > 2. Si el PO confirma, generar **dos ficheros** (dos ejecuciones del script con distinto `CONFIDENCIAL`, sufijo de `FILENAME` y contenido):
+   >    - `…-INTERNO` → `CONFIDENCIAL=true`: **banner rojo** `#D14351` arriba (*"CONFIDENCIAL — USO INTERNO REINICIA · No compartir fuera de Reinicia."*), contenido **completo** con el detalle sensible.
+   >    - `…-RELACION` → `CONFIDENCIAL=false`: **sin banner**, versión **saneada** para compartir con el Amigo (se retira o generaliza lo que el PO marcó en el paso 1).
+   > 3. En el Paso 4, entregar los dos, dejando claro cuál es de uso interno y cuál es compartible.
+   >
+   > Si no hay contenido sensible, un acta única normal (`CONFIDENCIAL=false`, sin sufijo). Nunca mencionar al Amigo Reinicia en documentos cara-cliente de otros proyectos (regla general de la casa).
+
 6. **Tarea ClickUp de Gestión** — se busca automáticamente por mes y cliente
 
 Si falta algún dato no inferable, preguntarlo antes de continuar.
@@ -62,6 +71,30 @@ Leer el fichero `.vtt` adjunto y extraer:
   - **Negrita** → conceptos técnicos clave, soluciones acordadas, datos relevantes (cifras, herramientas, sistemas)
   - *Cursiva* → ejemplos concretos, anécdotas o casos ilustrativos
   - Subrayado → solo en encabezados de bloque (HomeEspaña / Reinicia), nunca en Comentarios
+
+  > **Regla de atribución (obligatoria).** Un acta no resume temas: reconstruye **quién dice qué y quién responde**. Cada subtema de Comentarios debe leerse como un intercambio trazable, no como un resumen impersonal.
+  >
+  > - Atribuir cada intervención a su autor: *"Robin (HomeEspaña) trasladó que…"*, *"Paolo respondió que…"*, *"Kieran preguntó si…"*, *"Néstor se comprometió a…"*. Nombre + (empresa) al menos en la primera mención dentro de cada subtema, y siempre que haya riesgo de ambigüedad.
+  > - Distinguir los tres roles de cada punto: **quién plantea** el tema o la duda, **quién responde o decide**, y **quién asume** la acción. El responsable que acabe en la tabla de Decisiones debe coincidir con quien se comprometió en el relato.
+  > - Verbos de atribución precisos según el acto: *planteó / preguntó / trasladó* (abre un punto); *explicó / aclaró / respondió* (responde); *propuso / sugirió* (aporta una idea); *acordó / confirmó / se comprometió* (cierra).
+  > - Reservar el impersonal ("Se acordó…", "Se decidió…") **solo** para conclusiones genuinamente conjuntas. Si el punto es atribuible a una persona, atribuirlo.
+  > - **Si la transcripción no permite desambiguar** quién habla (p. ej. sala compartida con varias voces fundidas en una), **no inventar la atribución**: redactar en neutro y dejarlo reflejado en la nota final (variante "sala compartida").
+
+  > **Regla de ortografía (obligatoria).** El cuerpo del acta respeta la ortografía **completa del idioma de salida** (ver "Idioma de salida" en Inputs). La norma se aplica según el idioma en que se redacte el acta, no por defecto en español.
+  >
+  > - **Actas en español:** español correcto y completo — tildes, eñes (ñ/Ñ), signos de apertura ¿ ¡, diéresis (ü) y comillas. Nunca "aplanar" a ASCII: se escribe "gestión", "España", "implementación", "diseño", jamás "gestion", "Espana", "diseno". Aplica a todo el documento visible (Participantes, Guión, Comentarios, Ideas y Decisiones), incluidos nombres de persona y empresa ("HomeEspaña", no "HomeEspana").
+  > - **Actas en inglés (u otro idioma de salida):** aplicar la ortografía propia de ese idioma. La casuística de tildes/ñ del español no aplica, pero sí el principio general de **no degradar caracteres** (p. ej. no perder los acentos de un nombre propio castellano que aparezca dentro de un acta en inglés).
+  > - **Excepción — nombre de fichero.** El FILENAME mantiene su norma del Paso 2 (sin tildes ni ñ; cliente en mayúsculas sin acentos: "HOMEESPANA"), sea cual sea el idioma del contenido. La ortografía plena es solo para el contenido.
+  > - En `build_acta.js`, escribir los caracteres acentuados **literalmente en UTF-8** dentro de las cadenas (la librería `docx` los preserva en los `TextRun`). No hace falta escaparlos; si se hace, usar el código correcto (`\u00f1` = ñ, `\u00e9` = é).
+  > - **Verificación antes de entregar (actas en español):** releer buscando términos que suelen perder la tilde (gestión, integración, implementación, migración, comunicación, análisis, revisión, España) y confirmar que la ñ está donde toca. Si aparece una palabra aplanada, corregir y regenerar.
+
+  > **Regla de terminología de la casa (obligatoria).** El acta usa el vocabulario canónico de Reinicia, no el coloquial de la reunión. Como parafrasea (no transcribe literal) y es cara-cliente tras la revisión del PO, cada concepto se nombra con su término oficial:
+  >
+  > - "bolsa de horas" / "bolsa de horas operativas" → **"Soporte Operativo Continuo"** (o "soporte operativo"). En actas en inglés: **"Ongoing Operational Support"**. Nunca "bolsa de horas" / "hours bank" / "bag of hours", aunque en la reunión se dijera así.
+  > - "Refinamiento" como fase o servicio recurrente cara-cliente → **"Planificación Operativa"** (EN: "Operational Planning").
+  > - Aplica a todo el cuerpo: Comentarios, Ideas y Decisiones (incluida la columna Acción/Decisión y los nombres de servicios).
+  > - **Excepción — cita textual imprescindible:** si el término coloquial forma parte de una cita literal que importa (p. ej. una condición que el cliente enunció así), mantenerlo entrecomillado y añadir el canónico entre paréntesis. En el resto, usar directamente el canónico.
+  > - Al entregar, **avisar al PO** de esta normalización (ver Paso 4): el acta no reproduce literal lo dicho.
 - **Ideas tratadas** — ideas, propuestas o sugerencias que surgieron en la reunión (aunque no cristalizasen en acción). Para cada una extraer: idea, descripción breve, quién la aportó (nombre + empresa), grado de aceptación del cliente (`Sí` / `Con matices` / `No` / `Pendiente` si no se pronunció) y app(s) involucradas. No forzar ideas inexistentes: si la reunión no tuvo ideas reseñables, omitir el bloque.
 - **Decisiones y acciones** — separadas por responsable (Reinicia primero, cliente después), con fecha concreta si se mencionó
 
@@ -88,9 +121,32 @@ Usar el script de referencia (`build_acta.js`) que está al final de esta skill.
 
 Ejecutar con:
 ```bash
+# 0) PRERREQUISITO — logo y fuentes Manrope en /home/claude (ver tabla de identidad):
+#    logo_reinicia.png  +  manrope/static/Manrope-Regular.ttf  y  Manrope-Bold.ttf
+#    (extraer del ZIP de Workdrive si no están; ver "Fuentes corporativas" abajo)
 cd /home/claude && node build_acta.js
 # build_acta.js escribe /home/claude/<FILENAME>.docx — validar ESE fichero, no "output.docx"
+
+# 1) Parche de fuentes embebidas (OBLIGATORIO): fontKey en mayúsculas + <w:embedTrueTypeFonts/>
+python3 patch_fonts.py "/home/claude/<FILENAME>.docx"
+
+# 2) Validación estructural
 python3 /mnt/skills/public/docx/scripts/office/validate.py "/home/claude/<FILENAME>.docx"
+
+# 3) Sanity de fuentes embebidas — deben aparecer Manrope-Regular y Manrope-Bold con emb=yes:
+soffice --headless --convert-to pdf "/home/claude/<FILENAME>.docx" --outdir /home/claude >/dev/null 2>&1 \
+  && pdffonts "/home/claude/<FILENAME>.pdf" | grep -i manrope \
+  || echo "⚠️ REVISAR: Manrope no aparece embebida en el render"
+
+# 4) Sanity de acentos — SOLO para actas redactadas en español (omitir en actas en inglés):
+# el cuerpo debe contener caracteres no-ASCII (tildes/ñ). Si no, algo se ha aplanado.
+unzip -p "/home/claude/<FILENAME>.docx" word/document.xml | grep -qP '[áéíóúñÁÉÍÓÚÑü]' \
+  && echo "Acentos presentes ✓" || echo "⚠️ REVISAR: no se detectan acentos/ñ en el cuerpo"
+
+# 5) Sanity de terminología de la casa (actas en español): no debe aparecer vocabulario coloquial.
+unzip -p "/home/claude/<FILENAME>.docx" word/document.xml | grep -qiP 'bolsa de horas|refinamiento' \
+  && echo "⚠️ REVISAR: aparece 'bolsa de horas'/'refinamiento' — usar términos de la casa" \
+  || echo "Terminología de la casa ✓"
 ```
 
 ### Reglas estrictas de estilo
@@ -170,6 +226,10 @@ REVISIÓN PO (sin línea horizontal gris encima — solo espaciado)
    - Transcripción completa → "Acta redactada a partir de la transcripción completa de la reunión..."
    - Transcripción parcial   → "Acta redactada a partir de una transcripción parcial...; las partes
      no cubiertas se han reconstruido a partir del contexto... pendiente de la transcripción completa."
+   - Cláusula ADICIONAL «sala compartida» (eje independiente — se AÑADE a la completa o a la parcial,
+     no la sustituye): cuando parte del equipo Reinicia intervino desde una sala común y la
+     transcripción fundió varias voces en una. Se nombran las personas afectadas y se indica que su
+     reparto se reconstruyó por contexto. Enlaza con la "Regla de atribución" del Paso 1.
    (sin línea horizontal antes de la nota — solo espaciado)
 ```
 
@@ -179,11 +239,15 @@ REVISIÓN PO (sin línea horizontal gris encima — solo espaciado)
 
 Copiar el `.docx` generado a `/mnt/user-data/outputs/` y presentarlo al usuario con `present_files`.
 
+> **Entrega doble (solo variante INTERNA/confidencial de Amigo Reinicia).** Si se generaron las dos versiones, presentar **ambos** ficheros con `present_files` y explicar sin ambigüedad: `…-INTERNO` es de **uso interno Reinicia** (lleva el banner rojo, no se comparte fuera); `…-RELACION` es la versión **compartible** con el Amigo. Recordar al PO que revise el RELACION para confirmar que el saneado es correcto antes de difundirlo.
+
 Indicar al usuario:
 1. Descargar el `.docx`
 2. Copiarlo a la carpeta confirmada en Zoho Workdrive vía **Truesync** (la de la búsqueda dinámica de carpeta)
 3. Abrirlo en Workdrive y convertirlo a **Zoho Writer** (clic derecho → Abrir con → Zoho Writer)
 4. Marcar el **checkbox de revisión** del PO una vez revisado
+
+> **Aviso al PO (obligatorio en el mensaje de entrega).** Advertir SIEMPRE al PO de que el acta es una **redacción normalizada** de la reunión, no una transcripción literal: se ha aplicado la terminología de la casa (p. ej. "bolsa de horas" → "Soporte Operativo Continuo") y el estilo (atribución, ortografía). Pedirle que lo revise **antes de compartirla con el cliente**, porque si la difunde sin contexto podría parecer que hemos cambiado lo que se dijo en la reunión. El acta ya incorpora la nota de "pendiente de revisión y validación por los asistentes", que respalda esa revisión previa.
 
 Entregar el fichero **antes** del Paso 5, para que el usuario pueda subirlo a Workdrive y, si quiere, tener ya el enlace al registrar el acta.
 
@@ -324,14 +388,18 @@ Nunca guardar sin confirmación explícita del usuario. Proponer siempre la ruta
 | Color texto cuerpo | `#545454` |
 | Color headings H1 / H2 | `#0D0D0D` |
 | Color bordes tabla | `#FFFFFF` (siempre blancos, nunca grises) |
+| Color banner confidencial | `#D14351` (rojo Reinicia — solo banner CONFIDENCIAL de la variante INTERNO) |
 | Fuente Regular | `Manrope Regular` |
 | Fuente Bold | `Manrope Bold` |
 | H1 tamaño | 36pt (sz: 72) |
 | H2 tamaño | 18pt (sz: 36) |
 | Cuerpo tamaño | 12pt (sz: 24) |
 | Logotipo | `/home/claude/logo_reinicia.png` — extraer siempre de Workdrive (ver nota abajo) |
+| Fuentes embebidas | `manrope/static/Manrope-Regular.ttf` + `Manrope-Bold.ttf` — extraer del ZIP de Workdrive (ver nota abajo) |
 
 > **Logo corporativo:** Extraer `word/media/image3.png` del fichero `TEST-Merge-Store-HomeEspana.docx` (ID Workdrive: `okcqm65a2ea3684c2473583559fb91f0c3a59`) usando `ZohoWorkdrive_downloadWorkDriveFile` + decodificación base64 + extracción del ZIP. **Nunca generar el logo sintéticamente.**
+
+> **Fuentes corporativas (embebido obligatorio):** el `.docx` debe llevar Manrope **embebida** para que se vea igual en cualquier equipo (Word, Zoho Writer) sin depender de que la fuente esté instalada. Origen: ZIP de Manrope en Workdrive (resource_id `a2xhx44f0cbde39da4b6ba1186a213b92ebfd`) — descargar con `ZohoWorkdrive_downloadWorkDriveFile`, decodificar base64 y descomprimir en `/home/claude/manrope/`. Usar SIEMPRE los **estáticos** `static/Manrope-Regular.ttf` y `static/Manrope-Bold.ttf` (NO la variable `Manrope-VariableFont_wght.ttf`: Word no embebe bien los ejes variables). El `build_acta.js` los declara con **dos nombres distintos** en `fonts:` y `patch_fonts.py` deja el embebido válido para Word. Verificación: `pdffonts` sobre el render debe mostrar `Manrope-Regular` y `Manrope-Bold` con `emb=yes`.
 
 ---
 
@@ -343,7 +411,7 @@ Este es el script Node.js completo y validado para generar el `.docx`. Adaptar e
 const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   HeadingLevel, AlignmentType, BorderStyle, WidthType, ShadingType,
-  LevelFormat, VerticalAlign, Header, ImageRun
+  LevelFormat, VerticalAlign, Header, ImageRun, CharacterSet
 } = require('docx');
 const fs = require('fs');
 
@@ -357,14 +425,29 @@ const MANROPE_B      = "Manrope Bold";
 const TEXT_COLOR     = "545454";
 const HEADING_COLOR  = "0D0D0D";
 const H2_COLOR       = "0D0D0D";
+const RED_BANNER     = "D14351";   // rojo Reinicia — banner CONFIDENCIAL (solo variante INTERNO)
 
 // ── ADAPTAR ESTOS VALORES A CADA ACTA ───────────────────────────────────────
 const FILENAME = "YYYYMMDD-Acta-Reunion-Descripcion-CLIENTE";
+
+// Variante confidencial (SOLO reuniones transversales con Amigo Reinicia que tocan
+// información que no debe salir de Reinicia — ver Paso 1). Genera DOS ficheros:
+//   • CONFIDENCIAL=true  → sufijo "-INTERNO"  en FILENAME + banner rojo arriba, contenido completo.
+//   • CONFIDENCIAL=false → sufijo "-RELACION" en FILENAME + sin banner, contenido saneado (lo que
+//     el PO haya marcado se retira o generaliza) — versión compartible con el Amigo.
+// En actas normales dejar CONFIDENCIAL=false y quitar el sufijo del FILENAME.
+const CONFIDENCIAL = false;
 
 // Nota final — ELEGIR según la cobertura real de la transcripción (no dejar siempre "completa"):
 const NOTA_FINAL = "⚠️ Nota: Acta redactada a partir de la transcripción completa de la reunión. Pendiente de revisión y validación por parte de los asistentes.";
 // Si la transcripción fue PARCIAL, usar en su lugar (y ajustar qué partes recoge):
 // const NOTA_FINAL = "⚠️ Nota: Acta redactada a partir de una transcripción parcial de la reunión (recoge [qué partes]); las partes no cubiertas se han reconstruido a partir del contexto. Pendiente de revisión y validación por parte de los asistentes una vez se disponga de la transcripción completa.";
+//
+// Cláusula ADICIONAL «sala compartida» — eje INDEPENDIENTE: se AÑADE a la variante completa o parcial
+// (intercalar la frase en negrita antes del "Pendiente de revisión…"), no la sustituye. Úsala cuando
+// parte del equipo Reinicia intervino desde una sala común y la transcripción fundió varias voces en una.
+// Ejemplo (completa + sala compartida):
+// const NOTA_FINAL = "⚠️ Nota: Acta redactada a partir de la transcripción completa de la reunión. Parte del equipo de Reinicia participó desde una sala compartida, por lo que las intervenciones de [nombres] pueden aparecer atribuidas a una sola voz en la transcripción de origen; su reparto se ha reconstruido a partir del contexto. Pendiente de revisión y validación por parte de los asistentes.";
 // ────────────────────────────────────────────────────────────────────────────
 
 // Helpers
@@ -517,6 +600,11 @@ const NO_BORDER = { style: BorderStyle.NONE, size: 0, color: WHITE };
 const noBorders = { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER, insideHorizontal: NO_BORDER, insideVertical: NO_BORDER };
 
 const logoData = fs.readFileSync('/home/claude/logo_reinicia.png');
+
+// ── Fuentes Manrope para embebido (ver "Fuentes corporativas" en la tabla de identidad) ──
+// Estáticos por peso, extraídos del ZIP de Workdrive a /home/claude/manrope/static/.
+const manropeRegular = fs.readFileSync('/home/claude/manrope/static/Manrope-Regular.ttf');
+const manropeBold    = fs.readFileSync('/home/claude/manrope/static/Manrope-Bold.ttf');
 const logoRun = new ImageRun({ data: logoData, transformation: { width: 120, height: 22 }, type: "png" });
 
 const noBorderCell = (children, width) => new TableCell({
@@ -547,8 +635,27 @@ const headerSeparatorLine = new Paragraph({
   children: [new TextRun({ text: "", font: MANROPE_R, size: 2 })]
 });
 
+// Banner CONFIDENCIAL (solo variante INTERNO) — franja roja Reinicia con texto blanco.
+const confidentialBanner = () => new Paragraph({
+  shading: { type: ShadingType.SOLID, color: RED_BANNER, fill: RED_BANNER },
+  alignment: AlignmentType.CENTER,
+  spacing: { before: 0, after: 160 },
+  children: [new TextRun({
+    text: "CONFIDENCIAL — USO INTERNO REINICIA · No compartir fuera de Reinicia.",
+    font: MANROPE_B, bold: true, size: 22, color: "FFFFFF"
+  })]
+});
+
 // ── DOCUMENTO ────────────────────────────────────────────────────────────────
 const doc = new Document({
+  // Embebido de fuentes: DOS nombres distintos (no una familia única — docx-js 9.6.1
+  // deduplica por nombre y solo embebería un peso). Cada nombre coincide con el que usan
+  // los TextRun (MANROPE_R / MANROPE_B), así que no hay que tocar el resto del script.
+  // Tras generar, patch_fonts.py pone los fontKey en mayúsculas y añade <w:embedTrueTypeFonts/>.
+  fonts: [
+    { name: "Manrope Regular", data: manropeRegular, characterSet: CharacterSet.ANSI },
+    { name: "Manrope Bold",    data: manropeBold,    characterSet: CharacterSet.ANSI },
+  ],
   numbering: { config: [
     { reference: "bullets", levels: [{ level: 0, format: LevelFormat.BULLET, text: "•",
         alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }] },
@@ -573,6 +680,9 @@ const doc = new Document({
     headerSeparatorLine,
   ]})},
   children: [
+
+    // ── Banner CONFIDENCIAL (solo variante INTERNO; se omite si CONFIDENCIAL=false) ──
+    ...(CONFIDENCIAL ? [confidentialBanner()] : []),
 
     // ── 1. PARTICIPANTES ──────────────────────────────────────────────────
     h1("1_Participantes"),
@@ -648,7 +758,61 @@ Packer.toBuffer(doc).then(buffer => {
 
 ---
 
+## Script de referencia — patch_fonts.py
+
+Post-procesa el `.docx` generado por `build_acta.js` para dejar el **embebido de fuentes válido para Word**. `docx-js` 9.6.1 emite los `fontKey` en minúsculas y no marca `<w:embedTrueTypeFonts/>`; este parche lo corrige. Con la vía de **dos nombres distintos** (`Manrope Regular` / `Manrope Bold`) NO hace falta relabelar `embedBold`: cada nombre lleva su propia cara embebida como `embedRegular`. Ejecutar SIEMPRE tras `node build_acta.js` (ver Paso 3).
+
+```python
+#!/usr/bin/env python3
+"""Deja válido para Word el embebido de fuentes de un .docx generado con docx-js:
+(1) fontKey en MAYÚSCULAS en fontTable.xml; (2) <w:embedTrueTypeFonts/> en settings.xml
+en posición de esquema válida (tras displayBackgroundShape). Idempotente."""
+import sys, re, zipfile, shutil, os
+
+def patch(path):
+    tmp = path + ".patched"
+    with zipfile.ZipFile(path, "r") as zin:
+        names = zin.namelist()
+        data  = {n: zin.read(n) for n in names}
+        infos = {n: zin.getinfo(n) for n in names}
+
+    # 1) fontTable.xml — fontKey a mayúsculas (el valor hex no cambia: no rompe la deobfuscación)
+    ft = "word/fontTable.xml"
+    if ft in data:
+        xml = data[ft].decode("utf-8")
+        xml = re.sub(r'(w:fontKey=")(\{[0-9a-fA-F-]+\})(")',
+                     lambda m: m.group(1) + m.group(2).upper() + m.group(3), xml)
+        data[ft] = xml.encode("utf-8")
+
+    # 2) settings.xml — insertar <w:embedTrueTypeFonts/> si no está (posición válida)
+    st = "word/settings.xml"
+    if st in data:
+        xml = data[st].decode("utf-8")
+        if "embedTrueTypeFonts" not in xml:
+            if "<w:displayBackgroundShape/>" in xml:
+                xml = xml.replace("<w:displayBackgroundShape/>",
+                                  "<w:displayBackgroundShape/><w:embedTrueTypeFonts/>", 1)
+            else:  # fallback: justo tras <w:settings ...>
+                xml = re.sub(r'(<w:settings\b[^>]*>)', r'\1<w:embedTrueTypeFonts/>', xml, count=1)
+            data[st] = xml.encode("utf-8")
+
+    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zout:
+        for n in names:
+            zi = zipfile.ZipInfo(n, date_time=infos[n].date_time)
+            zi.compress_type = infos[n].compress_type
+            zi.external_attr = infos[n].external_attr
+            zout.writestr(zi, data[n])
+    shutil.move(tmp, path)
+    print(f"Parcheado: {os.path.basename(path)}")
+
+if __name__ == "__main__":
+    patch(sys.argv[1])
+```
+
+---
+
 ## Notas para futuras versiones de la skill
+
 
 - Cuando Zoho MCP habilite el endpoint de upload (`POST /api/v1/upload`), añadir Paso 5b: subida automática a Workdrive
 - Cuando Zoho Writer habilite actualización de contenido (`POST /writer/api/v1/documents/{id}/content`), añadir conversión automática a Writer nativo
@@ -665,3 +829,4 @@ Packer.toBuffer(doc).then(buffer => {
 | v1.2 | 20/06/2026 | Néstor + Claude | Fix: el comando de validación apuntaba a `output.docx` (inexistente) → ahora valida `/home/claude/<FILENAME>.docx`. Fix: la nota final estaba hardcodeada como "transcripción completa" → ahora es la constante `NOTA_FINAL`, a elegir entre variante completa o parcial según la cobertura real de la transcripción. |
 | v1.3 | 20/06/2026 | Néstor + Claude | Completado el caso "reunión transversal con Amigo Reinicia": nueva opción de destino Workdrive 🤝 Amigo Reinicia (raíz `8dktwacf39023e8274b1bab0ab423a81b5ed3`), Opción C de búsqueda dinámica y enrutado del comentario a `Gestión [Mes] Marketing [REINICIA]` (lista `3350803`). Añadida la regla obligatoria de leer la transcripción completa y de detectar subidas duplicadas (misma reunión con transcripción más completa → actualizar, no duplicar). |
 | v1.4 | 20/06/2026 | Néstor + Claude | Corrección del destino Amigo Reinicia (ruta/ID verificados en vivo contra Workdrive): la carpeta correcta es "Amigos Reinicios" (`62rwt1fabec685e80405c8a1e79be2046fe48`) en `Agencia Reinicia › 00. Seguimiento y Control`, NO la `02. Colaboradores - Amigos Reinicia` (`8dktwacf…`) que estaba anotada por error. Añadida la regla de idioma de salida (idioma del cliente; preguntar si no hay certeza). |
+| v1.5 | 07/07/2026 | Néstor + Claude | Nueva **regla de atribución** (Paso 1 · Comentarios): el acta reconstruye quién dice qué y quién responde (autor + empresa, verbos de atribución precisos según el acto, tres roles plantea/responde/asume). El responsable de la tabla de Decisiones debe coincidir con quien se comprometió en el relato. El impersonal se reserva para conclusiones conjuntas; prohibido inventar atribución cuando la transcripción no desambigua (enlaza con la variante "sala compartida"). Nueva **regla de ortografía** atada al idioma de salida (Paso 1): en actas en español, tildes/ñ/¿¡/ü completas y prohibición de aplanar a ASCII (excepto el nombre de fichero, que sigue la norma del Paso 2); en inglés u otro idioma, ortografía propia sin degradar caracteres. Check opcional de acentos en el Paso 3 (solo actas en español). Nueva **cláusula «sala compartida»** para `NOTA_FINAL` (eje independiente que se añade a la variante completa o parcial, no la sustituye): documenta cuándo parte del equipo Reinicia intervino desde una sala común y la transcripción fundió varias voces en una; enlaza con la regla de atribución. **Embebido de fuentes Manrope** (Paso 3 + `build_acta.js` + nuevo `patch_fonts.py`): el `.docx` embebe Manrope Regular/Bold con la vía de dos nombres distintos en el array `fonts:` (docx-js 9.6.1 deduplica por nombre único), y el parche pone los `fontKey` en mayúsculas y añade `<w:embedTrueTypeFonts/>`. Fuentes desde el ZIP de Workdrive (estáticos, no la variable). Verificación con `pdffonts` (Manrope-Regular/Bold `emb=yes`). **Regla de terminología de la casa** (Paso 1): el acta usa el vocabulario canónico ("bolsa de horas" → "Soporte Operativo Continuo" / EN "Ongoing Operational Support"; "Refinamiento" → "Planificación Operativa"), con excepción para citas literales y check opcional en el Paso 3. **Aviso obligatorio al PO** en la entrega (Paso 4): advertir de que el acta es una redacción normalizada (terminología + estilo), a revisar antes de compartirla con el cliente. **Variante INTERNA/confidencial** (solo destino Amigo Reinicia): ante contenido sensible (tarifas de terceros, datos de otros clientes, estrategia interna), detección + confirmación del PO y **doble salida** `-INTERNO` (banner rojo `#D14351`, contenido completo, `CONFIDENCIAL=true`) / `-RELACION` (sin banner, saneada, compartible); nuevo helper `confidentialBanner` y constante `CONFIDENCIAL` en `build_acta.js`, color rojo en identidad y entrega doble en el Paso 4. |

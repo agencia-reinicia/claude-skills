@@ -5,7 +5,7 @@ description: "Consulta esta skill SIEMPRE que vayas a generar cualquier contenid
 
 # Skill: Marca Reinicia — Identidad y Recursos
 
-> **Versión vigente: v1.1 — 20/06/2026** · ver changelog al final (`## Versiones`)
+> **Versión vigente: v1.2 — 07/07/2026** · ver changelog al final (`## Versiones`)
 
 ## Propósito
 
@@ -145,6 +145,7 @@ La escala oficial usa una relación de **cuarta aumentada** (×1.414 entre nivel
 
 ### Recursos tipográficos de marca
 
+- **Ficheros de fuente (para embebido en `.docx`):** ZIP de Manrope en Workdrive, resource_id `a2xhx44f0cbde39da4b6ba1186a213b92ebfd`. Contiene los estáticos por peso en `static/` (usar `Manrope-Regular.ttf` y `Manrope-Bold.ttf`) y la variable (no usar para embebido). Ver "Embebido de fuentes Manrope (OBLIGATORIO)".
 - **Símbolos de camino:** el guión bajo `_` al final de frases principales actúa como signo de puntuación de marca (*"Te enseñamos el camino inteligente para alcanzar tu meta_"*)
 - **Flecha de marca:** `->` (guión + mayor que) para indicar elementos de interés o pasos: *"Paso 1 > Paso 2 > Paso 3"*, *"-> Elemento de interés"*
 
@@ -253,6 +254,10 @@ const VERDE_SUAVE        = "D1FAF2";  // 649 C — fondo chip MEDIO/ACUERDO
 // Tipografía
 const FUENTE             = "Manrope";
 const FUENTE_FALLBACK    = "Verdana";
+// Familias canónicas para EMBEBIDO en .docx (deben coincidir con los nombres del array `fonts`).
+// docx-js deduplica por nombre único, así que se usan DOS nombres distintos (no "Manrope" + bold flag).
+const FUENTE_R           = "Manrope Regular";
+const FUENTE_B           = "Manrope Bold";
 ```
 
 > **Nota de formato.** En `docx-js` los códigos de color van **sin almohadilla** (`"3812CF"`, no `"#3812CF"`).
@@ -446,20 +451,31 @@ chipCell("ACUERDO",   ESTADO_TRIPARTITO);
 Valores validados para H1, H2, cuerpo, márgenes y configuración A4.
 
 ```javascript
-import { Document, Header, Footer, PageOrientation, convertInchesToTwip } from "docx";
+import { Document, Header, Footer, PageOrientation, convertInchesToTwip, CharacterSet } from "docx";
+import fs from "fs";
+
+// Fuentes Manrope para EMBEBIDO — estáticos del ZIP de Workdrive (ver "Embebido de fuentes Manrope").
+const manropeRegular = fs.readFileSync("/home/claude/manrope/static/Manrope-Regular.ttf");
+const manropeBold    = fs.readFileSync("/home/claude/manrope/static/Manrope-Bold.ttf");
 
 const doc = new Document({
+  // Embebido: DOS nombres distintos (docx-js deduplica por nombre único y solo embebería un peso).
+  // Deben coincidir con los font de los TextRun. Tras generar, ejecutar patch_fonts.py.
+  fonts: [
+    { name: FUENTE_R, data: manropeRegular, characterSet: CharacterSet.ANSI },
+    { name: FUENTE_B, data: manropeBold,    characterSet: CharacterSet.ANSI },
+  ],
   styles: {
     default: {
       document: {
-        run: { font: FUENTE, size: 24, color: GRIS_OSCURO },  // 12 pt
+        run: { font: FUENTE_R, size: 24, color: GRIS_OSCURO },  // 12 pt
       },
       heading1: {
-        run: { font: FUENTE, size: 72, color: NEGRO_TITULAR }, // 36 pt
+        run: { font: FUENTE_R, size: 72, color: NEGRO_TITULAR }, // 36 pt
         paragraph: { spacing: { before: 240, after: 120 } },
       },
       heading2: {
-        run: { font: FUENTE, size: 36, bold: true, color: NEGRO_TITULAR }, // 18 pt
+        run: { font: FUENTE_B, size: 36, bold: true, color: NEGRO_TITULAR }, // 18 pt
         paragraph: { spacing: { before: 200, after: 100 } },
       },
     },
@@ -480,6 +496,77 @@ const doc = new Document({
   }],
 });
 ```
+
+---
+
+### Embebido de fuentes Manrope (OBLIGATORIO en todo `.docx`)
+
+Todo `.docx` de marca debe llevar Manrope **embebida** para que se vea igual en cualquier equipo (Word, Zoho Writer) aunque la fuente no esté instalada. El embebido hace innecesario en la práctica el "respaldo a Manrope general / Verdana" (que queda solo como último recurso si por algún motivo no se puede embeber).
+
+**1. Origen de las fuentes.** ZIP de Manrope en Workdrive (resource_id `a2xhx44f0cbde39da4b6ba1186a213b92ebfd`): descargar con `ZohoWorkdrive_downloadWorkDriveFile`, decodificar base64 y descomprimir en `/home/claude/manrope/`. Usar SIEMPRE los **estáticos** `static/Manrope-Regular.ttf` y `static/Manrope-Bold.ttf`. **Nunca** la variable `Manrope-VariableFont_wght.ttf`: Word no embebe bien los ejes variables.
+
+**2. Declaración (dos nombres distintos).** `docx-js` (9.6.1) **deduplica por nombre**: si se declaran dos entradas con el mismo `name` (p. ej. "Manrope"), solo embebe un peso. Por eso se usan **dos familias distintas** — `Manrope Regular` y `Manrope Bold` (las canónicas de la spec) — y los `TextRun` referencian esos mismos nombres. El array `fonts:` va en el constructor `Document` (ver patrón de estilos globales arriba).
+
+**3. Parche posterior (obligatorio).** `docx-js` emite los `fontKey` en minúsculas y no marca `<w:embedTrueTypeFonts/>`. Ejecutar `patch_fonts.py` sobre el `.docx` recién generado:
+
+```python
+#!/usr/bin/env python3
+"""Deja válido para Word el embebido de fuentes de un .docx generado con docx-js:
+(1) fontKey en MAYÚSCULAS en fontTable.xml; (2) <w:embedTrueTypeFonts/> en settings.xml
+en posición de esquema válida (tras displayBackgroundShape). Idempotente."""
+import sys, re, zipfile, shutil, os
+
+def patch(path):
+    tmp = path + ".patched"
+    with zipfile.ZipFile(path, "r") as zin:
+        names = zin.namelist()
+        data  = {n: zin.read(n) for n in names}
+        infos = {n: zin.getinfo(n) for n in names}
+
+    # 1) fontTable.xml — fontKey a mayúsculas (el valor hex no cambia: no rompe la deobfuscación)
+    ft = "word/fontTable.xml"
+    if ft in data:
+        xml = data[ft].decode("utf-8")
+        xml = re.sub(r'(w:fontKey=")(\{[0-9a-fA-F-]+\})(")',
+                     lambda m: m.group(1) + m.group(2).upper() + m.group(3), xml)
+        data[ft] = xml.encode("utf-8")
+
+    # 2) settings.xml — insertar <w:embedTrueTypeFonts/> si no está (posición válida)
+    st = "word/settings.xml"
+    if st in data:
+        xml = data[st].decode("utf-8")
+        if "embedTrueTypeFonts" not in xml:
+            if "<w:displayBackgroundShape/>" in xml:
+                xml = xml.replace("<w:displayBackgroundShape/>",
+                                  "<w:displayBackgroundShape/><w:embedTrueTypeFonts/>", 1)
+            else:  # fallback: justo tras <w:settings ...>
+                xml = re.sub(r'(<w:settings\b[^>]*>)', r'\1<w:embedTrueTypeFonts/>', xml, count=1)
+            data[st] = xml.encode("utf-8")
+
+    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zout:
+        for n in names:
+            zi = zipfile.ZipInfo(n, date_time=infos[n].date_time)
+            zi.compress_type = infos[n].compress_type
+            zi.external_attr = infos[n].external_attr
+            zout.writestr(zi, data[n])
+    shutil.move(tmp, path)
+    print(f"Parcheado: {os.path.basename(path)}")
+
+if __name__ == "__main__":
+    patch(sys.argv[1])
+```
+
+**4. Verificación.** `pdffonts` sobre el render debe mostrar `Manrope-Regular` y `Manrope-Bold` con `emb=yes`:
+
+```bash
+node build_*.js
+python3 patch_fonts.py "/home/claude/<FICHERO>.docx"
+python3 /mnt/skills/public/docx/scripts/office/validate.py "/home/claude/<FICHERO>.docx"
+soffice --headless --convert-to pdf "/home/claude/<FICHERO>.docx" --outdir /home/claude >/dev/null 2>&1 \
+  && pdffonts "/home/claude/<FICHERO>.pdf" | grep -i manrope
+```
+
+> **Relación con el bug Manrope→Roboto de Zoho.** Aquel afecta a documentos **Zoho** (Sheet/Writer/Show), donde la fuente se aplica por nombre y depende del catálogo del usuario; se gestiona con su workaround. El embebido de aquí resuelve el problema equivalente en `.docx` de forma definitiva y autónoma.
 
 ---
 
@@ -525,7 +612,7 @@ El agency deck en inglés está en la carpeta Presentaciones Marca y puede ser �
 
 > Referencia de consulta para mantener coherencia entre `actas-reinicia` y `analisis-llamadas-reinicia`. **No es una dependencia en ejecución**: cada skill conserva su propio script autocontenido y probado. Al editar una de ellas, contrastar los valores con esta tabla.
 
-**Fuente.** Familias canónicas `Manrope Regular` (regular) y `Manrope Bold` (negrita). **Respaldo:** si esas familias no resuelven en el entorno de render (Zoho Writer / Word), usar `Manrope` general con el flag de negrita. Tamaños: H1 36 pt (sz 72 en docx-js), H2 18 pt (sz 36), cuerpo 12 pt (sz 24).
+**Fuente.** Familias canónicas `Manrope Regular` (regular) y `Manrope Bold` (negrita), **embebidas** en el `.docx` (ver "Embebido de fuentes Manrope (OBLIGATORIO)"): estáticos del ZIP de Workdrive, dos nombres distintos en `fonts:` + `patch_fonts.py`. El embebido garantiza el render correcto en cualquier equipo. **Respaldo** (solo si no se puede embeber): `Manrope` general con el flag de negrita. Tamaños: H1 36 pt (sz 72 en docx-js), H2 18 pt (sz 36), cuerpo 12 pt (sz 24).
 
 **Colores** (de la paleta de marca de este documento): azul `#3812CF` (solo línea separadora de cabecera y acentos puntuales), lila `#D9D0FB` (cabeceras y bloques de tabla), gris `#EBEBEB` (filas alternas), texto cuerpo `#545454`, titulares `#0D0D0D`, bordes de tabla siempre blancos `#FFFFFF`, rojo `#D14351` (solo banner de confidencialidad de análisis).
 
@@ -533,7 +620,7 @@ El agency deck en inglés está en la carpeta Presentaciones Marca y puede ser �
 
 **Tablas.** Bordes blancos en todas las celdas; cabecera lila `#D9D0FB` con texto `#0D0D0D` en negrita; filas alternas blanco/`#EBEBEB`; nunca fusionar celdas.
 
-**Banner de confidencialidad** (SOLO `analisis-llamadas-reinicia`): caja roja `#D14351` con texto blanco en negrita + pie de página en cada hoja. Las actas NO lo llevan (son para el cliente).
+**Banner de confidencialidad** (`analisis-llamadas-reinicia` y variante INTERNA de `actas-reinicia`): caja/franja roja `#D14351` con texto blanco en negrita. En `analisis-llamadas` es el patrón por defecto de uso interno; en `actas-reinicia` (v1.5) solo la variante `-INTERNO` de reuniones transversales con Amigo Reinicia lo lleva — el acta cara-cliente NO.
 
 **Cuerpo limpio.** Prohibidas las líneas decorativas horizontales fuera de la cabecera; la separación se consigue con espaciado y tipografía.
 
@@ -545,3 +632,4 @@ El agency deck en inglés está en la carpeta Presentaciones Marca y puede ser �
 |---|---|---|---|
 | v1.0 | 21/06/2026 | Néstor + Claude | Estado previo sin versionar: identidad visual y verbal, paleta, tipografía, recursos gráficos en Workdrive e instrucciones del logo real. |
 | v1.1 | 20/06/2026 | Néstor + Claude | Añadida la sección "Spec canónica de generación .docx" como referencia de consulta para `actas-reinicia` y `analisis-llamadas-reinicia` (fuente canónica Manrope Regular/Bold con respaldo a Manrope, colores, cabecera, tablas, banner de confidencialidad). Sin dependencia en ejecución. Incorporado el estándar de versionado. |
+| v1.2 | 07/07/2026 | Néstor + Claude | **Embebido de fuentes Manrope como norma canónica** para todo `.docx` de marca: nueva subsección "Embebido de fuentes Manrope (OBLIGATORIO)" (origen ZIP de Workdrive → estáticos `static/` Regular+Bold, nunca la variable; array `fonts:` de dos nombres distintos por la deduplicación de docx-js; `patch_fonts.py` para fontKey en mayúsculas + `<w:embedTrueTypeFonts/>`; verificación con `pdffonts`). Constantes `FUENTE_R`/`FUENTE_B` y patrón del constructor `Document` actualizado con el array `fonts:` y las familias canónicas. Spec canónica: el embebido pasa a ser la norma y "Manrope general/Verdana" queda como último recurso. Nota del banner de confidencialidad actualizada (también la variante `-INTERNO` de actas v1.5). Referencia al ZIP de fuentes en Recursos tipográficos. |
