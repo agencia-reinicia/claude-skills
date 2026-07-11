@@ -17,7 +17,7 @@ description: >
 
 # SKILL: Plan de Proyecto — Modo Desatendido (Gestión de ciclo de vida) — Reinicia
 
-> **Versión vigente: v1.9 — proxy `date_closed` + cotejo Asesor PO — 2026-07-11**
+> **Versión vigente: v1.10 — verificación en vivo de la plantilla + calendario heredado — 2026-07-11**
 
 > **Estado:** skill de producción en evolución — gestiona el ciclo de vida del Plan (localiza, crea
 > si falta, reconcilia las tres tablas, congela). Lo que queda por calibrar en ejecución real va
@@ -71,7 +71,7 @@ Plantilla canónica v2: `pnync351d56992b6d4026906a6fec5d56e682`.
 `42#` **Ideas** · `45#` Objetivos Cliente (lectura, priorización) · `43#` Log Cambios (solo añadir) ·
 `44#` Config. En reconciliación la desatendida escribe en 40#, 41#, 42# y 43# (Log); en creación también 36# (Portada) y 44# (Config).
 
-> **Portada (`36#`):** `C3` = título · `D5` = `=HYPERLINK("<web real>";"<Nombre Cliente>")` (semicolon es-ES, `https`) · **limpiar residuo `ackstorm` en `E5:G5`** · `C6`–`C10` = Idioma / País / Equipo / PO Cliente / PO Técnico (etiquetas traducidas en planes EN).
+> **Portada (`36#`):** `C3` = título (sustituir el marcador `[NOMBRE CLIENTE]` por el cliente real) · `D5` = `=HYPERLINK("<web real>";"<Nombre Cliente>")` (semicolon es-ES, `https`; **reemplaza** el hyperlink `ackstorm` de la plantilla) · **limpiar el residuo `ackstorm` desparramado en `E5:G5`** · etiquetas ya en `C6`–`C10`, **valores en `D6`–`D10`** sobrescribiendo los placeholders de la plantilla (`Español`/`España`/`Columbia o Proactive u otro`/`Nombre y Apellidos`); etiquetas traducidas en planes EN. **Header col 12 de 40#:** renombrar `Notas Nombre Cliente` → `Notas <Cliente real>`.
 > **Sello de última actualización (solo `41#`):** celda **`C3`**, formato **DD/MM/YYYY**. **Reescribirlo en CADA pasada de reconciliación** (y al crear).
 > **Estatus = desplegable:** la API **solo escribe el VALOR**; el color (incl. PARKING/CANCELADO) lo asigna la interfaz. **Nunca** pintar el color del Estatus ni intentar manipular el desplegable vía API. El desplegable ya viene en la plantilla.
 
@@ -159,11 +159,13 @@ Cabecera de tabla en **fila 8** (no fila 1). Filas 3–5 = leyenda de hitos; fil
 - Cabecera de tabla: `fill #3812CF` · `font #FFFFFF` · negrita · center/middle · alto 36 · wrap.
 - Banding datos: par `#FFFFFF` / impar `#EBEBEB` · alto 60 · valign top.
 - Zona calendario (encabezado meses/quincenas): `fill #EBEBEB` · negrita · `font #3812CF` · center/middle.
-- **Rejilla del calendario, celdas de datos (40# cols N–AK = 14–37; 41# cols M–AJ = 13–36): base
-  `#F2F2F2`, NUNCA blanco.** Son 24 quincenas (2 por mes). Los hitos se pintan ENCIMA del gris:
-  entrega `#70EED6`, validación `#EBE31B`. Al (re)dibujar el calendario, poner PRIMERO toda la rejilla
-  de datos en `#F2F2F2` y luego pintar los hitos desde las fechas (**col 9 due_date / col 10 validación**;
-  quincena = (mes−1)·2 + (1 si día≤15; 2 si>15)) — así ninguna celda queda en blanco. Redibujar la
+- **Rejilla del calendario, celdas de datos (40# cols N–AK = 14–37; 41# cols M–AJ = 13–36): la
+  plantilla ya la trae en gris.** Son 24 quincenas (2 por mes). **NO repintar la base** (las filas
+  insertadas heredan el gris de la de arriba). Pintar SOLO los hitos encima: entrega `#70EED6`,
+  validación `#EBE31B`, desde las fechas (**col 9 due_date / col 10 validación**; quincena =
+  (mes−1)·2 + (1 si día≤15; 2 si>15)). **Para MOVER un hito, restaurar la celda que se vacía al mismo
+  gris de la plantilla, NUNCA a blanco** (ese gris no se lee por API → fijarlo una vez confirmándolo a
+  ojo). Al redibujar hitos, recorrer la
   rejilla COMPLETA (todas las filas de datos), no solo las que cambian.
 - **Estatus = desplegable con formato asociado al valor** → escribir solo el texto exacto del
   desplegable y el color sale solo (TERMINADO verde · EN PROCESO amarillo · PENDIENTE lila ·
@@ -245,7 +247,7 @@ Idempotente.
 - **Reorden, recoloreado de Épica y redibujado del calendario van SIEMPRE juntos** (un cambio de
   orden invalida las marcas del calendario, que son solo fondo). Al reordenar: mover la fila
   completa, recomputar el color de Épica (fondo alternando `#70EED6`/`#BFBFBF` por grupo contiguo) y
-  redibujar el calendario (base `#F2F2F2` + hitos). Operación delicada → hacerla como paso dedicado.
+  redibujar el calendario (heredar el gris de la plantilla, **sin repintar la base**; solo (re)pintar hitos, restaurando al gris las celdas que se vacíen). Operación delicada → hacerla como paso dedicado.
 - **Reorden desfasado entre pestañas:** 40# y 41# pueden no estar alineadas (p. ej. Soporte Cerrado
   va una fila desplazado); mapear SIEMPRE por Entregable, no por número de fila.
 
@@ -283,7 +285,7 @@ Primera fila pendiente por el contenido de la columna PBI. 🚧 criterio exacto 
 - **Soporte Cerrado — tratamiento ligero por lotes:** Descripción de **1 línea** derivada de **Deliverable + Épica + PBI** (o vacía si es duda/consulta sin entregable real), **sin leer tarjeta a tarjeta**; procesar en lotes grandes; write-back de PBI igual que el resto. (Cuando `clickup_plan_fields` esté desplegada, esto sale de una sola consulta; hoy, por lotes con `clickup_get_task`.)
 - **Al cierre: registrar SIEMPRE la entrada en el Log de Cambios** (3 columnas Fecha | Autor | Cambio; paso obligatorio, no opcional).
 - **Reescribir el sello de última actualización** en `41#` `C3` (DD/MM/YYYY) en cada pasada.
-- (Re)dibujar calendario: base `#F2F2F2` en toda la rejilla de datos + hitos de **cols 9/10** encima (entrega `#70EED6`, validación `#EBE31B`).
+- (Re)dibujar calendario: **heredar el gris de la plantilla, sin repintar la base**; pintar solo los hitos de **cols 9/10** encima (entrega `#70EED6`, validación `#EBE31B`) y restaurar al gris las celdas que se vacíen al mover un hito.
 - **Insertar filas (§8)** si falta espacio, ANTES de pegar (en un proyecto con soporte real, **SOPORTE CERRADO puede necesitar ~18 inserciones**). **Verificar el recuento con una lectura** (`insert_row` a veces deja una de menos: 17 en vez de 18). Persistir en lotes ≤40.
 
 ### PASO 4 — Ideas (solo Routine dominical)
@@ -401,6 +403,7 @@ de Cliente empujadas a ClickUp · Épica/PBI vacíos rellenados · ≤7 ideas en
 
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|
+| **v1.10** | 2026-07-11 | Néstor + Claude | **Alineada con la supervisada v2.10 (verificación en vivo de la plantilla).** (1) **Calendario = heredar la base gris de la plantilla, NO repintar** (filas insertadas heredan el gris); pintar solo hitos; al mover un hito, restaurar la celda vaciada al gris de la plantilla (no a blanco) — ese gris no se lee por API. Actualizadas las 3 menciones (identidad, reorden, PASO 3). (2) **Portada:** valores en `D6`–`D10` sobrescribiendo placeholders; `D5`=HYPERLINK reemplaza el `ackstorm` + limpiar `E5:G5`; renombrar header col 12 de 40# (`Notas Nombre Cliente` → `Notas <Cliente>`) y el marcador del título. |
 | **v1.9** | 2026-07-11 | Néstor + Claude | **Proxy `date_closed` (decisión B) + bump alineado con la supervisada v2.9.** (1) **Cerrados sin `due_date`** usan **`date_closed` como fecha de entrega** (col 9 = fecha de cierre DD/MM/YYYY) **y marcan el calendario** en su quincena (color entrega); antes se dejaba `"-"`/blanco. Solo `"-"` si tampoco hay `date_closed`. `date_closed` sigue atribuyendo el año de la tabla. (2) Subida de versión (v1.8→v1.9) para mantener el par sincronizado con la supervisada. (3) **Cotejo de las 5 DECISIONES PO:** nº1–4 y nº5a ya cubiertas en la desatendida; **corregido el hueco nº5b** — la **Fecha de validación esperada** ahora sincroniza en **AMBOS sentidos** (Sheet ↔ ClickUp: rellenar el lado vacío desde el otro, nunca pisar el valor del Cliente; si difieren, avisar), antes solo Sheet→ClickUp. Actualizados mapa, MODELO DE SINCRONIZACIÓN y línea-resumen. |
 | **v1.8** | 2026-07-11 | Néstor + Claude | **Mapa de columnas v2 (piloto Carritech) + reglas deterministas + palanca de coste.** (1) Columna nueva **`Fecha de petición` (H = col 8)** (`date_created`) que desplaza +1 todo lo posterior: Estatus 40#=M(13)/41#=L(12); Fecha entrega=col 9; validación=col 10; Notas Reinicia=col 11; Notas Cliente=col 12; calendario 40#=N–AK(14–37)/41#=M–AJ(13–36), 24 quincenas, `quincena=(mes−1)·2+(1 si día≤15;2 si>15)`. Actualizados MAPA DE COLUMNAS, identidad visual, MODELO DE SINCRONIZACIÓN y reglas de escritura. (2) **4ª sección RESUMEN HISTÓRICO** (fila 81, 2 filas Implementation/Support) que agrega años previos; productos de años anteriores individuales con fecha real + calendario en blanco; meses repetidos por sección (7/32/57/81) traducidos en EN. (3) **Portada real** (C3/D5 HYPERLINK/limpiar `ackstorm` E5:G5/C6–C10), **Config 3 columnas** (Parámetro|Valor|ID/Resource, ID col D), **Log 3 columnas** (Fecha|Autor|Cambio), **sello de última actualización** en 41# C3 (DD/MM/YYYY) reescrito en cada pasada. (4) Estatus = desplegable: la API solo escribe el valor, color automático; nunca pintar el Estatus. (5) **Reglas deterministas (sin PO)**: idioma leído de Config/Portada (o inferido), Entregables NO traducidos por defecto, años previos agregados en Resumen Histórico. (6) Formación Interna fuera del Plan; Soporte Cerrado ligero por lotes; cerrados sin due_date → Entrega "-". (7) Límites API validados (≤40 celdas [63→400], HYPERLINK en lotes, insert_row 1 fila/llamada con verificación); **`clickup_plan_fields`** (Catalyst) como palanca objetivo para que el volcado quepa en una pasada — **aún sin desplegar; hasta entonces el default operativo es `clickup_get_task` troceado**. (8) **Cotejo con el proyecto Asesor PO:** Descripción = **ambos formatos combinados** por defecto (Historia + Resumen); en planes EN **SÍ se traducen los nombres de Entregables** (trazabilidad vía HYPERLINK al task_id). |
 | **v0.1** | 2026-06-28 | Néstor + Claude | Esqueleto: mantenimiento; reconciliación por campo; PBI vacío; idempotente; reporte a Gestión; piloto Sonnet 4.6 LS. |
