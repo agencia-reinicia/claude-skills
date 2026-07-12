@@ -16,7 +16,7 @@ description: >
 
 # SKILL: Plan de Proyecto en Zoho Sheet — Reinicia
 
-> **Versión vigente: v2.13 — localización de secciones solo con `find` + guarda de límite por escritura + verificación por celda — 2026-07-12**
+> **Versión vigente: v2.14 — Notas cara cliente sin ratios (resumen de estatus real); contadores/riesgos solo en el Interno — 2026-07-12**
 
 > ⚠️ **Prevalece el ANEXO B (v2.7 o vigente).** Antes de aplicar los pasos 3.x del cuerpo, **leer el ANEXO B completo**. La creación se hace **SIEMPRE** copiando la plantilla canónica `pnync351d56992b6d4026906a6fec5d56e682` con `ZohoSheet_copy`, **nunca** con `createNativeDocument`, `Create_New_File` ni `create_workbook`. La estructura canónica del fichero v2 (pestañas + tablas + mapa de columnas + portada + Config + Log + Resumen Histórico) está en **«4.0 ESTRUCTURA CANÓNICA DEL PLAN v2»** (más abajo, en el cuerpo) y en el ANEXO B. Los antiguos pasos 3.2–3.7 del cuerpo están **SUPERADOS** y quedan reescritos según el ANEXO B.
 
@@ -173,41 +173,57 @@ sea comprensible por un interlocutor no técnico del lado del cliente.
 
 > Solo si el PO pidió en la Pregunta 7 **un único formato**, escribir ese bloque solo. En planes EN, ambos bloques en inglés.
 
-### Procesamiento de la columna Notas
+### Procesamiento de las columnas de Notas
 
-La columna Notas no es un campo libre genérico — contiene un **estatus breve y operativo**
-del producto, con énfasis en riesgos. Se construye en dos pasos:
+Hay DOS destinos distintos y NO intercambiables:
 
-**Paso A — Leer subtareas:** `clickup_get_task(task_id=..., include_subtasks=true)`
-Calcular el ratio de subtareas completadas vs. total. Ej: "3/5 subtareas completadas".
-Identificar subtareas bloqueadas o con fecha vencida sin completar → posible riesgo.
+- **`Notas Reinicia` de la pestaña cara cliente (40#, col 11)** → **resumen de estatus REAL, en prosa, legible por el Cliente**: en qué punto está y qué queda pendiente. **PROHIBIDO** meter aquí contadores mecánicos (`0/10 subtareas`, `0/5 criterios`): al Cliente no le aportan nada.
+- **`Notas` de la pestaña interna (41#, col 11)** → **detalle interno**: los contadores (`X/Y subtareas · X/Y criterios`), el mismo resumen y los riesgos con ⚠️.
 
-**Paso B — Leer comentarios y sus hilos:** 
-- `clickup_get_task_comments(task_id=...)`
-- `clickup_get_threaded_comments(comment_id=...)` para cada comentario con respuestas
-Extraer información relevante sobre el estado actual: bloqueos mencionados, dependencias
-pendientes, validaciones en curso, decisiones tomadas recientemente.
+Ambas leen las MISMAS fuentes; cambia qué se vuelca en cada una.
 
-**Paso C — Leer checklist de criterios de aceptación:**
-Buscar en la tarea el checklist denominado "CRITERIOS DE ACEPTACIÓN" (o "ACCEPTANCE CRITERIA"
-en proyectos en inglés, o checklist equivalente en proyectos de marketing/microcampañas).
-Calcular el ratio de criterios marcados vs. total. Ej: "5/8 criterios cumplidos".
-Identificar criterios no cumplidos que puedan ser bloqueantes para la entrega.
+**Paso A — Subtareas:** `clickup_get_task(task_id=..., include_subtasks=true)`
+- Contar completadas vs total (ratio → solo Interno).
+- **Leer los NOMBRES y el estado de cada subtarea**, no solo el ratio: qué está hecho, qué está en curso y qué queda; detectar bloqueadas o vencidas.
 
-**Formato de la celda Notas** (máx. 3 líneas):
+**Paso B — Comentarios e hilos:** `clickup_get_task_comments` + `clickup_get_threaded_comments` (para los que tengan respuestas).
+- Extraer el estado real más reciente: último avance, bloqueos, dependencias, decisiones y **el siguiente paso**. **El comentario reciente pesa más que el ratio**: un `2/8` con un comentario "pendiente solo de validación del Cliente" está casi cerrado.
+
+**Paso C — Checklist de criterios de aceptación** ("CRITERIOS DE ACEPTACIÓN" / "ACCEPTANCE CRITERIA" o equivalente): contar marcados vs total (ratio → solo Interno) e identificar criterios no cumplidos que bloqueen la entrega.
+
+**RESUMEN DE ESTATUS** (va tal cual en `Notas Reinicia` 40#, y también dentro del Interno):
+Síntesis real de 1–2 frases con A+B+C que responda: **¿qué está hecho, qué queda pendiente y cuál es el siguiente paso o el bloqueo?** Concreto y con los nombres reales del trabajo, nunca genérico.
+- NO: `En proceso.` / `0/6 subtareas.`
+- SÍ: `Flujos 3.1 y 3.2 implementados y probados en sandbox; pendiente el 3.3 y el despliegue en producción.`
+- SÍ: `Catálogo cargado y bot respondiendo; pendiente solo la validación del Cliente.`
+- SÍ (parking): `Parado a la espera de que el Cliente confirme el copy de las plantillas.`
+Si el producto está TERMINADO → `Terminado.` (o una frase de cierre si aporta).
+
+**Formato de cada celda:**
+
+`Notas Reinicia` (40#, cara cliente) — SOLO el resumen en prosa:
 ```
-[ratio subtareas] · [ratio criterios] · [estatus operativo en 1 frase]
+[resumen de estatus real: hecho / pendiente / siguiente paso o bloqueo]
+```
+
+`Notas` (41#, interno) — contadores + resumen + riesgo:
+```
+[X/Y subtareas · X/Y criterios] · [mismo resumen de estatus real]
 ⚠️ [riesgo si existe] — [detalle breve]
 ```
 
-Ejemplos:
-- `4/4 subtareas · 6/6 criterios · Validación cliente en curso`
-- `2/5 subtareas · 3/8 criterios · Pendiente acceso al entorno de staging`\n`⚠️ Sin acceso desde hace 2 semanas — posible retraso`
-- `0/3 subtareas · sin criterios definidos aún · No iniciado`
+Ejemplos (Interno / cara cliente):
+- Interno: `4/4 subtareas · 6/6 criterios · Implementado; pendiente solo la validación del Cliente.`
+  Cara cliente: `Implementado; pendiente solo la validación del Cliente.`
+- Interno: `2/5 subtareas · 3/8 criterios · Entorno configurado; bloqueado a la espera de acceso a staging.` ⚠️ `Sin acceso desde hace 2 semanas — posible retraso.`
+  Cara cliente: `Entorno configurado; pendiente el acceso a staging para continuar.`
+- Interno: `0/6 subtareas · 0/4 criterios · No iniciado; en backlog priorizado.`
+  Cara cliente: `Pendiente de arranque.`
 
-Si no hay checklist de criterios: omitir ese ratio y no mencionar su ausencia
-salvo que el producto esté EN PROCESO o en fase de validación, en cuyo caso
-sí alertar: `⚠️ Criterios de aceptación no definidos — riesgo para la validación`.
+Reglas:
+- **Contadores solo en el Interno (41#)**; jamás en `Notas Reinicia` (40#).
+- **Riesgos ⚠️ internos** (retrasos, falta de acceso, criterios sin definir) van en el Interno; en cara cliente se reformulan en neutro solo si son relevantes para el Cliente.
+- Sin checklist: omitir su ratio en el Interno sin mencionarlo, salvo EN PROCESO/validación → `⚠️ Criterios de aceptación no definidos` (solo Interno).
 
 ### Tabla de mapeo de estatus ClickUp → Plan de Proyecto
 
@@ -509,12 +525,7 @@ Contenido:
 - **Columna Descripción:** por defecto **ambos formatos combinados** (Historia de usuario + Resumen ejecutivo en la misma celda); el PO puede pedir uno solo. Se aplica de forma consistente
   a todos los productos. En modo ACTUALIZACIÓN, verificar si el PO quiere mantener el
   formato o cambiarlo.
-- **Columna Notas:** no es un campo libre — es un estatus operativo breve construido a
-  partir de tres fuentes: (1) subtareas — ratio completadas/total y bloqueadas; (2) checklist
-  de criterios de aceptación ("CRITERIOS DE ACEPTACIÓN" / "ACCEPTANCE CRITERIA" o equivalente
-  en proyectos de marketing) — ratio cumplidos/total, con alerta si están ausentes en productos
-  EN PROCESO; (3) comentarios e hilos (`clickup_get_threaded_comments`) — bloqueos, dependencias
-  y validaciones en curso. Siempre resaltar riesgos con ⚠️. Máx. 3 líneas por producto.
+- **Columnas de Notas (dos destinos):** `Notas Reinicia` (40#, cara cliente) = **resumen de estatus real en prosa** (qué está hecho, qué queda, siguiente paso o bloqueo), construido de subtareas (nombres+estado), comentarios/hilos y checklist — **sin contadores**. `Notas` (41#, interno) = los contadores `X/Y subtareas · X/Y criterios` + el mismo resumen + riesgos ⚠️. Detalle en «Procesamiento de las columnas de Notas».
 - **Subtareas:** no incluir subtareas como filas del plan, solo tareas principales de
   `General [CLIENTE]`. Las subtareas se usan únicamente como fuente para la columna Notas.
 - **Idioma coherente:** todos los textos del documento (cabeceras, estatus, log) deben
@@ -892,6 +903,7 @@ Estas reglas prevalecen y complementan §4.0 del cuerpo:
 ## Versiones
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|
+| **v2.14** | 2026-07-12 | Néstor + Claude | **Notas cara cliente sin ratios + resumen de estatus real.** (1) `Notas Reinicia` (40#, col 11) deja de llevar contadores (`X/Y subtareas · X/Y criterios`): pasa a un **resumen de estatus REAL en prosa** legible por el Cliente (hecho/pendiente/siguiente paso o bloqueo), sintetizado de subtareas (nombres y estado, no solo ratio) + comentarios/hilos + checklist. (2) Contadores y riesgos ⚠️ **reservados a la pestaña interna** `Notas` (41#, col 11), junto al mismo resumen. (3) Reescrito el § «Procesamiento de las columnas de Notas» (Paso A/B/C con lectura de NOMBRES de subtareas y peso del comentario reciente; formato dividido por destino). Alineada con la desatendida v1.14. |
 | **v2.13** | 2026-07-12 | Néstor + Claude | **Blindaje del §8 tras un segundo incidente (se mezclaron IMPLANTACIÓN y SOPORTE ACTIVO al desbordar la tabla y al fiarse de lecturas por rango).** Tres refuerzos: (1) **Localización de secciones SOLO con `ZohoSheet_find`** (devuelve `row_index` real); prohibido contar filas de `worksheet.content.get` en array porque **COLAPSA las filas vacías** (índice del array ≠ nº de fila — hizo creer que SOPORTE CERRADO estaba en 63 cuando estaba en 59). El paso 1 del protocolo pasa de "LEER" a "LOCALIZAR con find". (2) **Guarda de límite por lote en el paso ESCRIBIR**: antes de CADA `cells.content.set`, verificar que todas las filas destino caen en `[cabecera+1 … título_siguiente−3]`; si una se sale → no escribir, volver a INSERTAR. Aserción por escritura, no solo cálculo previo — evita desbordar una tabla sobre el título/cabecera de la siguiente. (3) **Verificación por celda con `get_content_of_cell`** para las aserciones (fiable), y §8.2 cuenta títulos con `find` y valida cabeceras por celda. Bump v2.12→v2.13. Aplica a supervisada y desatendida. |
 | **v2.12** | 2026-07-12 | Néstor + Claude | **§8 reforzada: protocolo gated de inserción + invariantes + chequeo de integridad (tras incidente: se aplastaron título y cabecera de "PLAN SOPORTE ACTIVO" al insertar sobre su fila-título y al escribir en las filas de buffer).** La "regla de oro" en prosa se convierte en procedimiento obligatorio con verificación: (1) **§8.0 INVARIANTES — NUNCA**: no escribir en fila-título ni fila-cabecera; no escribir en las **2 últimas filas de datos** (buffer); no insertar con `row` en título/cabecera (ancla = `título_siguiente − 2`, fila interior); **no usar números de fila memorizados/del resumen/de versiones** (7/32/57/81) — releer en vivo. (2) **§8.1 Protocolo gated LEER→CALCULAR→INSERTAR→VERIFICAR→ESCRIBIR**: rango escribible = `[cabecera+1 … título_siguiente−3]`; insertar el déficit por adelantado en AMBAS pestañas; **VERIFICAR es aserción dura bloqueante** (los 4 títulos + 4 cabeceras presentes y desplazados lo esperado, recuento OK) → si falla, **ABORTAR** sin escribir. (3) **§8.2 Chequeo de integridad** (4 títulos + cabeceras no vacías) antes y después de toda operación estructural (inserción y **borrado** de Formación Interna). (4) La tabla de secciones de §4.0 marca las filas-título como **orientativas** (localizar por texto, no por índice). Aplica a supervisada y **desatendida** (en la desatendida, VERIFICAR/integridad son **bloqueantes** y ante fallo se **ABORTA y reporta el incidente en su canal propio — el producto `Gestión [CLIENTE]` de ClickUp — sin escribir nada más**). |
 | **v2.11** | 2026-07-11 | Néstor + Claude | **Sello de última actualización en AMBAS pestañas, con formato distinto.** Verificado en vivo: tanto `40#` como `41#` traen "Fecha actualización:" en B3 y placeholder `DD/MM/AAAA` en C3 (la skill decía "solo 41#" — impreciso). Ahora: **`40#` (pública) = solo fecha `DD/MM/YYYY`**; **`41#` (Interno) = fecha + hora `DD/MM/YYYY HH:MM`** (24h). Actualizadas las 3 menciones (§4.0, §4.7, recordatorios). |

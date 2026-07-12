@@ -4,8 +4,8 @@ description: >
   Guía el respaldo en GitHub de las skills de Reinicia que se editan en claude.ai, para que Claude
   Code las use en las Routines. claude.ai es la fuente de autoría; GitHub (agencia-reinicia/claude-skills)
   es el respaldo y la fuente de verdad para Claude Code/Desktop vía symlinks en ~/.claude/skills.
-  Cubre el flujo: generar el snapshot COMPLETO de la biblioteca (SIEMPRE en un chat nuevo FUERA de
-  cualquier Project, porque un Project ve una foto congelada con versiones viejas), descomprimirlo en
+  Cubre el flujo: generar el snapshot COMPLETO de la biblioteca (por defecto en un chat nuevo FUERA de
+  cualquier Project, porque un Project puede servir una foto congelada), descomprimirlo en
   ~/Downloads/claude-skills-export y ejecutar scripts/import-from-claude-ai.sh (copia + commit/push con
   confirmación + symlinks + verificación, con guardas anti-rollback, recuento y .md sueltos). Actívala
   cuando el usuario diga "sincroniza las skills", "sube las skills a GitHub", "haz el snapshot de skills"
@@ -15,7 +15,7 @@ description: >
 
 # SKILL: Sincronización de Skills a GitHub — Reinicia
 
-> **Versión vigente: v1.4 — 2026-07-05**
+> **Versión vigente: v1.5 — 2026-07-12**
 
 ## Propósito
 
@@ -32,20 +32,36 @@ la estrategia: la orquesta. El detalle canónico vive en `docs/sync-strategy.md`
 - **Dirección del flujo:** claude.ai → GitHub → repo local → `~/.claude/skills/`.
 - **Disciplina única:** no edites la MISMA skill en dos sitios a la vez. Edita solo en claude.ai.
 
-## ⚠️ Regla de oro — El snapshot se genera FUERA del Project
+## ⚠️ Regla de oro — Genera el snapshot fuera del Project por prudencia, pero confía en la guarda anti-rollback
 
-Un chat **dentro de un Project** ve una **foto congelada** de las skills (la de cuando el Project se
-actualizó por última vez): generará un ZIP con **versiones viejas**. Un chat **nuevo, fuera de todo
-Project**, ve tu biblioteca personal **al día**.
+Un chat **dentro de un Project** **puede** ver una **foto congelada** de las skills (la de cuando el
+Project se actualizó por última vez) y generar un ZIP con **versiones viejas** — pero **no siempre**:
+a veces el mount está al día. El problema es que **desde dentro no se distingue a ojo**, y verificarlo
+tiene su coste. Por eso, **por defecto y por prudencia, el ZIP del snapshot se pide desde un chat nuevo
+fuera del Project**, donde la biblioteca se ve siempre al día. Si esta skill se ejecuta dentro de un
+Project, lo primero sigue siendo ofrecer generar el snapshot desde un chat fuera del Project.
 
-**Por tanto: el ZIP del snapshot SIEMPRE se pide desde un chat nuevo fuera del Project.** Si esta skill
-se está ejecutando dentro de un Project, lo primero es avisar al usuario de que abra un chat fuera del
-Project para generar el ZIP.
+**Pero lo que de verdad te cubre no es *dónde* generas el ZIP: es la guarda anti-rollback del script.**
+Aunque el snapshot saliera viejo, `import-from-claude-ai.sh` compara versión a versión y **se detiene
+antes de retroceder ninguna skill** (Paso 4). Un snapshot congelado se traduce entonces en un aborto
+controlado, no en pérdida de trabajo. La regla "fuera del Project" es higiene para no toparte con ese
+aborto; la guarda es la red de seguridad.
 
-> Incidente que originó esta regla (jun-2026): se generó el snapshot desde dentro de un Project
+> Si aun así generas desde dentro de un Project, sal de dudas antes de importar: lista la "Versión
+> vigente" de cada skill de la exportación (ver *Verificaciones útiles*). Si vienen al día — o por
+> delante de lo que recordabas — el mount no estaba congelado y puedes seguir.
+
+> Incidente que originó la guarda (jun-2026): se generó el snapshot desde dentro de un Project
 > congelado y la importación intentó hacer rollback de skills ya actualizadas (bajar de v0.10 a v0.6).
 > El mismo SKILL.md se vio en tres versiones a la vez: v0.6 (Project), v0.7 (chat suelto), v0.10
-> (GitHub). De ahí nace la guarda anti-rollback del script.
+> (GitHub).
+
+> Contraejemplo (12-jul-2026): en una sincronización lanzada **desde dentro de un Project**, el mount
+> de `/mnt/skills/user` traía versiones **de ese mismo día**, algunas por delante de las que se daban
+> por vigentes (p. ej. `plan-proyecto-zoho-sheet-reinicia` v2.13). Un Project **no siempre** sirve una
+> foto vieja. Se verificó listando versiones antes de importar, la guarda anti-rollback no saltó y el
+> push entró correctamente. Moraleja: el "siempre congelado" es falso; trata el origen del ZIP como
+> prudencia y la guarda como seguridad.
 
 ## Flujo paso a paso
 
@@ -123,8 +139,14 @@ El script hace: copia (merge, no borra nada) → muestra diff → commit + push 
 El script se detiene y pide confirmación si detecta:
 
 - **`.md` sueltos** en la raíz de la exportación → **aborta**. Corrige la carpeta y reejecuta.
-- **Menos skills que el repo** → puede ser snapshot parcial/viejo. Solo continúa si retiraste skills
-  a propósito.
+- **Menos skills que el repo** → puede ser snapshot parcial/viejo. Antes de decidir, corre el `diff`
+  exportación↔repo (ver *Verificaciones útiles*) para ver **qué** skill sobra en el repo:
+  - Si la que falta es **`skill-creator`** → es **normal y esperado**: es la meta-skill de ejemplo de
+    Anthropic, vive en `/mnt/skills/examples` (no en tu biblioteca `/mnt/skills/user`), así que **nunca
+    entra en el snapshot** aunque esté copiada en el repo. Contesta `y`; el merge no la toca.
+  - Si es una skill que **retiraste a propósito** → continúa (el merge no borra la que sobra).
+  - Si es una skill que **debería estar viva** (p. ej. creada hoy, tras el último refresco del Project)
+    → aborta y regenera el snapshot desde un chat fuera del Project, no sea que se quede sin respaldar.
 - **Rollback** (alguna skill bajaría de versión) → **casi siempre significa que el ZIP salió de un
   sitio congelado**. No fuerces: regenera el ZIP desde un chat fuera del Project (Paso 1) y repite.
 
@@ -134,6 +156,24 @@ El script se detiene y pide confirmación si detecta:
 bash scripts/check-repo-status.sh   # ¿repo local alineado con origin?
 bash scripts/check-drift.sh         # ¿repo y ~/.claude/skills/ alineados?
 bash scripts/doctor.sh              # ¿todas las skills con frontmatter válido?
+```
+
+**Comprobar que el snapshot viene al día** — antes de importar; útil sobre todo si lo generaste desde
+dentro de un Project. Lista la "Versión vigente" de cada skill de la exportación (si vienen al día o
+por delante de lo recordado, el mount no estaba congelado):
+
+```bash
+for d in ~/Downloads/claude-skills-export/*/; do
+  v=$(grep -m1 -i "versión vigente" "$d/SKILL.md" 2>/dev/null | sed 's/^[>*# ]*//')
+  printf "%-52s %s\n" "$(basename "$d")" "${v:-<sin línea de versión>}"
+done
+```
+
+**Ver qué skill sobra/falta entre la exportación y el repo** — útil ante el aviso "menos skills que el
+repo" del Paso 4. La línea con `>` es la que está en el repo pero no en el snapshot:
+
+```bash
+diff <(ls ~/Downloads/claude-skills-export | sort) <(ls ~/repos/claude-skills/skills | sort)
 ```
 
 ## Comprobar la versión de una skill en GitHub
@@ -174,3 +214,4 @@ bash scripts/build-zips.sh
 | v1.2 | 2026-07-05 | Néstor + Claude | Paso 2 corregido: el bloque solo tenía un comentario, no un comando real de descompresión. Sustituido por `unzip` real, localizando el ZIP con `ls -t ~/Downloads/skills-reinicia*.zip \| head -1` para tolerar renombrados por descarga duplicada (`(1)`, `(2)`...). |
 | v1.3 | 2026-07-05 | Néstor + Claude | Nueva guarda en el Paso 2: comprobar que la exportación no tenga una carpeta contenedora de más (p. ej. `skills-reinicia/` envolviendo las skills) antes de importar. Incidente: un ZIP mal generado creó `skills/skills-reinicia/*/SKILL.md` en el repo y un symlink huérfano `skills-reinicia`; `check-drift.sh` no lo detectó porque no valida la estructura interna. |
 | v1.4 | 2026-07-05 | Néstor + Claude | Cortado el fallo de raíz en el Paso 1: instrucción a Claude reformulada para exigir explícitamente "sin carpeta contenedora adicional", más gotcha obligando a Claude a autoverificar la estructura del ZIP (`unzip -l`) antes de entregarlo, y aclaración de que comprimir el *contenido* de la carpeta de trabajo (`zip -r salida.zip *`) no es lo mismo que comprimir la carpeta en sí (`zip -r salida.zip skills-reinicia`) — esta última fue la causa real del incidente de la v1.3. |
+| v1.5 | 2026-07-12 | Néstor + Claude | Corregido el absoluto falso de la Regla de oro: un Project **puede** servir una foto congelada, pero **no siempre** (contraejemplo del 12-jul: mount al día, con versiones por delante de lo recordado, p. ej. `plan-proyecto-zoho-sheet-reinicia` v2.13). Regla reenfocada como prudencia y la **guarda anti-rollback** del script como red de seguridad real. Paso 4: documentado el caso benigno "menos skills que el repo" cuando la que falta es `skill-creator` (meta-skill de ejemplo de Anthropic en `/mnt/skills/examples`, nunca entra en el snapshot). Verificaciones útiles: añadidos one-liners para listar la "Versión vigente" de la exportación y el `diff` exportación↔repo. |
