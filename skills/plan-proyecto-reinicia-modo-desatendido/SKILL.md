@@ -17,7 +17,7 @@ description: >
 
 # SKILL: Plan de Proyecto — Modo Desatendido (Gestión de ciclo de vida) — Reinicia
 
-> **Versión vigente: v1.11 — sello con hora en 41#, fecha en 40# — 2026-07-11**
+> **Versión vigente: v1.13 — localización solo con `find` + guarda de límite por escritura + verificación por celda (abort→reporte en Gestión) — 2026-07-12**
 
 > **Estado:** skill de producción en evolución — gestiona el ciclo de vida del Plan (localiza, crea
 > si falta, reconcilia las tres tablas, congela). Lo que queda por calibrar en ejecución real va
@@ -78,15 +78,17 @@ Plantilla canónica v2: `pnync351d56992b6d4026906a6fec5d56e682`.
 ### Tablas dentro de 40#/41# y su FUENTE en ClickUp (cada tabla, su lista)
 Tres por pestaña, y **cada una se reconcilia contra una lista distinta** — NO todo sale de General:
 
-| Tabla del Plan | Fuente ClickUp | Filtro | Fila-título (meses) |
-|---|---|---|---|
-| **PLAN IMPLEMENTACIÓN** | `General [CLIENTE]` (LS `211763746`) | productos digitales / SPIKEs | **fila 7** |
-| **PLAN SOPORTE ACTIVO** | `Soporte [CLIENTE]` (LS `211763780`) | tareas **no cerradas** | **fila 32** |
-| **PLAN SOPORTE CERRADO** | `Soporte [CLIENTE]` (LS `211763780`) | tareas **cerradas en el año del Plan** (p. ej. 2026); las cerradas en años anteriores quedan en el Plan de su año (histórico), NO se traen | **fila 57** |
-| **RESUMEN HISTÓRICO** (rollup de años anteriores) | agregado interno | **2 filas: Implementation / Support** | **fila 81** |
+> ⚠️ **Los números de fila-título de abajo son ORIENTATIVOS y NO se dan por buenos: se releen EN VIVO (regla de escritura 5, paso a) antes de tocar nada.** La plantilla puede traer más/menos placeholders y cualquier inserción previa los desplaza (incidente real: SOPORTE ACTIVO apareció en la fila 36, no en la 32). Localizar cada sección **por el texto de su fila-título** (`PLAN …`), nunca por índice fijo.
 
-Cabecera de tabla en **fila 8** (no fila 1). Filas 3–5 = leyenda de hitos; fila 7 = meses; fila 8 = nº de semana.
-> **Los meses se repiten en la fila-título de CADA sección (7 / 32 / 57 / 81).** En planes **EN**, traducirlos **por sección** (no basta con la primera).
+| Tabla del Plan | Fuente ClickUp | Filtro | Fila-título (orientativa) |
+|---|---|---|---|
+| **PLAN IMPLEMENTACIÓN** | `General [CLIENTE]` (LS `211763746`) | productos digitales / SPIKEs | ~fila 7 |
+| **PLAN SOPORTE ACTIVO** | `Soporte [CLIENTE]` (LS `211763780`) | tareas **no cerradas** | ~fila 32 |
+| **PLAN SOPORTE CERRADO** | `Soporte [CLIENTE]` (LS `211763780`) | tareas **cerradas en el año del Plan** (p. ej. 2026); las cerradas en años anteriores quedan en el Plan de su año (histórico), NO se traen | ~fila 57 |
+| **RESUMEN HISTÓRICO** (rollup de años anteriores) | agregado interno | **2 filas: Implementation / Support** | ~fila 81 |
+
+Cabecera de tabla en la fila **inmediatamente posterior** al título (1ª sección: filas 3–5 = leyenda de hitos; fila 7 = meses; fila 8 = cabecera). Localizar por texto, no por índice.
+> **Los meses se repiten en la fila-título de CADA sección.** En planes **EN**, traducirlos **por sección** (no basta con la primera).
 > **Años anteriores** (alcance histórico completo): los productos de años previos van **individuales, con su fecha real**, y el **calendario del año en blanco**; el **RESUMEN HISTÓRICO (fila 81)** es el que los **agrega** en 2 filas (Implementation / Support).
 
 > ⚠️ **Regla anti-fallo de alcance** (la pasada del 29/06 dejó sin reconciliar las filas 39–79 por
@@ -199,10 +201,40 @@ Cabecera de tabla en **fila 8** (no fila 1). Filas 3–5 = leyenda de hitos; fil
 3. **`cells.content.set` plural, lotes ≤40.** Decimal con coma. Nunca `csvdata.set` para nº con coma.
 4. **Estatus = valor exacto del desplegable** (PENDIENTE · EN PROCESO · TERMINADO · POSPUESTO ·
    PARKING · CANCELADO / EN). El color es automático por el desplegable; no tocar formato.
-5. **Inserción de filas (§8) — en CUALQUIER tabla de CUALQUIER pestaña:** NUNCA rellenar hasta el
-   final de la tabla. Insertar las filas necesarias **ANTES de la penúltima fila del cuerpo** (heredan
-   formato + desplegable + condicional), y solo después pegar. Una fila por llamada a
-   `ZohoSheet_insert_row`. **Recalcular índices** de las tablas inferiores y revisar Gantt/hitos.
+5. **Inserción de filas (§8) — PROTOCOLO GATED OBLIGATORIO, en CUALQUIER tabla de CUALQUIER pestaña.**
+   **INVARIANTES — NUNCA** (violarlos corrompe la estructura; incidente real: se aplastaron el título y la
+   cabecera de "PLAN SOPORTE ACTIVO" al insertar sobre su fila-título):
+   - NUNCA escribir en la **fila-título** (`PLAN …`) ni en la **fila-cabecera** de una tabla.
+   - NUNCA escribir en las **2 últimas filas de datos** de una tabla (buffer: última = borde de cierre;
+     penúltima = ancla de formato/desplegable/semáforo). Se dejan vacías.
+   - NUNCA insertar con `row` en una fila-título/cabecera. **Ancla = `título_siguiente − 2`** (fila interior).
+   - NUNCA usar números de fila memorizados/del prompt/de versiones (7/32/57/81): **releer EN VIVO**.
+   - NUNCA localizar títulos/cabeceras **contando filas de una lectura por rango**: `worksheet.content.get` en
+     array **COLAPSA las vacías** (índice del array ≠ nº de fila; hizo creer que SOPORTE CERRADO estaba en 63
+     cuando estaba en 59). Localizar **SIEMPRE con `ZohoSheet_find`** (da `row_index` real); las lecturas por
+     rango solo para leer contenido de filas ya localizadas. Aserciones de celda → **`get_content_of_cell`**.
+
+   **Secuencia obligatoria LOCALIZAR → CALCULAR → INSERTAR → VERIFICAR → ESCRIBIR:**
+   (a) **LOCALIZAR con `find`** las **4 filas-título** (`ZohoSheet_find`, una búsqueda por título) → `row_index`
+       real de cada una; la cabecera es la fila siguiente. **No** contar filas de un array.
+   (b) **CALCULAR** por sección: rango escribible = `[cabecera+1 … título_siguiente − 3]`; contar filas
+       necesarias de TODA la sección vs. las que caben.
+   (c) **INSERTAR** el déficit por adelantado, `row = título_siguiente − 2`, **1 fila/llamada**, replicado en
+       **AMBAS pestañas** al mismo índice. (En un proyecto con soporte real, SOPORTE CERRADO puede pedir ~18.)
+   (d) **VERIFICAR (aserción DURA y BLOQUEANTE):** re-localizar con `find`; los **4 títulos** deben seguir
+       presentes (`matches_found` correcto) y desplazados lo insertado; cada cabecera no vacía por
+       `get_content_of_cell`; recuento OK (`insert_row` a veces deja una de menos).
+   (e) **ESCRIBIR — con GUARDA DE LÍMITE POR LOTE:** antes de CADA `cells.content.set`, verificar que **todas**
+       las filas destino caen en `[cabecera+1 … título_siguiente−3]`; si una sola se sale → **no escribir**,
+       volver a (c). Aserción por escritura, no solo el cálculo de (b) — evita **desbordar una tabla sobre el
+       título/cabecera de la siguiente** (incidente real: se mezclaron IMPLANTACIÓN y SOPORTE ACTIVO).
+
+   **CHEQUEO DE INTEGRIDAD (antes y después de toda operación estructural — inserción y borrado de Formación
+   Interna):** con `find`, exactamente 4 títulos por pestaña + cada cabecera (celda `B(título+1)`) no vacía por
+   `get_content_of_cell`. **Si (d), (e) o el chequeo fallan → ABORTAR: no escribir/insertar nada más, dejar la
+   hoja como estaba y REPORTAR el incidente estructural en el producto `Gestión [CLIENTE]` de ClickUp** (fichero,
+   sección y filas afectadas), en vez de continuar a ciegas. En desatendido este error sería invisible: por eso
+   es bloqueante, no un aviso más.
    **Excepción: Log de Cambios** (no hay tabla precreada) → añadir al final + aplicar formato explícito
    (ver identidad visual).
 6. **Índices de Estatus/calendario por cabecera leída** (difiere entre 40# y 41#).
@@ -286,7 +318,7 @@ Primera fila pendiente por el contenido de la columna PBI. 🚧 criterio exacto 
 - **Al cierre: registrar SIEMPRE la entrada en el Log de Cambios** (3 columnas Fecha | Autor | Cambio; paso obligatorio, no opcional).
 - **Reescribir el sello de última actualización** en `C3` de ambas: `40#` `DD/MM/YYYY`; `41#` `DD/MM/YYYY HH:MM` (24h), en cada pasada.
 - (Re)dibujar calendario: **heredar el gris de la plantilla, sin repintar la base**; pintar solo los hitos de **cols 9/10** encima (entrega `#70EED6`, validación `#EBE31B`) y restaurar al gris las celdas que se vacíen al mover un hito.
-- **Insertar filas (§8)** si falta espacio, ANTES de pegar (en un proyecto con soporte real, **SOPORTE CERRADO puede necesitar ~18 inserciones**). **Verificar el recuento con una lectura** (`insert_row` a veces deja una de menos: 17 en vez de 18). Persistir en lotes ≤40.
+- **Insertar filas — PROTOCOLO GATED (regla de escritura 5):** LEER→CALCULAR→INSERTAR→VERIFICAR→ESCRIBIR. Insertar el déficit por adelantado con ancla `título_siguiente − 2` (nunca sobre título/cabecera; respetar el buffer de 2 filas finales), en AMBAS pestañas. En proyecto con soporte real, SOPORTE CERRADO puede pedir **~18 inserciones**. **VERIFICAR es aserción bloqueante** (4 títulos + 4 cabeceras intactos y desplazados lo esperado; recuento OK — `insert_row` a veces deja una de menos). **Si falla → ABORTAR y reportar el incidente estructural en `Gestión [CLIENTE]`, sin escribir nada más.** Persistir en lotes ≤40.
 
 ### PASO 4 — Ideas (solo Routine dominical)
 ≤7 ideas nuevas en 42# con trazabilidad y priorización por Objetivos (45#).
@@ -403,6 +435,8 @@ de Cliente empujadas a ClickUp · Épica/PBI vacíos rellenados · ≤7 ideas en
 
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|
+| **v1.13** | 2026-07-12 | Néstor + Claude | **Blindaje del §8 (regla de escritura 5), alineada con la supervisada v2.13, tras mezclarse IMPLANTACIÓN y SOPORTE ACTIVO.** (1) **Localización de secciones SOLO con `ZohoSheet_find`** (`row_index` real); prohibido contar filas de `worksheet.content.get` en array porque **COLAPSA las vacías** (índice ≠ fila — hizo creer que SOPORTE CERRADO estaba en 63 cuando estaba en 59). El paso (a) pasa de "LEER" a "LOCALIZAR con find". (2) **Guarda de límite por lote en (e) ESCRIBIR**: antes de cada `cells.content.set`, verificar que todas las filas destino caen en `[cabecera+1 … título_siguiente−3]`; si una se sale → no escribir, volver a insertar. Aserción por escritura, no solo cálculo previo. (3) **Verificación por celda con `get_content_of_cell`** en VERIFICAR y en el chequeo de integridad (títulos contados con `find`, cabeceras validadas por celda). Se mantiene el carácter **bloqueante** y el **reporte en `Gestión [CLIENTE]`** ante fallo. |
+| **v1.12** | 2026-07-12 | Néstor + Claude | **Regla de escritura 5 (inserción) reforzada como PROTOCOLO GATED + invariantes + chequeo de integridad, alineada con la supervisada v2.12** (tras incidente: se aplastaron título y cabecera de "PLAN SOPORTE ACTIVO" al insertar sobre su fila-título y escribir en filas de buffer). Invariantes NUNCA (no escribir en título/cabecera; no escribir en las 2 últimas filas de datos; ancla de inserción = `título_siguiente − 2`; no usar filas memorizadas 7/32/57/81 → releer en vivo). Secuencia obligatoria **LEER→CALCULAR→INSERTAR→VERIFICAR→ESCRIBIR** con rango escribible `[cabecera+1 … título_siguiente−3]`, inserción del déficit por adelantado en AMBAS pestañas, y **VERIFICAR/integridad como aserción BLOQUEANTE**: ante fallo (título/cabecera perdidos, recuento KO) → **ABORTAR y reportar el incidente en `Gestión [CLIENTE]` (canal propio de esta skill, no Cliq), sin escribir nada más**. Tabla de secciones de §4.0 marcada como orientativa (localizar por texto). Aplica al borrado de Formación Interna igual que a la inserción. |
 | **v1.11** | 2026-07-11 | Néstor + Claude | **Sello con hora en el Interno (alineada con supervisada v2.11).** El sello de `C3` se escribe en AMBAS pestañas: **`40#` solo fecha `DD/MM/YYYY`**; **`41#` fecha + hora `DD/MM/YYYY HH:MM`** (24h), reescrito en cada pasada. Actualizadas §4.0 y PASO 3. |
 | **v1.10** | 2026-07-11 | Néstor + Claude | **Alineada con la supervisada v2.10 (verificación en vivo de la plantilla).** (1) **Calendario = heredar la base gris de la plantilla, NO repintar** (filas insertadas heredan el gris); pintar solo hitos; al mover un hito, restaurar la celda vaciada al gris de la plantilla (no a blanco) — ese gris no se lee por API. Actualizadas las 3 menciones (identidad, reorden, PASO 3). (2) **Portada:** valores en `D6`–`D10` sobrescribiendo placeholders; `D5`=HYPERLINK reemplaza el `ackstorm` + limpiar `E5:G5`; renombrar header col 12 de 40# (`Notas Nombre Cliente` → `Notas <Cliente>`) y el marcador del título. |
 | **v1.9** | 2026-07-11 | Néstor + Claude | **Proxy `date_closed` (decisión B) + bump alineado con la supervisada v2.9.** (1) **Cerrados sin `due_date`** usan **`date_closed` como fecha de entrega** (col 9 = fecha de cierre DD/MM/YYYY) **y marcan el calendario** en su quincena (color entrega); antes se dejaba `"-"`/blanco. Solo `"-"` si tampoco hay `date_closed`. `date_closed` sigue atribuyendo el año de la tabla. (2) Subida de versión (v1.8→v1.9) para mantener el par sincronizado con la supervisada. (3) **Cotejo de las 5 DECISIONES PO:** nº1–4 y nº5a ya cubiertas en la desatendida; **corregido el hueco nº5b** — la **Fecha de validación esperada** ahora sincroniza en **AMBOS sentidos** (Sheet ↔ ClickUp: rellenar el lado vacío desde el otro, nunca pisar el valor del Cliente; si difieren, avisar), antes solo Sheet→ClickUp. Actualizados mapa, MODELO DE SINCRONIZACIÓN y línea-resumen. |

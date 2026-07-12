@@ -10,13 +10,13 @@ description: >
   ClickUp MCP. Inactividad en días laborables (calendario de Madrid); ignora ClickBot, fórmulas y
   comentarios de mera intención. Actívala cuando el PO pida "detecta los productos parados de
   [Equipo]", "revisa los productos estancados", "qué tarjetas llevan paradas" o "avisa de los
-  parones de ClickUp", o cuando se ejecute la Routine diaria. No usar para Sprint Backlogs ni
-  cierres de gestión mensual.
+  parones de ClickUp", o cuando se ejecute la Routine diaria. En tarjetas de Gestión avisa pero NUNCA las mueve
+  a Parking. No usar para Sprint Backlogs.
 ---
 
 # SKILL: Detección de Productos Estancados en ClickUp — Reinicia
 
-> **Versión vigente: v0.2 — 06/06/2026** · ver changelog al final (`## Versiones`)
+> **Versión vigente: v0.3 — 12/07/2026** · ver changelog al final (`## Versiones`)
 
 ## Propósito
 
@@ -24,7 +24,8 @@ Detectar a diario las tarjetas de ClickUp (productos y microcampañas) que está
 "activo" pero llevan **5 o más días laborables sin actividad humana real**, avisar al PO
 correspondiente con un comentario informado por el histórico de la tarjeta, y —si el parón
 alcanza **7 días laborables** sin progreso— moverlas automáticamente a Parking. Al cierre,
-publicar un resumen en Zoho Cliq.
+publicar un resumen en Zoho Cliq. **Excepción:** las tarjetas de **Gestión** se avisan como
+recordatorio de seguimiento con el cliente, pero **nunca** se mueven a Parking (ver 0.9).
 
 El objetivo no es generar comentarios, sino **provocar una acción del Equipo**: o se retoma el
 trabajo, o la tarjeta sale del flujo activo a Parking.
@@ -148,6 +149,23 @@ el comentario.
   solo trae inactividad de Columbia. Cuando se amplíe a todos los equipos, esta skill seguirá
   filtrando por su propio alcance (0.1).
 
+### 0.9 Tratamiento especial de Gestión (avisar, nunca Parking)
+
+Las tarjetas de **Gestión** se identifican por la **lista**: `list_name` que empieza por `"Gestión "`
+(p. ej. "Gestión Avaderm", "Gestión Gonher"). Incluye las mensuales `Gestión [Mes] [CLIENTE]` y las
+recurrentes de gestión que vivan en esas listas (p. ej. "Daily 2026"). **El discriminador es la
+lista, no el nombre:** un producto real llamado "Gestión y actualización Middleware-SAP" que esté en
+`General [CLIENTE]` NO es Gestión y se trata como cualquier producto.
+
+Reglas para Gestión:
+- **Nunca se mueven a Parking**, ni a ≥7 días laborables. La acción máxima es el AVISO (re-aviso si persiste).
+- El aviso es un **recordatorio de seguimiento con el cliente** (plantilla propia en PASO 4): que el
+  PO hable con el cliente sobre el estatus del proyecto **y del cliente en sí**, y deje en la tarjeta
+  un comentario con el **resumen** de esa conversación.
+- **Regla de progreso más estricta (PASO 1):** en Gestión, un comentario de mera constancia — "hablé
+  con el cliente", "reunión con el cliente" — **NO cuenta como progreso**. Solo cuenta un comentario
+  con **resumen real** de la conversación o un **enlace al acta**.
+
 ---
 
 ## PASO 1 — REGLA DE "ACTIVIDAD REAL" (clave de toda la skill)
@@ -173,6 +191,11 @@ usa para (a) **podar** lo único que la función no mira —los comentarios de a
   respuesta", "lo reviso este puente", "lo miro mañana". Estos NO son progreso.
 - Comentarios escritos por **esta misma skill** (reconocibles por la firma 0.6).
 
+> **Regla estricta en tarjetas de Gestión (0.9):** un comentario de mera constancia de contacto
+> ("hablé con el cliente", "reunión con el cliente", "llamada con [persona]") **NO cuenta como
+> progreso**. Solo reinicia el contador un comentario con **resumen** de la conversación (estatus del
+> proyecto y del cliente) o un **enlace al acta**.
+
 > El criterio fino "¿este comentario demuestra avance?" lo decide Claude leyendo el texto. Ante
 > la duda, tratar el comentario como **no-progreso** (es la dirección segura: como mucho se
 > revisa una tarjeta de más).
@@ -187,7 +210,7 @@ listas de ClickUp; se hace una sola lectura a Catalyst.
 1. **Consulta ZCQL** (`CatalystbyZoho_Execute_Query`, entorno Development, 0.8):
 
    ```sql
-   SELECT task_id, current_status, project_name, inactivity_days_business, MODIFIEDTIME
+   SELECT task_id, current_status, project_name, list_name, inactivity_days_business, last_activity_datetime, MODIFIEDTIME
    FROM clickup_task_activity
    WHERE project_name IN ('Gonher','Avaderm','Líder System Grupo','Aicrov','Tee Travel',
                           'Moradillo','Exeltis','Ecophon España','Kasblan')
@@ -198,9 +221,21 @@ listas de ClickUp; se hace una sola lectura a Catalyst.
    > **No** poner `inactivity_days_business >= 5` en ZCQL: la columna es texto y la comparación
    > sería lexicográfica (`"9" > "22"`). El umbral se aplica en código tras `parseInt`.
 
-2. **Guarda de frescura.** Comprobar que la columna es de hoy: el `MODIFIEDTIME` de las filas debe
-   ser de la fecha actual (Madrid). Si **ninguna** fila se actualizó hoy → el cron de las 05:30 no
-   corrió → **ir al PASO 3-FALLBACK** (cálculo propio) y avisar de la anomalía en el reporte.
+2. **Guarda de frescura — DOS comprobaciones.**
+   - **(a) ¿Corrió el cron?** El `MODIFIEDTIME` de las filas debe ser de hoy (Madrid). Si **ninguna**
+     fila se actualizó hoy → el cron de las 05:30 no corrió.
+   - **(b) Heartbeat de eventos (CRÍTICO).** El `last_activity_datetime` **más reciente** de la tabla
+     (o el evento más nuevo de `clickup_events`) no puede tener más de **2 días laborables** de
+     antigüedad. Si lo tiene, el webhook ClickUp→Catalyst está caído aunque el cron siga sellando
+     `MODIFIEDTIME` de hoy: la inactividad está **inflada artificialmente** y NO es fiable.
+   - Si falla (a) **o** (b) → **ir al PASO 3-FALLBACK** (cálculo propio en vivo, fiable con el
+     pipeline caído) y avisar de la anomalía en el reporte. **Nunca** mover a Parking con dato de
+     Catalyst no fiable.
+
+   > Por qué (b) es imprescindible: el cron de las 05:30 recalcula la inactividad **cada día aunque no
+   > lleguen eventos nuevos**, así que sella `MODIFIEDTIME` de hoy sobre datos congelados. La
+   > comprobación (a) sola se deja engañar; el heartbeat (b) es lo que detecta el pipeline muerto
+   > (junio 2026: el webhook estuvo 5 semanas caído y la skill parkeó tarjetas vivas por no tenerlo).
 
 3. **Clasificar en código** (parsear cada `inactivity_days_business` con `parseInt`):
    - **`dias >= 5`** → candidato a aviso/Parking (pasa al PASO 3 para poda + redacción).
@@ -263,7 +298,18 @@ Aplicar sobre el **estado en vivo** (re-verificado en 3.1) y con `dias_inactivid
 - Si **ya** tiene `parado-avisado`: no reavisar (la siguiente acción es el día 7).
 
 **C) MOVER A PARKING (`dias_inactividad ≥ 7`):**
-- Solo si ya se dio el AVISO (tiene `parado-avisado`) y sigue sin progreso real:
+
+> **Tarjetas de Gestión (0.9): NUNCA se mueven a Parking.** Si una Gestión llega a ≥7, la acción es
+> **re-aviso** con la plantilla de Gestión (recordatorio de seguimiento con el cliente), nunca Parking.
+
+> **Red de seguridad anti-parkeo (obligatoria).** Antes de mover, comprobar si hay **algún comentario
+> humano** (no ClickBot, no de esta skill por su firma 0.6) con fecha **posterior** al aviso
+> `parado-avisado`. Si lo hay → **NO mover**: es señal de actividad reciente que la poda pudo no
+> captar. Dejar re-aviso y marcar la tarjeta para revisión humana en el reporte. Un solo fallo de
+> poda no debe poder parkear una tarjeta viva.
+
+- Solo mover si: es un **producto** (no Gestión), ya se dio el AVISO (`parado-avisado`), **no** hay
+  comentario humano posterior al aviso, y sigue sin progreso real:
   1. `clickup_update_task` → estado `parking e incidencias`.
   2. Comentario explicando el motivo del movimiento y a quién corresponde retomarlo.
   3. Al cambiar de estado, la tarjeta **sale de la lista blanca** y deja de generar avisos.
@@ -319,6 +365,22 @@ Privado - Producto parado [N] días laborables - [PRODUCTO] [CLIENTE]
 Cliente, pero la validación pendiente es interna de Reinicia; la acción pedida es completar o
 reasignar la validación.
 
+**Plantilla — tarjeta de Gestión** (0.9; recordatorio al PO, **nunca** Parking):
+
+```
+Recordatorio de seguimiento: esta tarjeta de Gestión lleva [N] días laborables sin un registro real
+de seguimiento con el cliente.
+
+[PO]: conviene hablar con el cliente sobre el estatus del proyecto y del propio cliente, y dejar aquí
+un comentario con el RESUMEN de esa conversación (o el enlace al acta). Una nota del tipo "hablé con
+el cliente" o "reunión con el cliente", sin resumen ni acta, no vale como seguimiento.
+
+Privado - Gestión sin seguimiento registrado [N] días laborables - [PRODUCTO] [CLIENTE]
+[URL]
+
+— Detección automática de estancamiento (Reinicia)
+```
+
 Si hay **compromiso vencido** en el hilo, añadir una línea: `Compromiso vencido: se prometió para
 el [fecha] y no consta entrega/avance.`
 
@@ -339,8 +401,17 @@ Tarjetas vigiladas: [N]  ·  Paradas detectadas: [N]
   • [Cliente] [Producto] — [N] días laborables parada — @[PO] — [estado]
     [URL]
 
-═══ MOVIDAS A PARKING (≥7 días) ═══
+═══ MOVIDAS A PARKING (≥7 días · solo productos) ═══
   • [Cliente] [Producto] — [N] días laborables — @[PO]
+    Último comentario humano: [fecha] "[extracto]" — por qué no contó: [motivo]
+    [URL]
+
+═══ RECORDATORIOS GESTIÓN (avisadas · nunca Parking) ═══
+  • [Cliente] [Gestión …] — [N] días laborables sin seguimiento registrado — @[PO]
+    [URL]
+
+═══ NO MOVIDAS POR RED DE SEGURIDAD (comentario humano tras el aviso) ═══
+  • [Cliente] [Producto] — revisar a mano — @[PO]
     [URL]
 
 ═══ REACTIVADAS (progreso detectado) ═══
@@ -395,7 +466,13 @@ Si un canal/post falla, no abortar el pase: registrar la anomalía y continuar.
 - Hilos: `clickup_get_task_comments` + `clickup_get_threaded_comments` siempre.
 - Parsing crudo ClickUp (fallback): `json.loads(raw[0]['text'])`.
 - Idempotencia por tag `parado-avisado` + firma de comentario.
-- Mover a Parking solo desde el día 7 y solo con aviso previo; al moverse, sale de la vigilancia.
+- Mover a Parking solo desde el día 7, solo productos (no Gestión), con aviso previo y sin comentario
+  humano posterior al aviso; al moverse, sale de la vigilancia.
+- **Heartbeat de eventos (2.2):** si el evento más nuevo tiene >2 días laborables, el webhook está
+  caído aunque el cron selle hoy → fallback; nunca fiarse de Catalyst para Parking.
+- **Gestión (0.9):** se avisa (recordatorio de seguimiento con el cliente, con resumen o acta) pero
+  **nunca** se mueve a Parking. Discriminar por `list_name` que empieza por "Gestión ".
+- **Red de seguridad:** no mover a Parking si hay comentario humano posterior al aviso → re-aviso + revisión humana.
 - Auto-move ACTIVO desde el primer día del piloto (decisión de Dirección: sin acción real no hay
   feedback real).
 - Reporte al **#Canal de POs** (`canaldepos`). Indicar si se usó fallback.
@@ -408,5 +485,6 @@ Si un canal/post falla, no abortar el pase: registrar la anomalía y continuar.
 
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|
+| **v0.3** | 2026-07-12 | Néstor + Claude | **Gestión** (identificada por `list_name` que empieza por "Gestión "): se avisa como recordatorio de seguimiento con el cliente (plantilla propia; un "hablé con el cliente" pelado no cuenta como progreso, hace falta resumen o enlace al acta) pero **nunca** se mueve a Parking (0.9, PASO 1, PASO 4-C). **Heartbeat de eventos** en la guarda de frescura (2.2): además de comprobar que el cron corrió, verifica que el evento más nuevo no supere 2 días laborables; si no, el webhook está caído aunque el cron selle hoy → fallback (raíz del incidente de junio 2026, webhook 5 semanas suspendido). **Red de seguridad anti-parkeo** (PASO 4-C): no mover a Parking si hay comentario humano posterior al aviso. `list_name`/`last_activity_datetime` añadidos al SELECT del PASO 2. Trazabilidad en el reporte (último comentario humano por cada Parking). |
 | **v0.2** | 2026-06-06 | Néstor + Claude | Consume `inactivity_days_business` de Catalyst como fuente primaria (PASO 2 = lectura ZCQL en vez de recorrer listas). PASO 3 pasa a "lectura + poda": solo lee el hilo de los candidatos ≥5, poda con la regla de comentario-que-demuestra-avance (lo único que la función no mira) y re-verifica el estado en vivo antes de actuar. Filtro ≥5 en código (columna de texto). Guarda de frescura por `MODIFIEDTIME` y **fallback** al cálculo propio v0.1 si Catalyst falla o el dato no es de hoy. Nombres canónicos Catalyst ("Líder System Grupo", "Ecophon España"). Config Catalyst en 0.8. Formato canónico del comentario de aviso por estado (texto plano sin acrónimos, plantillas en PASO 4, comentario asignado al responsable). |
 | **v0.1** | 2026-06-01 | Néstor + Claude | Versión inicial autónoma. Piloto Equipo Columbia, una pasada diaria. Detección por lista blanca de 4 estados; inactividad en días laborables (calendario Madrid capital 2026); regla de actividad real (excluye ClickBot, fórmulas y comentarios de intención); lectura de hilos para compromisos vencidos; aviso con enrutado por estado; auto-move a Parking en día 7; idempotencia por tag `parado-avisado`; reporte a #Canal de POs. Cálculo propio vía ClickUp MCP (consumo de columna Catalyst diferido a v0.2). |

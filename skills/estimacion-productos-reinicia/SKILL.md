@@ -2,22 +2,23 @@
 name: estimacion-productos-reinicia
 description: >
   Skill para que los POs de Reinicia (de Cliente y Técnicos) estimen el esfuerzo de un
-  producto o microcampaña (General o Soporte) antes de comprometerlo, a partir de lo solicitado por
-  el Cliente o de un SPIKE aprobado (Diseño Funcional). Descompone el trabajo en subtareas con horas
-  (PERT), busca productos similares en ClickUp, pregunta quién ejecuta cada subtarea y calcula la
-  tasa de desvío personal de cada ejecutor (real vs. estimado) para devolver DOS cifras: estimación
-  de referencia (cara cliente) y dedicación realista (interna); el Motivo de Desvío enruta qué
-  sobrecoste es facturable. Escribe MIN/MAX y time_estimate en horas (pasos de 0,5h), deja un
-  comentario de aprobación al PO en la Gestión del mes y, tras el OK, alimenta la propuesta en Zoho
-  CRM. Outputs en ES o EN según el cliente. Actívala cuando el PO pida "estima este producto",
-  "cuántas horas lleva [desarrollo]", "estima lo que pidió [CLIENTE]", "estima el SPIKE de [X]", o al
-  cerrarse un SPIKE. No crea productos ni cierra propuestas; las alimenta.
+  producto o microcampaña (General o Soporte) antes de comprometerlo, a partir de lo pedido
+  por el Cliente o de un SPIKE aprobado (Diseño Funcional). Descompone en subtareas (PERT),
+  busca similares en ClickUp, pregunta quién ejecuta cada una y aplica la tasa de desvío
+  personal para devolver DOS cifras: referencia (cara cliente) y dedicación realista (interna);
+  el Motivo de Desvío enruta qué sobrecoste es facturable. Opcionalmente prepara una
+  presentación cara a negocio sin tecnicismos (Requerimientos, Entregables, Actividades,
+  Limitaciones, Condiciones de tiempo y pago, Exclusiones). Escribe MIN/MAX y time_estimate en
+  horas (0,5h), comenta la aprobación al PO en la Gestión del mes y alimenta la propuesta en
+  Zoho CRM. Outputs ES o EN. Actívala cuando el PO pida "estima este producto", "cuántas horas
+  lleva [X]", "estima lo que pidió [CLIENTE]" o al cerrarse un SPIKE. No crea productos ni
+  cierra propuestas; las alimenta.
 ---
 
 # SKILL: Estimación de Productos — Reinicia
 ## Estimación de esfuerzo a partir de una solicitud de Cliente o de un SPIKE aprobado
 
-> **Versión vigente: v0.2 — 21/06/2026**
+> **Versión vigente: v0.3 — 11/07/2026**
 > ⚠️ Versión funcional **pendiente de calibración** tras el primer ciclo real. El método y el flujo
 > están cerrados; los coeficientes (tasa por tipo, contingencia aditiva) y la unidad efectiva de
 > `time_estimate` se afinan con los datos de los primeros usos.
@@ -295,6 +296,104 @@ tarjeta y **cross-linkear** ambos.
 La skill **debe parar y pedir input** si: la suma supera 1-2 sprints; el alcance (Modo A) sigue
 abierto (→ proponer SPIKE); o antes de cualquier escritura en ClickUp.
 
+**Pregunta de decisión (tras validar las dos cifras).** La presentación de arriba está pensada para
+el PO y **se mantiene tal cual**. Antes de pasar al Paso 8, preguntar:
+
+> "Esta presentación está pensada para ti como PO y se queda igual. ¿Necesitas **además** la
+> estimación presentada **para usuarios de negocio del Cliente** (los que la leerán en la parte del
+> Cliente)? Si es así, la preparo con estructura de negocio."
+
+- **No** → continuar al Paso 8 como hasta ahora.
+- **Sí** → generar el **Paso 7B** antes del Paso 8.
+
+---
+
+## PASO 7B — (Opcional) Presentación cara a negocio para el Cliente
+
+Se genera **solo si el PO lo pide** en la pregunta de decisión del Paso 7. **No sustituye** la
+presentación técnica del Paso 7 (esa es para el PO); es una capa adicional que traduce la estimación
+al lenguaje del negocio para quien la leerá en la parte del Cliente.
+
+**Molde de referencia:** esta presentación replica el **cuerpo del correo comercial real** de Reinicia
+(plantillas de la carpeta `REI Comercial` en Zoho CRM, p. ej. `REI - Comercial - Propuesta Comercial
+Genérica`). Se genera con esa misma estructura para que el handoff del Paso 8.2 sea **1:1**: el mismo
+contenido cae directo en el borrador de `propuesta-comercial-zoho-crm-reinicia` sin reescribir.
+
+### Principios de redacción
+- **Lenguaje de resultado, no de tarea.** El Cliente lee qué obtiene y qué gana, nunca subtareas,
+  PERT ni horas internas.
+- **Sin tecnicismos (regla dura).** El vocabulario debe ser entendible por un usuario de negocio. Si
+  un tecnicismo es **imprescindible**, se explica en la misma frase o entre paréntesis, en lenguaje
+  llano (p. ej. "entorno de pruebas (una copia de la web donde trabajar sin afectar a la web real)").
+  Ante la duda entre dos palabras, elegir siempre la de negocio.
+- **Nunca aparecen:** dedicación realista, tasas de desvío personales, la diferencia
+  referencia↔realista, nombres de ejecutores ni métrica interna. Solo la cifra de **REFERENCIA**
+  (como rango de horas) y el **plazo**.
+- **Requerimientos = el porqué de negocio, no una lista de prerrequisitos seca.** Abre con el
+  objetivo o problema de negocio que resuelve el trabajo, en palabras del Cliente, y a continuación
+  el punto de partida y lo que necesitamos del Cliente para arrancar.
+- **Supuestos y exclusiones en positivo, sin sonar defensivos.** No "no hacemos X", sino "este
+  presupuesto cubre A; B se puede abordar como ampliación / siguiente fase". Los supuestos se
+  redactan como acuerdo compartido ("partimos de que…") y como lo que necesitamos del Cliente para
+  arrancar, no como cláusula de protección. Cada limitación/exclusión **abre puerta, no la cierra**.
+- **Marcadores `〔...〕`** para lo que la estimación NO fija y rellena el PO/Comercial al montar el
+  correo: importe, condiciones de pago, validez de la oferta y enlaces (PDF de la propuesta, hoja de
+  presupuesto, formulario de peticiones). Equivalen a los textos en verde de la plantilla de Zoho CRM.
+
+### Estructura (envoltura de correo + 6 bloques en el orden real de la plantilla comercial)
+
+```
+📄 PRESENTACIÓN CARA A NEGOCIO — [Producto] [CLIENTE]
+   Idioma: ES/EN · Alimenta: [plantilla REI Comercial elegida]
+
+Buenos días, [Nombre contacto]:
+
+Tal y como hemos hablado, te paso la propuesta para [descripción breve en lenguaje de negocio].
+Te indico las condiciones a continuación:
+
+REQUERIMIENTOS
+   El objetivo o problema de negocio que resuelve el trabajo, en palabras del Cliente (por qué
+   lo necesita y qué gana), y el punto de partida que asumimos + lo que necesitamos del Cliente
+   para arrancar (accesos, contenidos, confirmaciones de alcance, validaciones).
+   Deriva de la historia de usuario + prerrequisitos "Ready to Backlog", en prosa de negocio.
+
+LIMITACIONES
+   Lo que acota el trabajo, en neutro y sin dramatismo: alcance o versión soportada, volúmenes,
+   idiomas, dependencias de terceros. Deriva de supuestos y riesgos, reescritos como marco.
+
+ACTIVIDADES
+   Bloques de trabajo comprensibles (NO las subtareas técnicas con horas). Agrupar las
+   subtareas del Paso 2 en 3-6 fases legibles (p. ej. "Análisis y diseño", "Puesta en marcha",
+   "Pruebas y validación", "Formación").
+
+ENTREGABLES
+   Qué recibe el Cliente al terminar (documentos, entornos, funcionalidad ya operativa).
+   Resultado tangible, no actividad. Deriva de "Entregables a Cliente" de la tarjeta.
+
+CONDICIONES ECONÓMICAS Y DE TIEMPO
+   - Dedicación estimada: RANGO de horas de REFERENCIA (banda 68% del Paso 5, redondeada).
+   - Importe: 〔a fijar por PO/Comercial a partir del rango — la skill NO calcula precio〕
+   - Condiciones de pago: por defecto **según el plazo** — plazo < 4 semanas laborables → **60/40**;
+     plazo de 4 semanas laborables o más → **60/20/20** (Soporte Operativo Continuo: % adelantado).
+     La skill lo deriva del plazo de este mismo bloque; queda confirmable por PO/Comercial.
+   - Validez de la oferta: 〔p. ej. 1 mes — confirmar〕
+   - Plazo de entrega estimado: en SEMANAS LABORALES (del encaje del Paso 5; nunca horas
+     internas), supeditado a que se cumplan los REQUERIMIENTOS.
+
+EXCLUSIONES
+   Qué queda fuera de este presupuesto, enmarcado como fase futura acotada ("no incluido en
+   este alcance; abordable como ampliación"). Deriva de las exclusiones del Paso 5, en positivo.
+
+Cualquier duda o pregunta, quedo a tu disposición. Puedes llamarme o escribirme.
+¡Hasta pronto y muchas gracias!
+[Firma corporativa — se resuelve sola en Zoho vía generateEmailTemplateContent]
+```
+
+⚠️ **Regla dura:** esta presentación jamás expone cifras internas. La única cifra económica que sale
+es el **rango de horas de referencia**; el importe, el pago y la validez los fija el PO/Comercial
+(marcadores `〔...〕`). Si el Cliente factura por Soporte Operativo Continuo, el rango se expresa como
+el Cliente lo consume, pero siempre **como rango de horas**.
+
 ---
 
 ## PASO 8 — Tras la aprobación del PO
@@ -312,7 +411,11 @@ el producto/microcampaña:
 **8.2 Handoff a propuesta comercial (cifra de referencia).** Pasar a
 `propuesta-comercial-zoho-crm-reinicia`: genera el **Deal en Zoho CRM** y el **correo borrador** con
 la cifra de **referencia** + supuestos y exclusiones (protegen el presupuesto). **No** se genera un
-Word suelto.
+Word suelto. **Si se generó el Paso 7B**, su envoltura y sus 6 bloques (REQUERIMIENTOS · LIMITACIONES ·
+ACTIVIDADES · ENTREGABLES · CONDICIONES ECONÓMICAS Y DE TIEMPO · EXCLUSIONES) ya están en el orden y
+con los nombres de la plantilla comercial, así que caen **1:1** en el correo borrador: solo hay que
+resolver los marcadores `〔...〕` (importe, pago, validez, enlaces) y la firma. Mantener el tono no
+defensivo y el vocabulario sin tecnicismos.
 
 **8.3 Handoff a Sprint Planning.** `MIN`/`MAX`/`time_estimate` (realista) alimentan el encaje en
 capacidad de `sprint-planning-reinicia`.
@@ -372,6 +475,13 @@ supuestos y exclusiones antes del handoff a la propuesta.
 - **1-2 sprints es un límite, no un objetivo.** Si no cabe, trocear.
 - **Simulación de asignación: solo propone**, mira capacidad, no juzga rendimiento.
 - **Idioma del cliente** en todos los outputs.
+- **Presentación cara a negocio (Paso 7B) es opcional y aditiva.** La presentación del Paso 7 (para el
+  PO) no cambia; el Paso 7B se genera solo si el PO lo pide. Estructura fija de 6 bloques:
+  Requerimientos, Entregables, Actividades, Limitaciones, Condiciones de tiempo y pago, Exclusiones.
+- **Vocabulario de negocio sin tecnicismos.** En todo lo que lee el Cliente, evitar jerga; si un
+  tecnicismo es imprescindible, explicarlo en llano en la misma frase. Nunca exponer horas realistas,
+  tasas personales ni nombres de ejecutores: al Cliente solo van **rango de horas de referencia** y
+  **plazo en semanas laborales**; el importe lo fija el PO/Comercial.
 - **Validar antes de escribir.** Ninguna escritura en ClickUp sin OK del PO.
 - **Terminología:** el modelo recurrente es **Soporte Operativo Continuo** (nunca "bolsa de horas");
   esta skill estima **presupuestos cerrados**.
@@ -395,6 +505,7 @@ supuestos y exclusiones antes del handoff a la propuesta.
 |---|---|---|---|
 | **v0.1** | 2026-06-21 | Néstor + Claude | Versión inicial. PERT + reference class, dos modos, flujo de 8 pasos, reparto de roles, contingencia por Motivo de Desvío. |
 | **v0.2** | 2026-06-21 | Néstor + Claude | Modelo de **dos cifras** (referencia vs. dedicación realista). **Tasa de desvío personal por ejecutor** (vía ClickUp) que reemplaza la contingencia aditiva; fallback a contingencia aditiva + Motivo cuando no hay muestra (histórico desde Sprint 5-26). **Motivo de Desvío como enrutador** de sobrecoste facturable. Asignación de ejecutor por subtarea. Ámbito ampliado a **Soporte** y a microcampañas. Idioma **ES/EN** por cliente. Escritura de **MIN/MAX/time_estimate** en horas (0,5 h). Búsqueda de referencias por nombre + petición de enlaces al PO. Comentario de aprobación en **Gestión del mes** asignado al PO (+ tarjeta si fichada). **Simulación de asignación** opcional. Handoff de propuesta = **Zoho CRM + correo borrador**. Hoja de Estimación con identidad visual Reinicia. |
+| **v0.3** | 2026-07-11 | Néstor + Claude | **Presentación cara a negocio opcional (Paso 7B)** para usuarios de negocio del Cliente, con pregunta de decisión al final del Paso 7 (la presentación técnica del Paso 7 se mantiene intacta). Estructura **calcada del correo comercial real de Reinicia** (plantillas `REI Comercial` en Zoho CRM): envoltura de correo (saludo/intro/cierre + firma) y 6 bloques en el orden real **REQUERIMIENTOS · LIMITACIONES · ACTIVIDADES · ENTREGABLES · CONDICIONES ECONÓMICAS Y DE TIEMPO · EXCLUSIONES**, para handoff 1:1 al Paso 8.2. **Requerimientos enriquecido** (objetivo/problema de negocio + punto de partida, no bullets secos). **Condiciones económicas y de tiempo** = rango de horas de referencia + importe/validez como **marcadores `〔...〕`** que fija PO/Comercial + **condiciones de pago derivadas del plazo** (< 4 semanas laborables → 60/40; ≥ 4 → 60/20/20; Soporte Operativo: % adelantado) + plazo en **semanas laborables**; la skill no calcula precio. **Tono no defensivo** en supuestos/exclusiones (positivo, "abre puerta"). **Regla dura de vocabulario sin tecnicismos** (y, si imprescindibles, explicados en llano). |
 
 ---
 
