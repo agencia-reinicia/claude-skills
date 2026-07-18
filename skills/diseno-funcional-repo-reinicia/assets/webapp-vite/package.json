@@ -1,0 +1,20 @@
+{
+  "name": "diseno-funcional-webapp",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Webapp de marca Reinicia que renderiza un Diseño Funcional en markdown",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource/manrope": "^5.0.0",
+    "js-yaml": "^4.1.0",
+    "marked": "^12.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0"
+  }
+}

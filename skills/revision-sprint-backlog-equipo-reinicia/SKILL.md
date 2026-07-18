@@ -22,7 +22,7 @@ La skill **NO planifica** (eso lo hace `sprint-planning-reinicia` al inicio del 
 
 ## RELACIÓN CON EL MODO DESATENDIDO (AUTOMATISMO)
 
-Esta es la versión **supervisada** (PO delante, con confirmaciones). Existe una hermana **desatendida** — `revision-sprint-backlog-equipo-reinicia-modo-desatendido` — que ejecuta este mismo flujo **sin intervención humana** mediante una **Routine de Claude Code** programada a las **06:00 (lun–vie, Europe/Madrid)** con cron `0 6 * * 1-5`, y que al terminar postea un reporte en el canal Metodología de Zoho Cliq (unique_name `reiniciametodologa`; channel ID `T45816000000085077` de referencia).
+Esta es la versión **supervisada** (PO delante, con confirmaciones). Existe una hermana **desatendida** — `revision-sprint-backlog-equipo-reinicia-modo-desatendido` — que ejecuta este mismo flujo **sin intervención humana** mediante una **Routine de Claude Code** programada a las **06:00 (lun–vie, Europe/Madrid)** con cron `0 6 * * 1-5`, y que al terminar postea un reporte en el canal Metodología de Zoho Cliq (chat_id `CT_1214384547920554519_20068152370`).
 
 Cuando esta skill menciona "la tarea programada semanal", se refiere a ese automatismo. La configuración completa (repo `agencia-reinicia/claude-skills`, prompt de disparo, conectores MCP y permisos, alcance) está documentada en la sección «⚙️ Configuración del automatismo en Claude Code (Routine)» de la skill desatendida.
 

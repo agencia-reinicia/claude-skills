@@ -53,7 +53,7 @@ POs de Cliq. Reporta cualquier bloqueo en el aviso de Cliq sin abortar el resto.
   `clickup_get_task`, `clickup_create_task_comment`, `clickup_attach_task_file`.
 - **Workdrive** (subir el PDF y validarlo): `ZohoSheet_create_workbook` no aplica aquí; subida de
   binario PDF + `ZohoWorkdrive_getFileOrFolderDetails`.
-- **Cliq** (aviso al Canal de POs): `ZohoCliq_Post_message_in_a_channel`.
+- **Cliq** (aviso al Canal de POs): `ZohoCliq_send_message_to_chat` (`chat_id = CT_1214384547891975984_20068152370`).
 - Si falta alguna herramienta en el entorno del Routine, el paso correspondiente se reporta como
   bloqueo en Cliq y se continúa con el resto (sección 6).
 
@@ -135,7 +135,7 @@ valor real se toma siempre de la cabecera (soporta sprints de 4-5 semanas de ver
   `kl62t6524c6834c8c4a769c7fa2b5eaa44eac`. Resolver la del sprint detectado por nombre.
 
 ### Cliq
-- **Canal de POs** (aviso): `T45816000000085071` (este, NO Metodología `T45816000000085077`).
+- **Canal de POs** (aviso): `chat_id = CT_1214384547891975984_20068152370` (este, NO Metodología). IDs antiguos obsoletos: POs `T45816000000085071`, Metodología `T45816000000085077`.
 
 ### Marca Reinicia (PDF)
 - Logo real: Workdrive resource `okcqm65a2ea3684c2473583559fb91f0c3a59` → extraer
@@ -266,7 +266,7 @@ Construir desde el cruce filas-ClickUp:
 - Adjuntar además el PDF a la tarjeta (`clickup_attach_task_file`) como respaldo.
 
 ### PASO 9 — Aviso en Cliq (Canal de POs)
-- Mensaje al canal `T45816000000085071` con: sprint, semana, KPIs, top de carga por persona, nº de
+- Mensaje al canal (`chat_id = CT_1214384547891975984_20068152370`) con: sprint, semana, KPIs, top de carga por persona, nº de
   altas, anomalías y los dos enlaces (Workdrive + tarjeta de POs).
 
 ---

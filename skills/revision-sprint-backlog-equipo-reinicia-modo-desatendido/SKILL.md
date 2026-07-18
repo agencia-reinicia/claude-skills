@@ -1,6 +1,6 @@
 ---
 name: revision-sprint-backlog-equipo-reinicia-modo-desatendido
-description: "Versión desatendida (cloud) de revision-sprint-backlog-equipo-reinicia para ejecución en Claude Code Routines a las 06:00 los días laborables (lun–vie, Europe/Madrid). Procesa los Sprint Backlogs del sprint vigente sin intervención humana aplicando reglas deterministas donde la supervisada pediría confirmación al PO. Al terminar, postea un reporte en Zoho Cliq (canal Metodología, ID T45816000000085077). Actívala SOLO cuando se ejecute la Routine programada o cuando un humano pida explícitamente \"ejecuta la revisión desatendida\". Para procesamiento supervisado interactivo, usa la skill hermana revision-sprint-backlog-equipo-reinicia. v1.7 (07/06/2026): antes de marcar un rename, normaliza la fórmula K canónica y el carácter invisible y detecta renames de forma simétrica (prefijo o sufijo, no solo sufijo). El reporte a Cliq usa el nombre EXACTO del fichero (sin apellidos inventados) y describe los flags solo verbatim. Sincronizada con la supervisada v3.10."
+description: "Versión desatendida (cloud) de revision-sprint-backlog-equipo-reinicia para ejecución en Claude Code Routines a las 06:00 los días laborables (lun–vie, Europe/Madrid). Procesa los Sprint Backlogs del sprint vigente sin intervención humana aplicando reglas deterministas donde la supervisada pediría confirmación al PO. Al terminar, postea un reporte en Zoho Cliq (canal Metodología, chat_id CT_1214384547920554519_20068152370). Actívala SOLO cuando se ejecute la Routine programada o cuando un humano pida explícitamente \"ejecuta la revisión desatendida\". Para procesamiento supervisado interactivo, usa la skill hermana revision-sprint-backlog-equipo-reinicia. v1.7 (07/06/2026): antes de marcar un rename, normaliza la fórmula K canónica y el carácter invisible y detecta renames de forma simétrica (prefijo o sufijo, no solo sufijo). El reporte a Cliq usa el nombre EXACTO del fichero (sin apellidos inventados) y describe los flags solo verbatim. Sincronizada con la supervisada v3.10."
 ---
 
 # SKILL: Revisión de Sprint Backlog — MODO DESATENDIDO (cloud Routine)
@@ -44,14 +44,14 @@ La skill **NO planifica** (eso lo hace `sprint-planning-reinicia` al inicio del 
 |---|---|---|
 | ClickUp | Lectura (time entries + tareas, workspace `762713`) | Horas reales, estatus (Col D), nombres de tarea e IDs para los enlaces HYPERLINK |
 | Zoho Workdrive (Sheet) | Lectura + escritura | Repoblar Data, escribir Tiempos / Tabla2 / Tabla21 / Log y sellos |
-| Zoho Cliq | Publicación en canal | Reporte de ejecución del PASO 9, canal Metodología (unique_name `reiniciametodologa`; channel ID `T45816000000085077` solo de referencia) |
+| Zoho Cliq | Publicación en canal | Reporte de ejecución del PASO 9, canal Metodología (herramienta `ZohoCliq_send_message_to_chat`, `chat_id = CT_1214384547920554519_20068152370`; unique_name `reiniciametodologa` / ID `T45816000000085077` obsoletos) |
 
 No se requiere ningún otro conector. Verificar que el token de integración de ClickUp (Néstor) tiene acceso a las tareas del periodo: las tareas privadas sin acceso provocan la anomalía API documentada en la Mejora 13.
 
 ### Prompt de disparo de la Routine
 Texto exacto que ejecuta la Routine programada:
 ```
-Ejecuta la revisión desatendida de Sprint Backlogs del Equipo Operativo para el sprint vigente (la carpeta se detecta de forma determinista, Override 1.0, con cross-check contra ClickUp). Sigue íntegramente la skill revision-sprint-backlog-equipo-reinicia-modo-desatendido: detección dinámica de Equipos y miembros (patrón Excel-Clickup-Sprint), lista de exclusión (Override 1.2), reglas deterministas del PASO 0 BIS, y al terminar postea el reporte de ejecución en el canal Metodología de Zoho Cliq (T45816000000085077).
+Ejecuta la revisión desatendida de Sprint Backlogs del Equipo Operativo para el sprint vigente (la carpeta se detecta de forma determinista, Override 1.0, con cross-check contra ClickUp). Sigue íntegramente la skill revision-sprint-backlog-equipo-reinicia-modo-desatendido: detección dinámica de Equipos y miembros (patrón Excel-Clickup-Sprint), lista de exclusión (Override 1.2), reglas deterministas del PASO 0 BIS, y al terminar postea el reporte de ejecución en el canal Metodología de Zoho Cliq (chat_id CT_1214384547920554519_20068152370).
 ```
 
 ### Identificador de la Routine
@@ -166,7 +166,7 @@ Todas las sugerencias automáticas se registran en Log de Cambios como `MOTIVO_D
 
 ### Override 6 — Reporte de ejecución al cierre
 
-Tras procesar todos los miembros, postear en Zoho Cliq canal Metodología (herramienta `ZohoCliq_Post_message_in_a_channel` con `unique_name` = `reiniciametodologa`; channel ID `T45816000000085077` solo de referencia) un mensaje con la estructura definida en el nuevo PASO 9 (al final de esta skill).
+Tras procesar todos los miembros, postear en Zoho Cliq canal Metodología (herramienta `ZohoCliq_send_message_to_chat` con `chat_id` = `CT_1214384547920554519_20068152370`) un mensaje con la estructura definida en el nuevo PASO 9 (al final de esta skill).
 
 ### Override 7 — Política de errores
 
@@ -2246,8 +2246,8 @@ Si recibes un error tipo `"Sorry! Only 50 cells can be updated at once"` o `414 
 ### Destino
 
 - **Canal**: Metodología
-- **Herramienta MCP**: `ZohoCliq_Post_message_in_a_channel`
-- 🚨 **Parámetro de canal**: la herramienta requiere el **`unique_name`** del canal, **`reiniciametodologa`** — NO el channel ID. El channel ID `T45816000000085077` es solo referencia documental; pasarlo como nombre de canal falla. Validado en el piloto del 31/05/2026.
+- **Herramienta MCP**: `ZohoCliq_send_message_to_chat`
+- 🚨 **Parámetro de canal**: la herramienta requiere el **`chat_id`** del canal, **`CT_1214384547920554519_20068152370`**. El antiguo `unique_name = reiniciametodologa` / channel ID `T45816000000085077` están obsoletos (eran de la herramienta anterior `Post_message_in_a_channel`) — NO usarlos. Validado el 18/07/2026.
 
 ### Estructura del mensaje
 

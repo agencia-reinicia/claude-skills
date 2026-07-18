@@ -128,8 +128,8 @@ el comentario.
 
 ### 0.7 Reporte
 
-- Canal Zoho Cliq **#Canal de POs**: `unique_name = canaldepos`, id `T45816000000085071`.
-- Herramienta: `ZohoCliq_Post_message_in_a_channel`.
+- Canal Zoho Cliq **#Canal de POs**: `chat_id = CT_1214384547891975984_20068152370` (el `unique_name = canaldepos` / id `T45816000000085071` son antiguos, obsoletos).
+- Herramienta: `ZohoCliq_send_message_to_chat` (parámetro `chat_id`).
 
 ### 0.8 Fuente de datos Catalyst (PASO 2 primario)
 
@@ -388,7 +388,7 @@ el [fecha] y no consta entrega/avance.`
 
 ## PASO 5 — REPORTE A ZOHO CLIQ
 
-Postear un único mensaje al **#Canal de POs** (`canaldepos`, `T45816000000085071`) con:
+Postear un único mensaje al **#Canal de POs** (`chat_id = CT_1214384547891975984_20068152370`) con:
 
 ```
 🕳️ Detección de productos estancados — Equipo Columbia — [DD/MM/AAAA] Madrid
@@ -475,7 +475,7 @@ Si un canal/post falla, no abortar el pase: registrar la anomalía y continuar.
 - **Red de seguridad:** no mover a Parking si hay comentario humano posterior al aviso → re-aviso + revisión humana.
 - Auto-move ACTIVO desde el primer día del piloto (decisión de Dirección: sin acción real no hay
   feedback real).
-- Reporte al **#Canal de POs** (`canaldepos`). Indicar si se usó fallback.
+- Reporte al **#Canal de POs** (`chat_id = CT_1214384547891975984_20068152370`). Indicar si se usó fallback.
 - La Routine de esta skill debe correr **después** del cron de Catalyst (05:30 Madrid) — p. ej.
   06:00+ — para leer la columna fresca.
 

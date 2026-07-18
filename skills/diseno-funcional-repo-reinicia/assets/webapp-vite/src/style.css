@@ -1,0 +1,223 @@
+/* ============================================================
+   Marca Reinicia — tokens canónicos (paleta de marca-reinicia)
+   ============================================================ */
+:root {
+  /* Principales */
+  --azul: #3812CF;          /* 2736 C — iniciativa, acentos, enlaces, separadores */
+  --negro-titular: #0D0D0D; /* titulares H1/H2 */
+  --blanco: #FFFFFF;
+
+  /* Secundarios (acentos puntuales, nunca fondos de chip) */
+  --coral: #D14351;         /* 710 C */
+  --amarillo: #EBE31B;      /* 395 C — solo sombreado */
+  --aguamarina: #70EED6;    /* 7471 C */
+
+  /* Colores de recurso (fondos suaves, chips, bordes) */
+  --lila: #D9D0FB;          /* 531 C — cabecera de tabla, bloques de empresa */
+  --gris-oscuro: #545454;   /* 425 C — cuerpo de texto */
+  --gris-claro: #F5F5F5;    /* 7541 C — fondos sutiles */
+  --gris-fila: #EBEBEB;     /* filas alternas de tabla */
+  --rosa-suave: #F5D6D9;    /* estado error suave */
+  --amarillo-suave: #FEFDCD;/* estado advertencia suave */
+  --verde-suave: #D1FAF2;   /* estado éxito suave */
+
+  --fuente: "Manrope", "Verdana", system-ui, sans-serif;
+
+  --radio: 10px;
+  --ancho-contenido: 860px;
+  --sombra: 0 1px 3px rgba(13, 13, 13, 0.06), 0 8px 24px rgba(13, 13, 13, 0.05);
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: var(--fuente);
+  color: var(--gris-oscuro);
+  background: var(--blanco);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.cargando { padding: 3rem; color: var(--gris-oscuro); font-family: var(--fuente); }
+
+/* ---------- Cabecera corporativa ---------- */
+.df-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.4rem clamp(1rem, 4vw, 3rem) 0.9rem;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+.df-header img { height: 26px; width: auto; }
+.df-header .df-file {
+  font-size: 0.9rem;
+  color: var(--gris-oscuro);
+  text-align: right;
+  font-weight: 400;
+}
+/* Línea separadora azul Reinicia bajo la cabecera */
+.df-rule {
+  height: 2px;
+  background: var(--azul);
+  border: 0;
+  margin: 0 clamp(1rem, 4vw, 3rem);
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ---------- Layout ---------- */
+.df-shell {
+  display: grid;
+  grid-template-columns: 240px minmax(0, var(--ancho-contenido));
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 2rem clamp(1rem, 4vw, 3rem) 4rem;
+}
+@media (max-width: 820px) {
+  .df-shell { grid-template-columns: 1fr; }
+  .df-toc { position: static !important; order: -1; }
+}
+
+/* ---------- TOC ---------- */
+.df-toc {
+  position: sticky;
+  top: 1.5rem;
+  align-self: start;
+  font-size: 0.9rem;
+}
+.df-toc h2 {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gris-oscuro);
+  margin: 0 0 0.6rem;
+  font-weight: 700;
+}
+.df-toc a {
+  display: block;
+  padding: 0.28rem 0.6rem;
+  color: var(--gris-oscuro);
+  text-decoration: none;
+  border-left: 2px solid var(--gris-fila);
+  transition: all 0.15s ease;
+}
+.df-toc a:hover { color: var(--azul); border-left-color: var(--azul); }
+.df-toc a.nivel-3 { padding-left: 1.4rem; font-size: 0.84rem; }
+
+/* ---------- Ficha de metadatos ---------- */
+.df-meta {
+  background: var(--lila);
+  border-radius: var(--radio);
+  padding: 1.2rem 1.4rem;
+  margin-bottom: 2.4rem;
+  box-shadow: var(--sombra);
+}
+.df-meta dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1.2rem;
+  margin: 0;
+}
+.df-meta dt { font-weight: 700; color: var(--negro-titular); font-size: 0.85rem; }
+.df-meta dd { margin: 0; color: var(--gris-oscuro); font-size: 0.9rem; word-break: break-word; }
+.df-meta code { background: rgba(255,255,255,0.6); padding: 0.05rem 0.35rem; border-radius: 4px; font-size: 0.85em; }
+
+/* ---------- Contenido ---------- */
+.df-content h1 {
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  color: var(--negro-titular);
+  font-weight: 300;
+  line-height: 1.15;
+  margin: 0 0 1.4rem;
+}
+.df-content h2 {
+  font-size: 1.4rem;
+  color: var(--negro-titular);
+  font-weight: 700;
+  margin: 2.6rem 0 0.9rem;
+  padding-left: 0.8rem;
+  border-left: 4px solid var(--azul);
+  scroll-margin-top: 1.5rem;
+}
+.df-content h3 {
+  font-size: 1.1rem;
+  color: var(--negro-titular);
+  font-weight: 700;
+  margin: 1.8rem 0 0.6rem;
+  scroll-margin-top: 1.5rem;
+}
+.df-content p { margin: 0 0 1rem; }
+.df-content a { color: var(--azul); text-decoration: none; border-bottom: 1px solid rgba(56,18,207,0.3); }
+.df-content a:hover { border-bottom-color: var(--azul); }
+.df-content strong { color: var(--negro-titular); }
+.df-content ul, .df-content ol { margin: 0 0 1rem; padding-left: 1.4rem; }
+.df-content li { margin: 0.3rem 0; }
+
+.df-content code {
+  background: var(--gris-claro);
+  padding: 0.1rem 0.4rem;
+  border-radius: 5px;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 0.86em;
+  color: var(--azul);
+}
+.df-content pre {
+  background: var(--gris-claro);
+  border-radius: var(--radio);
+  padding: 1rem 1.2rem;
+  overflow-x: auto;
+}
+.df-content pre code { background: none; color: var(--gris-oscuro); padding: 0; }
+
+.df-content blockquote {
+  margin: 1.2rem 0;
+  padding: 0.6rem 1.2rem;
+  background: var(--gris-claro);
+  border-left: 4px solid var(--lila);
+  border-radius: 0 var(--radio) var(--radio) 0;
+}
+
+/* ---------- Tablas (patrón Reinicia) ---------- */
+.df-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.2rem 0 1.6rem;
+  font-size: 0.92rem;
+  box-shadow: var(--sombra);
+  border-radius: var(--radio);
+  overflow: hidden;
+}
+.df-content thead th {
+  background: var(--lila);       /* cabecera lila */
+  color: var(--negro-titular);
+  font-weight: 700;
+  text-align: left;
+}
+.df-content th, .df-content td {
+  padding: 0.6rem 0.9rem;
+  border: 2px solid var(--blanco); /* bordes blancos gruesos, nunca grises */
+}
+.df-content tbody tr:nth-child(odd)  td { background: var(--blanco); }
+.df-content tbody tr:nth-child(even) td { background: var(--gris-fila); } /* alternancia */
+
+/* ---------- Listas de tareas (criterios de aceptación) ---------- */
+.df-content input[type="checkbox"] { accent-color: var(--azul); margin-right: 0.45rem; }
+.df-content li:has(input[type="checkbox"]) { list-style: none; margin-left: -1.1rem; }
+
+/* ---------- Pie ---------- */
+.df-footer {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 2rem clamp(1rem, 4vw, 3rem);
+  border-top: 1px solid var(--gris-fila);
+  color: var(--gris-oscuro);
+  font-size: 0.8rem;
+  text-align: center;
+}
