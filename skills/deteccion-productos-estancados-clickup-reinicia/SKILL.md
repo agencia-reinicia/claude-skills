@@ -46,19 +46,37 @@ Toda la configuración volátil vive aquí. No hardcodear asignaciones en el cue
 
 ### 0.1 Alcance del piloto
 
-- **Equipo:** Columbia (PO líder: Pablo Losada, ClickUp `87715920`).
-- **Clientes Columbia** (validar en cada pase; pueden cambiar sprint a sprint): Gonher, Avaderm,
-  Líder System, Aicrov, Tee Travel, Moradillo, Exeltis, Ecophon, Kasblan.
-- **Nombres canónicos en Catalyst** (`project_name` exacto de `clickup_task_activity`, ojo a los
-  que no son obvios):
+El piloto cubre **dos equipos** en una **única corrida**. Cada tarjeta se procesa según el equipo de
+su cliente; el reporte final se agrupa por equipo (ver PASO 5). Match por `project_name` **exacto** de
+`clickup_task_activity`.
+
+**Equipo Columbia** (11 clientes) — líder + PO Cliente: Pablo Losada (`87715920`) · PO Técnico:
+Paolo Bergamelli (`2447443`):
 
   ```
-  Gonher · Avaderm · Líder System Grupo · Aicrov · Tee Travel ·
-  Moradillo · Exeltis · Ecophon España · Kasblan
+  Gonher · Avaderm · Líder System Grupo · Aicrov · Tee Travel · Moradillo ·
+  Exeltis · Ecophon España · Kasblan · Adymar · Estarima
   ```
 
-  > "Líder System Grupo" y "Ecophon España" llevan sufijo en la tabla; un match exacto por
-  > `'Líder System'`/`'Ecophon'` los dejaría fuera (falso negativo). Usar los nombres completos.
+**Equipo Proactive** (16 clientes) — co-liderado por Fabián Vargas (`93744950`, PO Técnico) y
+Óscar Díez (`93631901`, PO Cliente); en el resumen se avisa a los dos:
+
+  ```
+  Aunna · Birdease · Breezom · Carritech · Home España · Ingelyt · ISL Agency ·
+  Inefso - Dinam · Lacroix Environment (Sofrel) · Mazarea · Synuptic · Ti Medi ·
+  Cloverty · Niuvo · Saint Gobain PAM · Worldwide Boat
+  ```
+
+> **Nombres con sufijo/paréntesis** ("Líder System Grupo", "Ecophon España", "Inefso - Dinam",
+> "Lacroix Environment (Sofrel)", "Saint Gobain PAM") deben ir **completos**; un match parcial los
+> deja fuera (falso negativo).
+> **Óscar Díez** aparece en ClickUp solo como "Óscar"; usar el ID `93631901`, no el nombre.
+> **Auto-Parking activo desde el día 1 en AMBOS equipos.**
+> **Fuera del piloto** (no se vigilan): Reinicia y Reinicia Comercial (internos) y Reinnova (PO Néstor).
+> **Mejora Fase 2 (pendiente, NO implementada):** reforzar el criterio con juicio de "comentario de
+> valor" — un comentario debe dar estatus real y/o próximos pasos; frases vacías ("reunión con
+> cliente", "trabajando en ello") no cuentan, y un evento mecánico sin comentario de valor tampoco
+> debería contar por sí solo. Idea: guardar los comentarios en Catalyst para poder evaluarlos.
 
 - Para el **fallback** vía ClickUp MCP, el alcance se filtra por las listas `General [CLIENTE]`,
   `Soporte [CLIENTE]` y `Gestión [CLIENTE]` de esos clientes (microcampañas incluidas).
@@ -114,10 +132,12 @@ en la función de Catalyst** — mantener ambos sincronizados:
 | `validacion cliente` | PO Cliente | Se espera respuesta del cliente; el PO debe perseguir |
 | `validacion reinicia` | PO Técnico / Reinicia | Validación interna pendiente |
 
-Defaults Columbia (ajustar si procede): **PO Cliente = Pablo Losada `87715920`**;
-**PO Técnico = Paolo Bergamelli `2447443`** salvo que la tarjeta indique otro. Siempre que un
-nombre no esté en el workspace (p. ej. Amigos Reinicia), no asignar como assignee: mencionar en
-el comentario.
+Defaults por equipo (el equipo se deduce del cliente de la tarjeta, ver 0.1):
+- **Columbia** → PO Cliente = Pablo Losada `87715920` · PO Técnico = Paolo Bergamelli `2447443`
+- **Proactive** → PO Cliente = Óscar Díez `93631901` · PO Técnico = Fabián Vargas `93744950`
+
+Salvo que la tarjeta indique otro. Siempre que un nombre no esté en el workspace (p. ej. Amigos
+Reinicia), no asignar como assignee: mencionar en el comentario.
 
 ### 0.6 Idempotencia
 
@@ -145,9 +165,9 @@ el comentario.
 
 - Lectura vía MCP: `CatalystbyZoho_Execute_Query` con `headers {Catalyst-org, Environment}` y
   `path_variables {projectId}`.
-- **Alcance del dato hoy:** la función calcula con `RESTRICT_TO_COLUMBIA = true`, así que la tabla
-  solo trae inactividad de Columbia. Cuando se amplíe a todos los equipos, esta skill seguirá
-  filtrando por su propio alcance (0.1).
+- **Alcance del dato:** la función calcula con `RESTRICT_TO_PILOT = true`, así que la tabla trae
+  inactividad de los 27 clientes del piloto (Columbia + Proactive). Esta skill los procesa todos en
+  una sola corrida y agrupa el reporte por equipo según el cliente de cada tarjeta (0.1).
 
 ### 0.9 Tratamiento especial de Gestión (avisar, nunca Parking)
 
@@ -388,14 +408,20 @@ el [fecha] y no consta entrega/avance.`
 
 ## PASO 5 — REPORTE A ZOHO CLIQ
 
-Postear un único mensaje al **#Canal de POs** (`chat_id = CT_1214384547891975984_20068152370`) con:
+Postear un único mensaje al **#Canal de POs** (`chat_id = CT_1214384547891975984_20068152370`),
+**agrupado por equipo** (primero **Columbia** — líder @Pablo Losada; luego **Proactive** — líderes
+@Fabián Vargas @Óscar Díez), con las mismas secciones dentro de cada equipo y solo las tarjetas de
+ese equipo:
 
 ```
-🕳️ Detección de productos estancados — Equipo Columbia — [DD/MM/AAAA] Madrid
+🕳️ Detección de productos estancados — Piloto (Columbia + Proactive) — [DD/MM/AAAA] Madrid
 Fuente: Catalyst (inactivity_days_business) | [o] Fallback cálculo propio ⚠️
 
-Umbral: 5 días laborables (aviso) · 7 (mover a Parking)
+Umbral: 5 días laborables (aviso) · 7 (mover a Parking) · Auto-Parking activo en AMBOS equipos
 Tarjetas vigiladas: [N]  ·  Paradas detectadas: [N]
+
+━━━━━ EQUIPO [Columbia (líder @Pablo Losada) | Proactive (líderes @Fabián Vargas @Óscar Díez)] ━━━━━
+(repetir el bloque de secciones de abajo por cada equipo, solo con las tarjetas de ese equipo)
 
 ═══ AVISOS (5–6 días) ═══
   • [Cliente] [Producto] — [N] días laborables parada — @[PO] — [estado]
@@ -444,9 +470,10 @@ Si un canal/post falla, no abortar el pase: registrar la anomalía y continuar.
 - Una vez estable, alimentar una sección de "productos estancados" en el Informe Ejecutivo Semanal
   de los POs y un resumen para el Director de Operaciones (encaja con
   `informes-ejecutivos-sprint-backlog-equipos-reinicia`).
-- Ampliar el alcance del **dato** a todos los equipos (`RESTRICT_TO_COLUMBIA = false` en la función
-  + revisar Max Execution Time / optimizar lecturas en lote); la **acción** (aviso/Parking) se
-  amplía a otros equipos de forma independiente cuando Dirección lo decida.
+- **Hecho en v0.4:** dato + acción ampliados a Columbia + Proactive (`RESTRICT_TO_PILOT = true`, 27
+  clientes, corrida única, reporte por equipo). **Pendiente:** llevar el dato a **todo el workspace**
+  (`RESTRICT_TO_PILOT = false`) revisando Max Execution Time / optimizando lecturas en lote, y ampliar
+  la **acción** a más equipos cuando Dirección lo decida.
 
 ---
 
@@ -485,6 +512,7 @@ Si un canal/post falla, no abortar el pase: registrar la anomalía y continuar.
 
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|
+| **v0.4** | 2026-07-19 | Néstor + Claude | **Ampliación a Equipo Proactive** en una **única corrida** para ambos equipos (Columbia + Proactive, 27 clientes). Alcance 0.1 reconvertido a **multi-equipo** con mapa cliente→equipo→PO; **defaults de routing por equipo** en 0.5 (Proactive: PO Cliente Óscar Díez `93631901`, PO Técnico Fabián Vargas `93744950`; co-liderazgo Vargas+Díez, se avisa a ambos en el resumen). Dato Catalyst pasa a `RESTRICT_TO_PILOT` (0.8). **Reporte del PASO 5 agrupado por equipo.** Auto-Parking desde el día 1 también en Proactive. Nota: "Óscar Díez" figura en ClickUp como "Óscar" (usar ID). Fuera del piloto: Reinicia/Reinicia Comercial (internos) y Reinnova (PO Néstor). Anotada **mejora Fase 2** (juicio de "comentario de valor"). Incluye la alineación de **Cliq** a `ZohoCliq_send_message_to_chat` + `chat_id` CT-IDs. |
 | **v0.3** | 2026-07-12 | Néstor + Claude | **Gestión** (identificada por `list_name` que empieza por "Gestión "): se avisa como recordatorio de seguimiento con el cliente (plantilla propia; un "hablé con el cliente" pelado no cuenta como progreso, hace falta resumen o enlace al acta) pero **nunca** se mueve a Parking (0.9, PASO 1, PASO 4-C). **Heartbeat de eventos** en la guarda de frescura (2.2): además de comprobar que el cron corrió, verifica que el evento más nuevo no supere 2 días laborables; si no, el webhook está caído aunque el cron selle hoy → fallback (raíz del incidente de junio 2026, webhook 5 semanas suspendido). **Red de seguridad anti-parkeo** (PASO 4-C): no mover a Parking si hay comentario humano posterior al aviso. `list_name`/`last_activity_datetime` añadidos al SELECT del PASO 2. Trazabilidad en el reporte (último comentario humano por cada Parking). |
 | **v0.2** | 2026-06-06 | Néstor + Claude | Consume `inactivity_days_business` de Catalyst como fuente primaria (PASO 2 = lectura ZCQL en vez de recorrer listas). PASO 3 pasa a "lectura + poda": solo lee el hilo de los candidatos ≥5, poda con la regla de comentario-que-demuestra-avance (lo único que la función no mira) y re-verifica el estado en vivo antes de actuar. Filtro ≥5 en código (columna de texto). Guarda de frescura por `MODIFIEDTIME` y **fallback** al cálculo propio v0.1 si Catalyst falla o el dato no es de hoy. Nombres canónicos Catalyst ("Líder System Grupo", "Ecophon España"). Config Catalyst en 0.8. Formato canónico del comentario de aviso por estado (texto plano sin acrónimos, plantillas en PASO 4, comentario asignado al responsable). |
 | **v0.1** | 2026-06-01 | Néstor + Claude | Versión inicial autónoma. Piloto Equipo Columbia, una pasada diaria. Detección por lista blanca de 4 estados; inactividad en días laborables (calendario Madrid capital 2026); regla de actividad real (excluye ClickBot, fórmulas y comentarios de intención); lectura de hilos para compromisos vencidos; aviso con enrutado por estado; auto-move a Parking en día 7; idempotencia por tag `parado-avisado`; reporte a #Canal de POs. Cálculo propio vía ClickUp MCP (consumo de columna Catalyst diferido a v0.2). |
